@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -11,10 +11,247 @@ import {
   Image,
   Platform,
   KeyboardAvoidingView,
-  Switch
+  Switch,
+  StatusBar
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+
+// Componente modal para agregar mascota - extraído y memoizado
+const MemoizedAddPetModal = memo(({
+  modalVisible,
+  setModalVisible,
+  petName,
+  setPetName,
+  petType,
+  petTypes,
+  petBreed,
+  setPetBreed,
+  petAge,
+  setPetAge,
+  petGender,
+  isVaccinated,
+  setIsVaccinated,
+  petWeight,
+  setPetWeight,
+  specialNeeds,
+  setSpecialNeeds,
+  petColor,
+  setPetColor,
+  showBreedSelector,
+  setShowBreedSelector,
+  availableBreeds,
+  handleSelectPetType,
+  handleSelectBreed,
+  handleSelectGender,
+  addPet
+}) => (
+  <Modal
+    animationType="slide"
+    transparent={true}
+    visible={modalVisible}
+    onRequestClose={() => setModalVisible(false)}
+  >
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.centeredView}
+    >
+      <View style={styles.modalView}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Agregar Mascota</Text>
+          <TouchableOpacity
+            onPress={() => setModalVisible(false)}
+          >
+            <Ionicons name="close" size={24} color="#333" />
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView style={styles.modalScrollView}>
+          {/* Nombre de mascota */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Nombre *</Text>
+            <TextInput
+              style={styles.input}
+              value={petName}
+              onChangeText={setPetName}
+              placeholder="Nombre de tu mascota"
+            />
+          </View>
+          
+          {/* Tipo de mascota */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Tipo de mascota *</Text>
+            <View style={styles.selectorContainer}>
+              {petTypes.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[styles.typeOption, petType === type.name && styles.selectedTypeOption]}
+                  onPress={() => handleSelectPetType(type)}
+                >
+                  <View style={styles.typeOptionContent}>
+                    <Ionicons 
+                      name={type.icon} 
+                      size={18} 
+                      color={petType === type.name ? '#fff' : '#1E88E5'} 
+                    />
+                    <Text style={[styles.typeText, petType === type.name && styles.selectedTypeText]}>
+                      {type.name}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          {/* Raza basada en el tipo de mascota */}
+          {petType && (
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Raza</Text>
+              <TouchableOpacity 
+                style={styles.breedInput}
+                onPress={() => setShowBreedSelector(!showBreedSelector)}
+              >
+                {petBreed ? (
+                  <Text style={styles.breedSelectedText}>{petBreed}</Text>
+                ) : (
+                  <Text style={styles.breedPlaceholder}>Selecciona una raza</Text>
+                )}
+                <Ionicons 
+                  name={showBreedSelector ? "chevron-up" : "chevron-down"} 
+                  size={18} 
+                  color="#666" 
+                />
+              </TouchableOpacity>
+              
+              {/* Selector de razas */}
+              <View style={[styles.breedSelectorContainer, !showBreedSelector && styles.hiddenBreedSelector]}>
+                <ScrollView style={styles.breedsScrollView}>
+                  {availableBreeds.map((breed, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.breedOption, petBreed === breed && styles.selectedBreedOption]}
+                      onPress={() => handleSelectBreed(breed)}
+                    >
+                      <Text style={[styles.breedText, petBreed === breed && styles.selectedBreedText]}>
+                        {breed}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+          
+          {/* Edad */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Edad *</Text>
+            <TextInput
+              style={styles.input}
+              value={petAge}
+              onChangeText={setPetAge}
+              placeholder="Ej. 2 años, 6 meses"
+            />
+          </View>
+          
+          {/* Peso */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Peso (opcional)</Text>
+            <TextInput
+              style={styles.input}
+              value={petWeight}
+              onChangeText={setPetWeight}
+              placeholder="Ej. 5.2 kg"
+              keyboardType="numeric"
+            />
+          </View>
+          
+          {/* Color */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Color (opcional)</Text>
+            <TextInput
+              style={styles.input}
+              value={petColor}
+              onChangeText={setPetColor}
+              placeholder="Ej. Negro, Blanco, Marrón..."
+            />
+          </View>
+          
+          {/* Género */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Género</Text>
+            <View style={styles.genderContainer}>
+              <TouchableOpacity 
+                style={[styles.genderOption, petGender === 'Macho' && styles.selectedGenderOption]}
+                onPress={() => handleSelectGender('Macho')}
+              >
+                <Ionicons 
+                  name="male" 
+                  size={20} 
+                  color={petGender === 'Macho' ? '#fff' : '#1E88E5'} 
+                />
+                <Text style={[styles.genderText, petGender === 'Macho' && styles.selectedGenderText]}>Macho</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.genderOption, petGender === 'Hembra' && styles.selectedGenderOption]}
+                onPress={() => handleSelectGender('Hembra')}
+              >
+                <Ionicons 
+                  name="female" 
+                  size={20} 
+                  color={petGender === 'Hembra' ? '#fff' : '#1E88E5'} 
+                />
+                <Text style={[styles.genderText, petGender === 'Hembra' && styles.selectedGenderText]}>Hembra</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* Vacunación */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Información adicional</Text>
+            <View style={styles.switchContainer}>
+              <Text style={styles.switchLabel}>¿Está vacunado?</Text>
+              <Switch
+                value={isVaccinated}
+                onValueChange={setIsVaccinated}
+                trackColor={{ false: '#E0E0E0', true: '#a7d1f5' }}
+                thumbColor={isVaccinated ? '#1E88E5' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+          
+          {/* Necesidades especiales */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Necesidades especiales (opcional)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={specialNeeds}
+              onChangeText={setSpecialNeeds}
+              placeholder="Describe cualquier necesidad especial o condición médica"
+              multiline
+              numberOfLines={4}
+            />
+          </View>
+          
+          {/* Foto */}
+          <View style={styles.photoContainer}>
+            <Text style={styles.photoText}>Agregar foto</Text>
+            <TouchableOpacity style={styles.photoButton}>
+              <Ionicons name="camera" size={28} color="#1E88E5" />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Botón Guardar */}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={addPet}
+          >
+            <Text style={styles.addButtonText}>Guardar mascota</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>
+));
 
 const PetsScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -111,7 +348,7 @@ const PetsScreen = () => {
       lastVisit: '03/05/2025',
       image: null,
       iconType: 'dog'
-    },
+    }
   ]);
 
   const renderPetIcon = (type) => {
@@ -223,219 +460,9 @@ const PetsScreen = () => {
     setPetGender(gender);
   }, []);
 
-  // Componente modal para agregar mascota
-  const AddPetModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={modalVisible}
-      onRequestClose={() => setModalVisible(false)}
-    >
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.centeredView}
-      >
-        <View style={styles.modalView}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Agregar Mascota</Text>
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-            >
-              <Ionicons name="close" size={24} color="#333" />
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView style={styles.modalScrollView}>
-            {/* Nombre de mascota */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nombre *</Text>
-              <TextInput
-                style={styles.input}
-                value={petName}
-                onChangeText={setPetName}
-                placeholder="Nombre de tu mascota"
-              />
-            </View>
-            
-            {/* Tipo de mascota */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Tipo de mascota *</Text>
-              <View style={styles.selectorContainer}>
-                {petTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={[styles.typeOption, petType === type.name && styles.selectedTypeOption]}
-                    onPress={() => handleSelectPetType(type)}
-                  >
-                    <View style={styles.typeOptionContent}>
-                      <Ionicons 
-                        name={type.icon} 
-                        size={18} 
-                        color={petType === type.name ? '#fff' : '#1E88E5'} 
-                      />
-                      <Text style={[styles.typeText, petType === type.name && styles.selectedTypeText]}>
-                        {type.name}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            
-            {/* Raza basada en el tipo de mascota */}
-            {petType && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Raza</Text>
-                <TouchableOpacity 
-                  style={styles.breedInput}
-                  onPress={() => setShowBreedSelector(!showBreedSelector)}
-                >
-                  {petBreed ? (
-                    <Text style={styles.breedSelectedText}>{petBreed}</Text>
-                  ) : (
-                    <Text style={styles.breedPlaceholder}>Selecciona una raza</Text>
-                  )}
-                  <Ionicons 
-                    name={showBreedSelector ? "chevron-up" : "chevron-down"} 
-                    size={18} 
-                    color="#666" 
-                  />
-                </TouchableOpacity>
-                
-                {/* Selector de razas */}
-                <View style={[styles.breedSelectorContainer, !showBreedSelector && styles.hiddenBreedSelector]}>
-                  <ScrollView style={styles.breedsScrollView}>
-                    {availableBreeds.map((breed, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={[styles.breedOption, petBreed === breed && styles.selectedBreedOption]}
-                        onPress={() => handleSelectBreed(breed)}
-                      >
-                        <Text style={[styles.breedText, petBreed === breed && styles.selectedBreedText]}>
-                          {breed}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-            )}
-            
-            {/* Edad */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Edad *</Text>
-              <TextInput
-                style={styles.input}
-                value={petAge}
-                onChangeText={setPetAge}
-                placeholder="Ej. 2 años, 6 meses"
-              />
-            </View>
-            
-            {/* Peso */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Peso (opcional)</Text>
-              <TextInput
-                style={styles.input}
-                value={petWeight}
-                onChangeText={setPetWeight}
-                placeholder="Ej. 5.2 kg"
-                keyboardType="numeric"
-              />
-            </View>
-            
-            {/* Color */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Color (opcional)</Text>
-              <TextInput
-                style={styles.input}
-                value={petColor}
-                onChangeText={setPetColor}
-                placeholder="Ej. Negro, Blanco, Marrón..."
-              />
-            </View>
-            
-            {/* Género */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Género</Text>
-              <View style={styles.genderContainer}>
-                <TouchableOpacity 
-                  style={[styles.genderOption, petGender === 'Macho' && styles.selectedGenderOption]}
-                  onPress={() => handleSelectGender('Macho')}
-                >
-                  <Ionicons 
-                    name="male" 
-                    size={20} 
-                    color={petGender === 'Macho' ? '#fff' : '#1E88E5'} 
-                  />
-                  <Text style={[styles.genderText, petGender === 'Macho' && styles.selectedGenderText]}>Macho</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.genderOption, petGender === 'Hembra' && styles.selectedGenderOption]}
-                  onPress={() => handleSelectGender('Hembra')}
-                >
-                  <Ionicons 
-                    name="female" 
-                    size={20} 
-                    color={petGender === 'Hembra' ? '#fff' : '#1E88E5'} 
-                  />
-                  <Text style={[styles.genderText, petGender === 'Hembra' && styles.selectedGenderText]}>Hembra</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            
-            {/* Vacunación */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Información adicional</Text>
-              <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>¿Está vacunado?</Text>
-                <Switch
-                  value={isVaccinated}
-                  onValueChange={setIsVaccinated}
-                  trackColor={{ false: '#E0E0E0', true: '#a7d1f5' }}
-                  thumbColor={isVaccinated ? '#1E88E5' : '#f4f3f4'}
-                />
-              </View>
-            </View>
-            
-            {/* Necesidades especiales */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Necesidades especiales (opcional)</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={specialNeeds}
-                onChangeText={setSpecialNeeds}
-                placeholder="Describe cualquier necesidad especial o condición médica"
-                multiline
-                numberOfLines={4}
-              />
-            </View>
-            
-            {/* Foto */}
-            <View style={styles.photoContainer}>
-              <Text style={styles.photoText}>Agregar foto</Text>
-              <TouchableOpacity style={styles.photoButton}>
-                <Ionicons name="camera" size={28} color="#1E88E5" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Botón Guardar */}
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={addPet}
-            >
-              <Text style={styles.addButtonText}>Guardar mascota</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mis Mascotas</Text>
         <TouchableOpacity
@@ -467,12 +494,40 @@ const PetsScreen = () => {
         </View>
       )}
       
-      <AddPetModal />
+      <MemoizedAddPetModal 
+        modalVisible={modalVisible}
+        setModalVisible={setModalVisible}
+        petName={petName}
+        setPetName={setPetName}
+        petType={petType}
+        petTypes={petTypes}
+        petBreed={petBreed}
+        setPetBreed={setPetBreed}
+        petAge={petAge}
+        setPetAge={setPetAge}
+        petGender={petGender}
+        isVaccinated={isVaccinated}
+        setIsVaccinated={setIsVaccinated}
+        petWeight={petWeight}
+        setPetWeight={setPetWeight}
+        specialNeeds={specialNeeds}
+        setSpecialNeeds={setSpecialNeeds}
+        petColor={petColor}
+        setPetColor={setPetColor}
+        showBreedSelector={showBreedSelector}
+        setShowBreedSelector={setShowBreedSelector}
+        availableBreeds={availableBreeds}
+        handleSelectPetType={handleSelectPetType}
+        handleSelectBreed={handleSelectBreed}
+        handleSelectGender={handleSelectGender}
+        addPet={addPet}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  // ...
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',
