@@ -54,28 +54,89 @@ const HomeScreen = ({ navigation }) => {
     }
   ];
 
-  // Datos de ejemplo para los veterinarios
-  const vets = [
+  // Datos de ejemplo para los veterinarios destacados
+  const featuredVets = [
     {
       id: '1',
       name: 'Dr. Carlos Rodríguez',
       specialty: 'Medicina general',
       rating: 4.9,
-      image: 'https://example.com/vet1.jpg'
+      experience: '10 años',
+      patients: 120,
+      reviews: 48,
+      available: true,
+      status: 'Destacado',
+      specialties: ['Perros', 'Gatos', 'Aves'],
+      image: null // Usamos placeholder en vez de URL para evitar errores
     },
     {
       id: '2',
       name: 'Dra. María Gómez',
-      specialty: 'Cirugía',
+      specialty: 'Cirugía veterinaria',
       rating: 4.8,
-      image: 'https://example.com/vet2.jpg'
+      experience: '8 años',
+      patients: 95,
+      reviews: 36,
+      available: true,
+      status: 'Destacado',
+      specialties: ['Perros', 'Gatos', 'Animales exóticos'],
+      image: null
     },
     {
       id: '3',
       name: 'Dr. Juan Pérez',
-      specialty: 'Dermatología',
+      specialty: 'Dermatología animal',
       rating: 4.7,
-      image: 'https://example.com/vet3.jpg'
+      experience: '6 años',
+      patients: 78,
+      reviews: 29,
+      available: false,
+      status: 'Destacado',
+      specialties: ['Perros', 'Gatos'],
+      image: null
+    },
+  ];
+
+  // Datos de ejemplo para los veterinarios disponibles ahora
+  const availableVets = [
+    {
+      id: '4',
+      name: 'Dra. Lucía Hernández',
+      specialty: 'Nutrición animal',
+      rating: 4.6,
+      experience: '5 años',
+      patients: 64,
+      reviews: 31,
+      available: true,
+      status: 'Disponible ahora',
+      specialties: ['Perros', 'Gatos', 'Roedores'],
+      image: null
+    },
+    {
+      id: '5',
+      name: 'Dr. Martín Díaz',
+      specialty: 'Cardiología',
+      rating: 4.9,
+      experience: '12 años',
+      patients: 150,
+      reviews: 67,
+      available: true,
+      status: 'Disponible ahora',
+      specialties: ['Perros', 'Gatos'],
+      image: null
+    },
+    {
+      id: '6',
+      name: 'Dra. Sofía López',
+      specialty: 'Oftalmología',
+      rating: 4.7,
+      experience: '7 años',
+      patients: 85,
+      reviews: 42,
+      available: true,
+      status: 'Disponible ahora',
+      specialties: ['Perros', 'Gatos', 'Conejos'],
+      image: null
     },
   ];
 
@@ -94,20 +155,91 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const renderVetItem = ({ item }) => (
-    <TouchableOpacity style={styles.vetCard}>
-      <View style={styles.vetImageContainer}>
-        <View style={styles.vetImagePlaceholder}>
-          <Ionicons name="person" size={32} color="#fff" />
+  // Función para manejar la selección de un veterinario
+  const handleVetPress = (vet) => {
+    // Aquí podríamos navegar a una pantalla de detalle del veterinario
+    alert(`Has seleccionado a ${vet.name}, especialista en ${vet.specialty}`);
+    // Implementación futura: navigation.navigate('VetDetail', { vet });
+  };
+
+  // Renderizar cada veterinario destacado
+  const renderFeaturedVetItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.featuredVetCard}
+      onPress={() => handleVetPress(item)}
+    >
+      <View style={styles.vetTopSection}>
+        <View style={styles.vetImageContainer}>
+          <View style={[styles.vetImagePlaceholder, { backgroundColor: item.available ? '#4CAF50' : '#FFA000' }]}>
+            <Ionicons name="person" size={32} color="#fff" />
+          </View>
+          {item.available && (
+            <View style={styles.statusBadge}>
+              <Ionicons name="ellipse" size={10} color="#4CAF50" />
+            </View>
+          )}
+        </View>
+        <View style={styles.vetInfo}>
+          <Text style={styles.vetName}>{item.name}</Text>
+          <Text style={styles.vetSpecialty}>{item.specialty}</Text>
+          <View style={styles.ratingContainer}>
+            <Ionicons name="star" size={16} color="#FFC107" />
+            <Text style={styles.ratingText}>{item.rating} ({item.reviews} reseñas)</Text>
+          </View>
         </View>
       </View>
-      <View style={styles.vetInfo}>
-        <Text style={styles.vetName}>{item.name}</Text>
-        <Text style={styles.vetSpecialty}>{item.specialty}</Text>
-        <View style={styles.ratingContainer}>
-          <Ionicons name="star" size={16} color="#FFC107" />
-          <Text style={styles.ratingText}>{item.rating}</Text>
+      
+      <View style={styles.vetDetailSection}>
+        <View style={styles.vetDetailItem}>
+          <Ionicons name="time-outline" size={14} color="#666" />
+          <Text style={styles.vetDetailText}>{item.experience}</Text>
         </View>
+        <View style={styles.vetDetailItem}>
+          <Ionicons name="people-outline" size={14} color="#666" />
+          <Text style={styles.vetDetailText}>{item.patients} pacientes</Text>
+        </View>
+      </View>
+      
+      <View style={styles.vetSpecialtiesContainer}>
+        {item.specialties.map((specialty, index) => (
+          <View key={index} style={styles.specialtyBadge}>
+            <Text style={styles.specialtyText}>{specialty}</Text>
+          </View>
+        ))}
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Renderizar cada veterinario disponible
+  const renderAvailableVetItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.availableVetCard}
+      onPress={() => handleVetPress(item)}
+    >
+      <View style={styles.vetStatusContainer}>
+        <View style={styles.vetStatusIndicator} />
+        <Text style={styles.vetStatusText}>{item.status}</Text>
+      </View>
+      
+      <View style={styles.vetAvailableContent}>
+        <View style={styles.vetImageContainer}>
+          <View style={[styles.vetImagePlaceholder, { backgroundColor: '#4CAF50' }]}>
+            <Ionicons name="person" size={32} color="#fff" />
+          </View>
+        </View>
+        
+        <View style={styles.vetInfo}>
+          <Text style={styles.vetName}>{item.name}</Text>
+          <Text style={styles.vetSpecialty}>{item.specialty}</Text>
+          <View style={styles.ratingContainer}>
+            <Ionicons name="star" size={16} color="#FFC107" />
+            <Text style={styles.ratingText}>{item.rating}</Text>
+          </View>
+        </View>
+        
+        <TouchableOpacity style={styles.contactButton}>
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -174,6 +306,24 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Veterinarios disponibles ahora */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Veterinarios disponibles ahora</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>Ver todos</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={availableVets}
+            renderItem={renderAvailableVetItem}
+            keyExtractor={item => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.vetsList}
+          />
+        </View>
+        
         {/* Veterinarios destacados */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
@@ -183,8 +333,8 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
           <FlatList
-            data={vets}
-            renderItem={renderVetItem}
+            data={featuredVets}
+            renderItem={renderFeaturedVetItem}
             keyExtractor={item => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -350,22 +500,29 @@ const styles = StyleSheet.create({
   },
   vetsList: {
     paddingRight: 10,
+    paddingBottom: 10,
   },
-  vetCard: {
+  // Estilos para veterinarios destacados
+  featuredVetCard: {
     backgroundColor: '#fff',
     borderRadius: 15,
     padding: 15,
     marginRight: 15,
-    width: 170,
+    marginBottom: 5,
+    width: 250,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 5,
-    elevation: 2,
+    elevation: 3,
+  },
+  vetTopSection: {
     flexDirection: 'row',
+    marginBottom: 10,
   },
   vetImageContainer: {
     marginRight: 10,
+    position: 'relative',
   },
   vetImagePlaceholder: {
     width: 50,
@@ -375,17 +532,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  statusBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 2,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
   vetInfo: {
     flex: 1,
   },
   vetName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 2,
   },
   vetSpecialty: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
     marginBottom: 5,
   },
@@ -397,6 +564,88 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginLeft: 5,
+  },
+  vetDetailSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#F0F0F0',
+    marginBottom: 10,
+  },
+  vetDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  vetDetailText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 5,
+  },
+  vetSpecialtiesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  specialtyBadge: {
+    backgroundColor: '#E3F2FD',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  specialtyText: {
+    fontSize: 11,
+    color: '#1E88E5',
+    fontWeight: '500',
+  },
+  // Estilos para veterinarios disponibles
+  availableVetCard: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginRight: 15,
+    marginBottom: 5,
+    width: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  vetStatusContainer: {
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 5,
+    paddingHorizontal: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  vetStatusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4CAF50',
+    marginRight: 5,
+  },
+  vetStatusText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  vetAvailableContent: {
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  contactButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1E88E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
   },
   tipCard: {
     backgroundColor: '#fff',
