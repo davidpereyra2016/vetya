@@ -34,6 +34,10 @@ import ConsultaConfirmacionScreen from '../screens/main/ConsultaConfirmacionScre
 import AgendarCitaScreen from '../screens/main/AgendarCitaScreen';
 import CitaConfirmacionScreen from '../screens/main/CitaConfirmacionScreen';
 
+// Pantallas de consejos de salud
+import HealthTipsScreen from '../screens/main/HealthTipsScreen';
+import HealthTipDetailScreen from '../screens/main/HealthTipDetailScreen';
+
 // Creación de navegadores
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -243,6 +247,58 @@ function MainNavigator() {
       <Stack.Screen 
         name="CitaConfirmacion" 
         component={CitaConfirmacionScreen}
+        options={{
+          transitionSpec: {
+            open: { 
+              animation: 'timing', 
+              config: { 
+                duration: 300 
+              } 
+            },
+            close: { 
+              animation: 'timing', 
+              config: { 
+                duration: 300 
+              } 
+            },
+          },
+          cardStyleInterpolator: ({ current: { progress } }) => ({
+            cardStyle: {
+              opacity: progress,
+            }
+          }),
+        }}
+      />
+      
+      {/* Pantallas de Consejos de Salud */}
+      <Stack.Screen 
+        name="HealthTips" 
+        component={HealthTipsScreen}
+        options={{
+          transitionSpec: {
+            open: { 
+              animation: 'timing', 
+              config: { 
+                duration: 300 
+              } 
+            },
+            close: { 
+              animation: 'timing', 
+              config: { 
+                duration: 300 
+              } 
+            },
+          },
+          cardStyleInterpolator: ({ current: { progress } }) => ({
+            cardStyle: {
+              opacity: progress,
+            }
+          }),
+        }}
+      />
+      <Stack.Screen 
+        name="HealthTipDetail" 
+        component={HealthTipDetailScreen}
         options={{
           transitionSpec: {
             open: { 

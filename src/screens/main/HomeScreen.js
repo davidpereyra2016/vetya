@@ -346,11 +346,26 @@ const HomeScreen = ({ navigation }) => {
         <View style={[styles.sectionContainer, styles.lastSection]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Consejos de salud</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('HealthTips')}>
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.tipCard}>
+          <TouchableOpacity 
+            style={styles.tipCard}
+            onPress={() => navigation.navigate('HealthTipDetail', {
+              tip: {
+                id: '1',
+                title: 'Alimentación saludable para tu mascota',
+                description: 'Aprende cómo mejorar la dieta de tu mascota para una vida larga y feliz con los mejores consejos nutricionales.',
+                image: null,
+                petType: 'dog',
+                category: 'Nutrición',
+                author: 'Dr. Carlos Rodríguez',
+                date: '12 mayo, 2025',
+                readTime: '5 min'
+              }
+            })}
+          >
             <View style={styles.tipImageContainer}>
               <Ionicons name="nutrition" size={32} color="#1E88E5" />
             </View>
@@ -360,6 +375,36 @@ const HomeScreen = ({ navigation }) => {
               </Text>
               <Text style={styles.tipDescription}>
                 Aprende cómo mejorar la dieta de tu mascota para una vida larga y feliz.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#999" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tipCard, { marginTop: 15 }]}
+            onPress={() => navigation.navigate('HealthTipDetail', {
+              tip: {
+                id: '2',
+                title: 'Signos de alerta en la salud de tu mascota',
+                description: 'Conoce los síntomas que indican que debes llevar a tu mascota al veterinario inmediatamente.',
+                image: null,
+                petType: 'cat',
+                category: 'Cuidados Generales',
+                author: 'Dra. María Gómez',
+                date: '10 mayo, 2025',
+                readTime: '4 min'
+              }
+            })}
+          >
+            <View style={styles.tipImageContainer}>
+              <Ionicons name="alert-circle" size={32} color="#F44336" />
+            </View>
+            <View style={styles.tipContent}>
+              <Text style={styles.tipTitle}>
+                Signos de alerta en la salud de tu mascota
+              </Text>
+              <Text style={styles.tipDescription}>
+                Conoce los síntomas que indican que debes llevar a tu mascota al veterinario.
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#999" />
