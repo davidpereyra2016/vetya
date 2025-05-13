@@ -18,6 +18,7 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 // Pantallas principales
 import HomeScreen from '../screens/main/HomeScreen';
 import PetsScreen from '../screens/main/PetsScreen';
+import PetDetailScreen from '../screens/main/PetDetailScreen';
 import AppointmentsScreen from '../screens/main/AppointmentsScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 
@@ -86,6 +87,18 @@ function MainNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={MainTabsNavigator} />
+      <Stack.Screen 
+        name="PetDetailScreen" 
+        component={PetDetailScreen}
+        options={{
+          headerShown: false,
+          cardStyleInterpolator: ({ current }) => ({
+            cardStyle: {
+              opacity: current.progress,
+            },
+          }),
+        }}
+      />
       <Stack.Screen 
         name="EmergencyForm" 
         component={EmergencyFormScreen} 

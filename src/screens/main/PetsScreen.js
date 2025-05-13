@@ -253,7 +253,7 @@ const MemoizedAddPetModal = memo(({
   </Modal>
 ));
 
-const PetsScreen = () => {
+const PetsScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [petName, setPetName] = useState('');
   const [petType, setPetType] = useState('');
@@ -406,7 +406,10 @@ const PetsScreen = () => {
   }, [petName, petType, petAge, petBreed, petGender, isVaccinated, petWeight, specialNeeds, petColor, petTypes, pets]);
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.petCard}>
+    <TouchableOpacity 
+      style={styles.petCard}
+      onPress={() => navigation.navigate('PetDetailScreen', { pet: item })}
+    >
       <View style={styles.petImageContainer}>
         {item.image ? (
           <Image source={{ uri: item.image }} style={styles.petImage} />
@@ -436,9 +439,9 @@ const PetsScreen = () => {
           <Text style={styles.lastVisitText}>Última visita: {item.lastVisit}</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.moreButton}>
-        <Ionicons name="ellipsis-vertical" size={20} color="#888" />
-      </TouchableOpacity>
+      <View style={styles.chevronContainer}>
+        <Ionicons name="chevron-forward" size={20} color="#1E88E5" />
+      </View>
     </TouchableOpacity>
   );
 
