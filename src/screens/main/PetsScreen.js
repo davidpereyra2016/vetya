@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -8,7 +8,10 @@ import {
   Modal,
   TextInput,
   ScrollView, 
-  Image
+  Image,
+  Platform,
+  KeyboardAvoidingView,
+  Switch
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +22,63 @@ const PetsScreen = () => {
   const [petType, setPetType] = useState('');
   const [petAge, setPetAge] = useState('');
   const [petBreed, setPetBreed] = useState('');
+  const [petGender, setPetGender] = useState('');
+  const [isVaccinated, setIsVaccinated] = useState(false);
+  const [petWeight, setPetWeight] = useState('');
+  const [specialNeeds, setSpecialNeeds] = useState('');
+  const [petColor, setPetColor] = useState('');
+  const [showBreedSelector, setShowBreedSelector] = useState(false);
+
+  // Datos predefinidos para tipos de mascotas
+  const petTypes = [
+    { id: 'dog', name: 'Perro', icon: 'paw' },
+    { id: 'cat', name: 'Gato', icon: 'paw' },
+    { id: 'bird', name: 'Ave', icon: 'airplane' },
+    { id: 'fish', name: 'Pez', icon: 'fish' },
+    { id: 'rabbit', name: 'Conejo', icon: 'extension-puzzle' },
+    { id: 'rodent', name: 'Roedor', icon: 'ellipse' },
+    { id: 'reptile', name: 'Reptil', icon: 'leaf' },
+    { id: 'other', name: 'Otro', icon: 'paw' }
+  ];
+
+  // Datos predefinidos para razas según el tipo de mascota
+  const breedsByType = {
+    'Perro': [
+      'Labrador Retriever', 'Pastor Alemán', 'Bulldog', 'Golden Retriever', 
+      'Beagle', 'Poodle', 'Boxer', 'Chihuahua', 'Husky Siberiano', 
+      'Dálmata', 'Doberman', 'Gran Danés', 'Pitbull', 'Pug', 
+      'Rottweiler', 'Shih Tzu', 'Yorkshire Terrier', 'Otro'
+    ],
+    'Gato': [
+      'Siamés', 'Persa', 'Maine Coon', 'Bengalí', 'Sphynx', 
+      'Ragdoll', 'Británico de Pelo Corto', 'Abisinio', 'Azul Ruso', 
+      'Himalayo', 'Munchkin', 'Savannah', 'Siberiano', 'Otro'
+    ],
+    'Ave': [
+      'Periquito', 'Canario', 'Cacatúa', 'Loro', 'Agapornis', 
+      'Ninfa', 'Guacamayo', 'Jilguero', 'Diamante Mandarín', 'Otro'
+    ],
+    'Pez': [
+      'Guppy', 'Betta', 'Goldfish', 'Neón Tetra', 'Pez Ángel', 
+      'Pez Payaso', 'Pez Disco', 'Pez Koi', 'Otro'
+    ],
+    'Conejo': [
+      'Rex', 'Cabeza de León', 'Holandés', 'Mini Lop', 'Angora', 
+      'Californiano', 'Gigante de Flandes', 'Otro'
+    ],
+    'Roedor': [
+      'Hámster', 'Rata', 'Ratón', 'Cobaya', 'Jerbo', 'Chinchilla', 'Otro'
+    ],
+    'Reptil': [
+      'Iguana', 'Gecko', 'Tortuga', 'Camaleón', 'Serpiente', 'Dragón Barbudo', 'Otro'
+    ],
+    'Otro': ['No especificada']
+  };
+
+  // Obtener las razas disponibles según el tipo de mascota seleccionado
+  const availableBreeds = useMemo(() => {
+    return petType ? (breedsByType[petType] || []) : [];
+  }, [petType]);
 
   // Datos de ejemplo para las mascotas
   const [pets, setPets] = useState([
@@ -73,7 +133,7 @@ const PetsScreen = () => {
     }
   };
 
-  const addPet = () => {
+  const addPet = useCallback(() => {
     if (petName && petType && petAge) {
       const newPet = {
         id: Date.now().toString(),
@@ -81,21 +141,32 @@ const PetsScreen = () => {
         type: petType,
         breed: petBreed || 'No especificada',
         age: petAge,
+        gender: petGender || 'No especificado',
+        vaccinated: isVaccinated,
+        weight: petWeight || 'No especificado',
+        specialNeeds: specialNeeds || 'Ninguna',
+        color: petColor || 'No especificado',
         lastVisit: 'Sin visitas',
         image: null,
-        iconType: petType.toLowerCase()
+        iconType: petTypes.find(type => type.name === petType)?.id || 'other'
       };
       
       setPets([...pets, newPet]);
+      // Limpiar todos los campos
       setPetName('');
       setPetType('');
       setPetAge('');
       setPetBreed('');
+      setPetGender('');
+      setIsVaccinated(false);
+      setPetWeight('');
+      setSpecialNeeds('');
+      setPetColor('');
       setModalVisible(false);
     } else {
       alert('Por favor complete los campos requeridos');
     }
-  };
+  }, [petName, petType, petAge, petBreed, petGender, isVaccinated, petWeight, specialNeeds, petColor, petTypes, pets]);
 
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.petCard}>
@@ -111,7 +182,18 @@ const PetsScreen = () => {
       <View style={styles.petInfo}>
         <Text style={styles.petName}>{item.name}</Text>
         <Text style={styles.petDetails}>{item.type} • {item.breed}</Text>
-        <Text style={styles.petAge}>{item.age}</Text>
+        <Text style={styles.petAge}>{item.age}{item.gender ? ` • ${item.gender}` : ''}</Text>
+        
+        {/* Badges para características importantes */}
+        <View style={styles.badgesContainer}>
+          {item.vaccinated && (
+            <View style={styles.vaccinatedBadge}>
+              <Ionicons name="checkmark-circle" size={10} color="#fff" />
+              <Text style={styles.vaccinatedText}>Vacunado</Text>
+            </View>
+          )}
+        </View>
+        
         <View style={styles.lastVisitContainer}>
           <Ionicons name="calendar-outline" size={14} color="#888" />
           <Text style={styles.lastVisitText}>Última visita: {item.lastVisit}</Text>
@@ -123,6 +205,25 @@ const PetsScreen = () => {
     </TouchableOpacity>
   );
 
+  // Función para manejar la selección de tipo de mascota
+  const handleSelectPetType = useCallback((type) => {
+    setPetType(type.name);
+    setPetBreed(''); // Resetear la raza al cambiar el tipo
+    setShowBreedSelector(false);
+  }, []);
+
+  // Función para manejar la selección de raza
+  const handleSelectBreed = useCallback((breed) => {
+    setPetBreed(breed);
+    setShowBreedSelector(false);
+  }, []);
+
+  // Función para manejar la selección de género
+  const handleSelectGender = useCallback((gender) => {
+    setPetGender(gender);
+  }, []);
+
+  // Componente modal para agregar mascota
   const AddPetModal = () => (
     <Modal
       animationType="slide"
@@ -130,7 +231,10 @@ const PetsScreen = () => {
       visible={modalVisible}
       onRequestClose={() => setModalVisible(false)}
     >
-      <View style={styles.centeredView}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.centeredView}
+      >
         <View style={styles.modalView}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Agregar Mascota</Text>
@@ -142,6 +246,7 @@ const PetsScreen = () => {
           </View>
           
           <ScrollView style={styles.modalScrollView}>
+            {/* Nombre de mascota */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Nombre *</Text>
               <TextInput
@@ -152,26 +257,71 @@ const PetsScreen = () => {
               />
             </View>
             
+            {/* Tipo de mascota */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Tipo de mascota *</Text>
-              <TextInput
-                style={styles.input}
-                value={petType}
-                onChangeText={setPetType}
-                placeholder="Ej. Perro, Gato, Ave"
-              />
+              <View style={styles.selectorContainer}>
+                {petTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[styles.typeOption, petType === type.name && styles.selectedTypeOption]}
+                    onPress={() => handleSelectPetType(type)}
+                  >
+                    <View style={styles.typeOptionContent}>
+                      <Ionicons 
+                        name={type.icon} 
+                        size={18} 
+                        color={petType === type.name ? '#fff' : '#1E88E5'} 
+                      />
+                      <Text style={[styles.typeText, petType === type.name && styles.selectedTypeText]}>
+                        {type.name}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
             
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Raza</Text>
-              <TextInput
-                style={styles.input}
-                value={petBreed}
-                onChangeText={setPetBreed}
-                placeholder="Raza de tu mascota"
-              />
-            </View>
+            {/* Raza basada en el tipo de mascota */}
+            {petType && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Raza</Text>
+                <TouchableOpacity 
+                  style={styles.breedInput}
+                  onPress={() => setShowBreedSelector(!showBreedSelector)}
+                >
+                  {petBreed ? (
+                    <Text style={styles.breedSelectedText}>{petBreed}</Text>
+                  ) : (
+                    <Text style={styles.breedPlaceholder}>Selecciona una raza</Text>
+                  )}
+                  <Ionicons 
+                    name={showBreedSelector ? "chevron-up" : "chevron-down"} 
+                    size={18} 
+                    color="#666" 
+                  />
+                </TouchableOpacity>
+                
+                {/* Selector de razas */}
+                <View style={[styles.breedSelectorContainer, !showBreedSelector && styles.hiddenBreedSelector]}>
+                  <ScrollView style={styles.breedsScrollView}>
+                    {availableBreeds.map((breed, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[styles.breedOption, petBreed === breed && styles.selectedBreedOption]}
+                        onPress={() => handleSelectBreed(breed)}
+                      >
+                        <Text style={[styles.breedText, petBreed === breed && styles.selectedBreedText]}>
+                          {breed}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            )}
             
+            {/* Edad */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Edad *</Text>
               <TextInput
@@ -182,6 +332,87 @@ const PetsScreen = () => {
               />
             </View>
             
+            {/* Peso */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Peso (opcional)</Text>
+              <TextInput
+                style={styles.input}
+                value={petWeight}
+                onChangeText={setPetWeight}
+                placeholder="Ej. 5.2 kg"
+                keyboardType="numeric"
+              />
+            </View>
+            
+            {/* Color */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Color (opcional)</Text>
+              <TextInput
+                style={styles.input}
+                value={petColor}
+                onChangeText={setPetColor}
+                placeholder="Ej. Negro, Blanco, Marrón..."
+              />
+            </View>
+            
+            {/* Género */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Género</Text>
+              <View style={styles.genderContainer}>
+                <TouchableOpacity 
+                  style={[styles.genderOption, petGender === 'Macho' && styles.selectedGenderOption]}
+                  onPress={() => handleSelectGender('Macho')}
+                >
+                  <Ionicons 
+                    name="male" 
+                    size={20} 
+                    color={petGender === 'Macho' ? '#fff' : '#1E88E5'} 
+                  />
+                  <Text style={[styles.genderText, petGender === 'Macho' && styles.selectedGenderText]}>Macho</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.genderOption, petGender === 'Hembra' && styles.selectedGenderOption]}
+                  onPress={() => handleSelectGender('Hembra')}
+                >
+                  <Ionicons 
+                    name="female" 
+                    size={20} 
+                    color={petGender === 'Hembra' ? '#fff' : '#1E88E5'} 
+                  />
+                  <Text style={[styles.genderText, petGender === 'Hembra' && styles.selectedGenderText]}>Hembra</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {/* Vacunación */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Información adicional</Text>
+              <View style={styles.switchContainer}>
+                <Text style={styles.switchLabel}>¿Está vacunado?</Text>
+                <Switch
+                  value={isVaccinated}
+                  onValueChange={setIsVaccinated}
+                  trackColor={{ false: '#E0E0E0', true: '#a7d1f5' }}
+                  thumbColor={isVaccinated ? '#1E88E5' : '#f4f3f4'}
+                />
+              </View>
+            </View>
+            
+            {/* Necesidades especiales */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Necesidades especiales (opcional)</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={specialNeeds}
+                onChangeText={setSpecialNeeds}
+                placeholder="Describe cualquier necesidad especial o condición médica"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+            
+            {/* Foto */}
             <View style={styles.photoContainer}>
               <Text style={styles.photoText}>Agregar foto</Text>
               <TouchableOpacity style={styles.photoButton}>
@@ -189,6 +420,7 @@ const PetsScreen = () => {
               </TouchableOpacity>
             </View>
             
+            {/* Botón Guardar */}
             <TouchableOpacity
               style={styles.addButton}
               onPress={addPet}
@@ -197,7 +429,7 @@ const PetsScreen = () => {
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 
@@ -407,12 +639,163 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
+    height: 50,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+    paddingTop: 15,
+  },
+  selectorContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+  },
+  typeOption: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginRight: 10,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+  },
+  selectedTypeOption: {
+    backgroundColor: '#1E88E5',
+    borderColor: '#1E88E5',
+  },
+  typeOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  typeText: {
+    marginLeft: 5,
+    color: '#333',
+    fontWeight: '500',
+  },
+  selectedTypeText: {
+    color: '#fff',
+  },
+  breedInput: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  breedPlaceholder: {
+    color: '#999',
+    fontSize: 16,
+  },
+  breedSelectedText: {
+    color: '#333',
+    fontSize: 16,
+  },
+  breedSelectorContainer: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    marginTop: 5,
+    overflow: 'hidden',
+  },
+  hiddenBreedSelector: {
+    display: 'none',
+  },
+  breedsScrollView: {
+    maxHeight: 200,
+  },
+  breedOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  selectedBreedOption: {
+    backgroundColor: '#E3F2FD',
+  },
+  breedText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedBreedText: {
+    color: '#1E88E5',
+    fontWeight: '500',
+  },
+  genderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 10,
+  },
+  genderOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    width: '45%',
+    justifyContent: 'center',
+  },
+  selectedGenderOption: {
+    backgroundColor: '#1E88E5',
+  },
+  genderText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedGenderText: {
+    color: '#fff',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    height: 50,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+  },
+  switchLabel: {
+    fontSize: 16,
+    color: '#333',
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    marginTop: 5,
+    marginBottom: 5,
+  },
+  vaccinatedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 10,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  vaccinatedText: {
+    color: '#fff',
+    fontSize: 10,
+    marginLeft: 3,
+    fontWeight: '500',
   },
   photoContainer: {
     alignItems: 'center',
