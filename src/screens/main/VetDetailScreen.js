@@ -96,17 +96,23 @@ const VetDetailScreen = ({ route, navigation }) => {
       <View style={{flexDirection: 'row', alignItems: 'center'}}>
         {/* Estrellas completas */}
         {Array.from({ length: fullStars }).map((_, i) => (
-          <Ionicons key={`full-${i}`} name="star" size={size} color="#FFC107" />
+          <Text key={`full-${i}`}>
+            <Ionicons name="star" size={size} color="#FFC107" />
+          </Text>
         ))}
         
         {/* Media estrella si corresponde */}
         {halfStar && (
-          <Ionicons key="half" name="star-half" size={size} color="#FFC107" />
+          <Text key="half">
+            <Ionicons name="star-half" size={size} color="#FFC107" />
+          </Text>
         )}
         
         {/* Estrellas vacías */}
         {Array.from({ length: emptyStars }).map((_, i) => (
-          <Ionicons key={`empty-${i}`} name="star-outline" size={size} color="#FFC107" />
+          <Text key={`empty-${i}`}>
+            <Ionicons name="star-outline" size={size} color="#FFC107" />
+          </Text>
         ))}
       </View>
     );
@@ -121,12 +127,14 @@ const VetDetailScreen = ({ route, navigation }) => {
             key={star}
             onPress={() => setUserRating(star)}
           >
-            <Ionicons
-              name={userRating >= star ? "star" : "star-outline"}
-              size={36}
-              color="#FFC107"
-              style={styles.ratingStar}
-            />
+            <Text>
+              <Ionicons
+                name={userRating >= star ? "star" : "star-outline"}
+                size={36}
+                color="#FFC107"
+                style={styles.ratingStar}
+              />
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -141,7 +149,7 @@ const VetDetailScreen = ({ route, navigation }) => {
           style={styles.backButton} 
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Text><Ionicons name="arrow-back" size={24} color="#fff" /></Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Perfil de Veterinario</Text>
         <View style={{ width: 24 }} /> {/* Espacio para equilibrar el header */}
@@ -155,12 +163,12 @@ const VetDetailScreen = ({ route, navigation }) => {
               <Image source={{ uri: vet.image }} style={styles.vetImage} />
             ) : (
               <View style={styles.vetImagePlaceholder}>
-                <Ionicons name="person" size={60} color="#fff" />
+                <Text><Ionicons name="person" size={60} color="#fff" /></Text>
               </View>
             )}
             {vet.available && (
               <View style={styles.statusBadge}>
-                <Ionicons name="ellipse" size={12} color="#4CAF50" />
+                <Text><Ionicons name="ellipse" size={12} color="#4CAF50" /></Text>
               </View>
             )}
           </View>
@@ -186,11 +194,13 @@ const VetDetailScreen = ({ route, navigation }) => {
                 )
               }
             >
-              <Ionicons 
-                name="star" 
-                size={16} 
-                color={canRateVet ? "#fff" : "#aaa"} 
-              />
+              <Text>
+                <Ionicons 
+                  name="star" 
+                  size={16} 
+                  color={canRateVet ? "#fff" : "#aaa"} 
+                />
+              </Text>
               <Text style={[styles.rateButtonText, !canRateVet && styles.rateButtonTextDisabled]}>
                 Valorar
               </Text>
@@ -211,7 +221,7 @@ const VetDetailScreen = ({ route, navigation }) => {
             style={styles.scheduleButton}
             onPress={scheduleAppointment}
           >
-            <Ionicons name="calendar" size={20} color="#fff" />
+            <Text><Ionicons name="calendar" size={20} color="#fff" /></Text>
             <Text style={styles.scheduleButtonText}>Agendar Cita</Text>
           </TouchableOpacity>
         </View>
@@ -223,7 +233,7 @@ const VetDetailScreen = ({ route, navigation }) => {
           {/* Datos profesionales */}
           <View style={styles.infoRow}>
             <View style={styles.infoLabel}>
-              <Ionicons name="school-outline" size={20} color="#1E88E5" />
+              <Text><Ionicons name="school-outline" size={20} color="#1E88E5" /></Text>
               <Text style={styles.infoLabelText}>Número de Matrícula:</Text>
             </View>
             <Text style={styles.infoValue}>MP-{Math.floor(10000 + Math.random() * 90000)}</Text>
@@ -231,7 +241,7 @@ const VetDetailScreen = ({ route, navigation }) => {
 
           <View style={styles.infoRow}>
             <View style={styles.infoLabel}>
-              <Ionicons name="time-outline" size={20} color="#1E88E5" />
+              <Text><Ionicons name="time-outline" size={20} color="#1E88E5" /></Text>
               <Text style={styles.infoLabelText}>Experiencia:</Text>
             </View>
             <Text style={styles.infoValue}>{vet.experience}</Text>
@@ -239,7 +249,7 @@ const VetDetailScreen = ({ route, navigation }) => {
 
           <View style={styles.infoRow}>
             <View style={styles.infoLabel}>
-              <Ionicons name="people-outline" size={20} color="#1E88E5" />
+              <Text><Ionicons name="people-outline" size={20} color="#1E88E5" /></Text>
               <Text style={styles.infoLabelText}>Pacientes atendidos:</Text>
             </View>
             <Text style={styles.infoValue}>{vet.patients}</Text>
@@ -247,7 +257,7 @@ const VetDetailScreen = ({ route, navigation }) => {
 
           <View style={styles.infoRow}>
             <View style={styles.infoLabel}>
-              <Ionicons name="medical-outline" size={20} color="#1E88E5" />
+              <Text><Ionicons name="medical-outline" size={20} color="#1E88E5" /></Text>
               <Text style={styles.infoLabelText}>Especialidad:</Text>
             </View>
             <Text style={styles.infoValue}>{vet.specialty}</Text>
@@ -255,7 +265,7 @@ const VetDetailScreen = ({ route, navigation }) => {
 
           <View style={styles.infoRow}>
             <View style={styles.infoLabel}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#1E88E5" />
+              <Text><Ionicons name="checkmark-circle-outline" size={20} color="#1E88E5" /></Text>
               <Text style={styles.infoLabelText}>Disponibilidad:</Text>
             </View>
             <Text style={[styles.infoValue, vet.available ? styles.availableText : styles.unavailableText]}>
@@ -299,8 +309,8 @@ const VetDetailScreen = ({ route, navigation }) => {
             <View style={styles.reviewItem}>
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewUser}>
-                  <Ionicons name="person-circle" size={24} color="#1E88E5" />
-                  <Text style={styles.reviewUserName}>Laura M.</Text>
+                  <Text><Ionicons name="person-circle" size={24} color="#1E88E5" /></Text>
+                  <Text style={styles.reviewUserName}>Andrea D.</Text>
                 </View>
                 <View style={styles.reviewRating}>
                   <RatingStars rating={5} />
@@ -315,11 +325,11 @@ const VetDetailScreen = ({ route, navigation }) => {
             <View style={styles.reviewItem}>
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewUser}>
-                  <Ionicons name="person-circle" size={24} color="#1E88E5" />
-                  <Text style={styles.reviewUserName}>Carlos P.</Text>
+                  <Text><Ionicons name="person-circle" size={24} color="#1E88E5" /></Text>
+                  <Text style={styles.reviewUserName}>David P.</Text>
                 </View>
                 <View style={styles.reviewRating}>
-                  <RatingStars rating={4.5} />
+                  <RatingStars rating={5} />
                 </View>
               </View>
               <Text style={styles.reviewDate}>Hace 1 semana</Text>
@@ -343,7 +353,7 @@ const VetDetailScreen = ({ route, navigation }) => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Valorar Veterinario</Text>
               <TouchableOpacity onPress={() => setShowRatingModal(false)}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Text><Ionicons name="close" size={24} color="#666" /></Text>
               </TouchableOpacity>
             </View>
 

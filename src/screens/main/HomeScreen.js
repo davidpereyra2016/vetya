@@ -170,11 +170,15 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.vetTopSection}>
         <View style={styles.vetImageContainer}>
           <View style={[styles.vetImagePlaceholder, { backgroundColor: item.available ? '#4CAF50' : '#FFA000' }]}>
-            <Ionicons name="person" size={32} color="#fff" />
+            <Text>
+              <Ionicons name="person" size={32} color="#fff" />
+            </Text>
           </View>
           {item.available && (
             <View style={styles.statusBadge}>
-              <Ionicons name="ellipse" size={10} color="#4CAF50" />
+              <Text>
+                <Ionicons name="ellipse" size={10} color="#4CAF50" />
+              </Text>
             </View>
           )}
         </View>
@@ -182,7 +186,9 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.vetName}>{item.name}</Text>
           <Text style={styles.vetSpecialty}>{item.specialty}</Text>
           <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color="#FFC107" />
+            <Text>
+              <Ionicons name="star" size={16} color="#FFC107" />
+            </Text>
             <Text style={styles.ratingText}>{item.rating} ({item.reviews} reseñas)</Text>
           </View>
         </View>
@@ -190,11 +196,15 @@ const HomeScreen = ({ navigation }) => {
       
       <View style={styles.vetDetailSection}>
         <View style={styles.vetDetailItem}>
-          <Ionicons name="time-outline" size={14} color="#666" />
+          <Text>
+            <Ionicons name="time-outline" size={14} color="#666" />
+          </Text>
           <Text style={styles.vetDetailText}>{item.experience}</Text>
         </View>
         <View style={styles.vetDetailItem}>
-          <Ionicons name="people-outline" size={14} color="#666" />
+          <Text>
+            <Ionicons name="people-outline" size={14} color="#666" />
+          </Text>
           <Text style={styles.vetDetailText}>{item.patients} pacientes</Text>
         </View>
       </View>
@@ -223,7 +233,9 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.vetAvailableContent}>
         <View style={styles.vetImageContainer}>
           <View style={[styles.vetImagePlaceholder, { backgroundColor: '#4CAF50' }]}>
-            <Ionicons name="person" size={32} color="#fff" />
+            <Text>
+              <Ionicons name="person" size={32} color="#fff" />
+            </Text>
           </View>
         </View>
         
@@ -231,13 +243,20 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.vetName}>{item.name}</Text>
           <Text style={styles.vetSpecialty}>{item.specialty}</Text>
           <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color="#FFC107" />
+            <Text>
+              <Ionicons name="star" size={16} color="#FFC107" />
+            </Text>
             <Text style={styles.ratingText}>{item.rating}</Text>
           </View>
         </View>
         
-        <TouchableOpacity style={styles.contactButton}>
-          <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+        <TouchableOpacity 
+          style={styles.contactButton}
+          onPress={() => navigation.navigate('ChatScreen', { vet: item })}
+        >
+          <Text>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -262,7 +281,9 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
           <View style={styles.bannerImageContainer}>
-            <Ionicons name="paw" size={100} color="#fff" style={{ opacity: 0.3 }} />
+            <Text>
+              <Ionicons name="paw" size={100} color="#fff" style={{ opacity: 0.3 }} />
+            </Text>
           </View>
         </View>
 
@@ -290,7 +311,9 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.appointmentContainer}>
           <View style={styles.appointmentHeader}>
             <Text style={styles.appointmentTitle}>Tu próxima cita</Text>
-            <Ionicons name="calendar" size={24} color="#1E88E5" />
+            <Text>
+              <Ionicons name="calendar" size={24} color="#1E88E5" />
+            </Text>
           </View>
           <View style={styles.appointmentContent}>
             <View style={styles.appointmentInfo}>
@@ -309,7 +332,7 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Veterinarios disponibles</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('AllVetsScreen', { filter: 'available' })}>
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
           </View>
@@ -327,7 +350,7 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Veterinarios destacados</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('AllVetsScreen', { filter: 'featured' })}>
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
           </View>
