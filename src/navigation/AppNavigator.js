@@ -19,6 +19,7 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import HomeScreen from '../screens/main/HomeScreen';
 import PetsScreen from '../screens/main/PetsScreen';
 import PetDetailScreen from '../screens/main/PetDetailScreen';
+import VetDetailScreen from '../screens/main/VetDetailScreen';
 import AppointmentsScreen from '../screens/main/AppointmentsScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 
@@ -90,6 +91,18 @@ function MainNavigator() {
       <Stack.Screen 
         name="PetDetailScreen" 
         component={PetDetailScreen}
+        options={{
+          headerShown: false,
+          cardStyleInterpolator: ({ current }) => ({
+            cardStyle: {
+              opacity: current.progress,
+            },
+          }),
+        }}
+      />
+      <Stack.Screen 
+        name="VetDetailScreen" 
+        component={VetDetailScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({

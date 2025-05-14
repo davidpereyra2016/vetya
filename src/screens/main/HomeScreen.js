@@ -146,9 +146,9 @@ const HomeScreen = ({ navigation }) => {
     } else if (service.id === '1') { // Consulta General
       navigation.navigate('ConsultaGeneral');
     } else if (service.id === 'citas') {
-      navigation.navigate('Appointments');
+      navigation.navigate('Citas');
     } else if (service.id === 'mascotas') {
-      navigation.navigate('Pets');
+      navigation.navigate('Mascotas');
     } else {
       // Para otros servicios podríamos mostrar un mensaje o navegar a otras pantallas
       console.log(`Servicio seleccionado: ${service.title}`);
@@ -157,9 +157,8 @@ const HomeScreen = ({ navigation }) => {
 
   // Función para manejar la selección de un veterinario
   const handleVetPress = (vet) => {
-    // Aquí podríamos navegar a una pantalla de detalle del veterinario
-    alert(`Has seleccionado a ${vet.name}, especialista en ${vet.specialty}`);
-    // Implementación futura: navigation.navigate('VetDetail', { vet });
+    // Navegar a la pantalla de detalle del veterinario
+    navigation.navigate('VetDetailScreen', { vet });
   };
 
   // Renderizar cada veterinario destacado
@@ -309,7 +308,7 @@ const HomeScreen = ({ navigation }) => {
         {/* Veterinarios disponibles ahora */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Veterinarios disponibles ahora</Text>
+            <Text style={styles.sectionTitle}>Veterinarios disponibles</Text>
             <TouchableOpacity>
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
