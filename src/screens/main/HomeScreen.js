@@ -389,7 +389,9 @@ const HomeScreen = ({ navigation }) => {
             })}
           >
             <View style={styles.tipImageContainer}>
-              <Ionicons name="nutrition" size={32} color="#1E88E5" />
+              <Text>
+                <Ionicons name="nutrition" size={32} color="#1E88E5" />
+              </Text>
             </View>
             <View style={styles.tipContent}>
               <Text style={styles.tipTitle}>
@@ -399,7 +401,9 @@ const HomeScreen = ({ navigation }) => {
                 Aprende cómo mejorar la dieta de tu mascota para una vida larga y feliz.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+            <Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -419,7 +423,9 @@ const HomeScreen = ({ navigation }) => {
             })}
           >
             <View style={styles.tipImageContainer}>
-              <Ionicons name="alert-circle" size={32} color="#F44336" />
+              <Text>
+                <Ionicons name="alert-circle" size={32} color="#F44336" />
+              </Text>
             </View>
             <View style={styles.tipContent}>
               <Text style={styles.tipTitle}>
@@ -429,7 +435,9 @@ const HomeScreen = ({ navigation }) => {
                 Conoce los síntomas que indican que debes llevar a tu mascota al veterinario.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+            <Text>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

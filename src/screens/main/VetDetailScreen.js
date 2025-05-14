@@ -19,6 +19,10 @@ const VetDetailScreen = ({ route, navigation }) => {
   const [userRating, setUserRating] = useState(0);
   const [userComment, setUserComment] = useState('');
   
+  // Generar el número de matrícula una sola vez cuando se monta el componente
+  // Usando useRef para mantener un valor estable entre renderizados
+  const matriculaRef = React.useRef(`MP-${Math.floor(10000 + Math.random() * 90000)}`);
+  
   // Estado que determina si el usuario puede valorar al veterinario
   // En un entorno real, esto se cargaría desde el backend
   const [canRateVet, setCanRateVet] = useState(false);
@@ -102,7 +106,7 @@ const VetDetailScreen = ({ route, navigation }) => {
         ))}
         
         {/* Media estrella si corresponde */}
-        {halfStar && (
+        {Boolean(halfStar) && (
           <Text key="half">
             <Ionicons name="star-half" size={size} color="#FFC107" />
           </Text>
@@ -166,15 +170,18 @@ const VetDetailScreen = ({ route, navigation }) => {
                 <Text><Ionicons name="person" size={60} color="#fff" /></Text>
               </View>
             )}
-            {vet.available && (
+            {Boolean(vet.available) && (
               <View style={styles.statusBadge}>
                 <Text><Ionicons name="ellipse" size={12} color="#4CAF50" /></Text>
               </View>
             )}
           </View>
 
-          <Text style={styles.vetName}>{vet.name}</Text>
-          <Text style={styles.vetSpecialty}>{vet.specialty}</Text>
+          {/* <Text style={styles.vetName}>{vet.name}</Text> */}
+          <Text style={styles.vetName}>{String(vet.name)}</Text>
+
+          {/* <Text style={styles.vetSpecialty}>{vet.specialty}</Text> */}
+          <Text style={styles.vetSpecialty}>{String(vet.specialty)}</Text>
 
           <View style={styles.ratingSection}>
             <View style={styles.ratingContainer}>
@@ -236,7 +243,7 @@ const VetDetailScreen = ({ route, navigation }) => {
               <Text><Ionicons name="school-outline" size={20} color="#1E88E5" /></Text>
               <Text style={styles.infoLabelText}>Número de Matrícula:</Text>
             </View>
-            <Text style={styles.infoValue}>MP-{Math.floor(10000 + Math.random() * 90000)}</Text>
+            <Text style={styles.infoValue}>{matriculaRef.current}</Text>
           </View>
 
           <View style={styles.infoRow}>
