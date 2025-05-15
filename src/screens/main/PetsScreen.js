@@ -281,6 +281,7 @@ const PetsScreen = ({ navigation }) => {
   // Datos predefinidos para razas según el tipo de mascota
   const breedsByType = {
     'Perro': [
+      'Mestizo',
       'Labrador Retriever', 'Pastor Alemán', 'Bulldog', 'Golden Retriever', 
       'Beagle', 'Poodle', 'Boxer', 'Chihuahua', 'Husky Siberiano', 
       'Dálmata', 'Doberman', 'Gran Danés', 'Pitbull', 'Pug', 
