@@ -9,7 +9,8 @@ import {
   Modal,
   TextInput,
   Alert,
-  Platform
+  Platform,
+  KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -324,8 +325,12 @@ const VetDetailScreen = ({ route, navigation }) => {
         visible={showRatingModal}
         onRequestClose={() => setShowRatingModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Valorar Veterinario</Text>
               <TouchableOpacity onPress={() => setShowRatingModal(false)}>
@@ -346,8 +351,9 @@ const VetDetailScreen = ({ route, navigation }) => {
             <TouchableOpacity style={styles.submitButton} onPress={submitRating}>
               <Text style={styles.submitButtonText}>Enviar Valoración</Text>
             </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

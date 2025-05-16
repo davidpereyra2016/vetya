@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import usePetStore from '../../store/usePetStore';
 import {
   StyleSheet,
   Text,
@@ -11,20 +12,63 @@ import {
   TextInput,
   Switch,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 const PetDetailScreen = ({ route, navigation }) => {
-  const { pet } = route.params;
+  const { petId } = route.params;
+  const [pet, setPet] = useState(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [editedPet, setEditedPet] = useState({ ...pet });
+  const [editedPet, setEditedPet] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Cargar los detalles de la mascota cuando se monte el componente
+  useEffect(() => {
+    const loadPetDetails = async () => {
+      try {
+        setLoading(true);
+        const { fetchPetById } = usePetStore.getState();
+        const result = await fetchPetById(petId);
+        
+        if (result.success) {
+          setPet(result.data);
+          // Asegurarnos que todos los campos estén presentes para la edición
+          setEditedPet({
+            ...result.data,
+            nombre: result.data.nombre || '',
+            edad: result.data.edad || '',
+            peso: result.data.peso || '',
+            color: result.data.color || '',
+            tipo: result.data.tipo || '',
+            raza: result.data.raza || '',
+            genero: result.data.genero || '',
+            vacunado: result.data.vacunado || false,
+            necesidadesEspeciales: result.data.necesidadesEspeciales || ''
+          });
+        } else {
+          setError(result.error || 'Error al cargar los detalles de la mascota');
+        }
+      } catch (err) {
+        console.error('Error al cargar detalles de mascota:', err);
+        setError('Error al cargar los detalles de la mascota');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPetDetails();
+  }, [petId]);
 
   // Función para confirmar eliminación de mascota
   const confirmDeletePet = () => {
+    if (!pet) return;
+    
     Alert.alert(
       "Eliminar mascota",
-      `¿Estás seguro de que deseas eliminar a ${pet.name}?`,
+      `¿Estás seguro de que deseas eliminar a ${pet.nombre}?`,
       [
         {
           text: "Cancelar",
@@ -40,22 +84,48 @@ const PetDetailScreen = ({ route, navigation }) => {
   };
 
   // Función para eliminar mascota
-  const deletePet = () => {
-    // Aquí iría la lógica para eliminar la mascota del estado global
-    // Por ahora solo navegamos de vuelta
-    navigation.goBack();
-    // Agregar notificación de éxito
-    setTimeout(() => {
-      Alert.alert("Mascota eliminada", `${pet.name} ha sido eliminado correctamente.`);
-    }, 500);
+  const deletePet = async () => {
+    if (!pet) return;
+    
+    try {
+      const { deletePet } = usePetStore.getState();
+      const result = await deletePet(pet._id);
+      
+      if (result.success) {
+        navigation.goBack();
+        // Agregar notificación de éxito
+        setTimeout(() => {
+          Alert.alert("Mascota eliminada", `${pet.nombre} ha sido eliminado correctamente.`);
+        }, 500);
+      } else {
+        Alert.alert("Error", result.error || "No se pudo eliminar la mascota");
+      }
+    } catch (err) {
+      console.error('Error al eliminar mascota:', err);
+      Alert.alert("Error", "Ocurrió un error al eliminar la mascota");
+    }
   };
 
   // Función para guardar cambios de mascota
-  const savePetChanges = () => {
-    // Aquí iría la lógica para actualizar la mascota en el estado global
-    setIsEditModalVisible(false);
-    // Mostrar alerta de éxito
-    Alert.alert("Cambios guardados", "Los datos de la mascota se han actualizado correctamente.");
+  const savePetChanges = async () => {
+    if (!pet || !editedPet) return;
+    
+    try {
+      const { updatePet } = usePetStore.getState();
+      const result = await updatePet(pet._id, editedPet);
+      
+      if (result.success) {
+        setPet(result.data);
+        setIsEditModalVisible(false);
+        // Mostrar alerta de éxito
+        Alert.alert("Cambios guardados", "Los datos de la mascota se han actualizado correctamente.");
+      } else {
+        Alert.alert("Error", result.error || "No se pudieron guardar los cambios");
+      }
+    } catch (err) {
+      console.error('Error al actualizar mascota:', err);
+      Alert.alert("Error", "Ocurrió un error al guardar los cambios");
+    }
   };
 
   // Renderizar el ícono correspondiente para el tipo de mascota
@@ -88,6 +158,29 @@ const PetDetailScreen = ({ route, navigation }) => {
     }
   };
 
+  // Si está cargando, mostrar indicador de carga
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#1E88E5" />
+        <Text style={styles.loadingText}>Cargando detalles de la mascota...</Text>
+      </View>
+    );
+  }
+
+  // Si hay un error, mostrar mensaje de error
+  if (error || !pet) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Ionicons name="alert-circle" size={60} color="#F44336" />
+        <Text style={styles.errorText}>{error || 'No se encontró la mascota'}</Text>
+        <TouchableOpacity style={styles.backButtonError} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonErrorText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header con botón de volver y título */}
@@ -105,24 +198,24 @@ const PetDetailScreen = ({ route, navigation }) => {
         {/* Tarjeta principal con información básica */}
         <View style={styles.mainCard}>
           <View style={styles.petImageContainer}>
-            {pet.image ? (
-              <Image source={{ uri: pet.image }} style={styles.petImage} />
+            {pet.imagen ? (
+              <Image source={{ uri: pet.imagen }} style={styles.petImage} />
             ) : (
               <View style={styles.petIconContainer}>
-                {renderPetIcon(pet.type, 80)}
+                {renderPetIcon(pet.tipo, 80)}
               </View>
             )}
           </View>
           
-          <Text style={styles.petName}>{pet.name}</Text>
+          <Text style={styles.petName}>{pet.nombre}</Text>
           <View style={styles.petTypeContainer}>
-            <Text style={styles.petType}>{pet.type}</Text>
-            {pet.breed && pet.breed !== 'No especificada' && (
-              <Text style={styles.petBreed}>{pet.breed}</Text>
+            <Text style={styles.petType}>{pet.tipo}</Text>
+            {pet.raza && pet.raza !== 'No especificada' && (
+              <Text style={styles.petBreed}>{pet.raza}</Text>
             )}
           </View>
 
-          {pet.vaccinated && (
+          {pet.vacunado && (
             <View style={styles.vaccinatedBadge}>
               <Ionicons name="checkmark-circle" size={12} color="#fff" />
               <Text style={styles.vaccinatedText}>Vacunado</Text>
@@ -139,34 +232,34 @@ const PetDetailScreen = ({ route, navigation }) => {
               <Ionicons name="calendar-outline" size={20} color="#1E88E5" />
               <Text style={styles.infoLabel}>Edad:</Text>
             </View>
-            <Text style={styles.infoValue}>{pet.age}</Text>
+            <Text style={styles.infoValue}>{pet.edad}</Text>
           </View>
           
           <View style={styles.infoRow}>
             <View style={styles.infoLabelContainer}>
-              {pet.gender === 'Macho' ? (
+              {pet.genero === 'Macho' ? (
                 <Ionicons name="male" size={20} color="#1E88E5" />
-              ) : pet.gender === 'Hembra' ? (
+              ) : pet.genero === 'Hembra' ? (
                 <Ionicons name="female" size={20} color="#E91E63" />
               ) : (
                 <Ionicons name="help-circle-outline" size={20} color="#888" />
               )}
               <Text style={styles.infoLabel}>Género:</Text>
             </View>
-            <Text style={styles.infoValue}>{pet.gender || 'No especificado'}</Text>
+            <Text style={styles.infoValue}>{pet.genero || 'No especificado'}</Text>
           </View>
           
-          {pet.weight && pet.weight !== 'No especificado' && (
+          {pet.peso && pet.peso !== '' && (
             <View style={styles.infoRow}>
               <View style={styles.infoLabelContainer}>
                 <MaterialCommunityIcons name="weight" size={20} color="#1E88E5" />
                 <Text style={styles.infoLabel}>Peso:</Text>
               </View>
-              <Text style={styles.infoValue}>{pet.weight}</Text>
+              <Text style={styles.infoValue}>{pet.peso}</Text>
             </View>
           )}
           
-          {pet.color && pet.color !== 'No especificado' && (
+          {pet.color && pet.color !== '' && (
             <View style={styles.infoRow}>
               <View style={styles.infoLabelContainer}>
                 <MaterialCommunityIcons name="palette" size={20} color="#1E88E5" />
@@ -181,8 +274,8 @@ const PetDetailScreen = ({ route, navigation }) => {
               <Ionicons name="medkit-outline" size={20} color="#1E88E5" />
               <Text style={styles.infoLabel}>Vacunado:</Text>
             </View>
-            <Text style={[styles.infoValue, pet.vaccinated ? styles.vaccinated : styles.notVaccinated]}>
-              {pet.vaccinated ? 'Sí' : 'No'}
+            <Text style={[styles.infoValue, pet.vacunado ? styles.vaccinated : styles.notVaccinated]}>
+              {pet.vacunado ? 'Sí' : 'No'}
             </Text>
           </View>
           
@@ -191,15 +284,15 @@ const PetDetailScreen = ({ route, navigation }) => {
               <Ionicons name="time-outline" size={20} color="#1E88E5" />
               <Text style={styles.infoLabel}>Última visita:</Text>
             </View>
-            <Text style={styles.infoValue}>{pet.lastVisit}</Text>
+            <Text style={styles.infoValue}>{pet.ultimaVisita ? new Date(pet.ultimaVisita).toLocaleDateString() : 'Sin visitas'}</Text>
           </View>
         </View>
 
         {/* Tarjeta de necesidades especiales si existen */}
-        {pet.specialNeeds && pet.specialNeeds !== 'Ninguna' && (
+        {pet.necesidadesEspeciales && pet.necesidadesEspeciales !== '' && (
           <View style={styles.specialNeedsCard}>
             <Text style={styles.infoCardTitle}>Necesidades Especiales</Text>
-            <Text style={styles.specialNeedsText}>{pet.specialNeeds}</Text>
+            <Text style={styles.specialNeedsText}>{pet.necesidadesEspeciales}</Text>
           </View>
         )}
 
@@ -237,8 +330,8 @@ const PetDetailScreen = ({ route, navigation }) => {
                 <Text style={styles.inputLabel}>Nombre *</Text>
                 <TextInput
                   style={styles.input}
-                  value={editedPet.name}
-                  onChangeText={(text) => setEditedPet({...editedPet, name: text})}
+                  value={editedPet.nombre}
+                  onChangeText={(text) => setEditedPet({...editedPet, nombre: text})}
                   placeholder="Nombre de la mascota"
                 />
               </View>
@@ -247,8 +340,8 @@ const PetDetailScreen = ({ route, navigation }) => {
                 <Text style={styles.inputLabel}>Edad *</Text>
                 <TextInput
                   style={styles.input}
-                  value={editedPet.age}
-                  onChangeText={(text) => setEditedPet({...editedPet, age: text})}
+                  value={editedPet.edad}
+                  onChangeText={(text) => setEditedPet({...editedPet, edad: text})}
                   placeholder="Ej: 2 años"
                 />
               </View>
@@ -257,8 +350,8 @@ const PetDetailScreen = ({ route, navigation }) => {
                 <Text style={styles.inputLabel}>Peso</Text>
                 <TextInput
                   style={styles.input}
-                  value={editedPet.weight === 'No especificado' ? '' : editedPet.weight}
-                  onChangeText={(text) => setEditedPet({...editedPet, weight: text || 'No especificado'})}
+                  value={editedPet.peso === 'No especificado' ? '' : editedPet.peso}
+                  onChangeText={(text) => setEditedPet({...editedPet, peso: text || 'No especificado'})}
                   placeholder="Ej: 5.2 kg"
                   keyboardType="numeric"
                 />
@@ -274,13 +367,13 @@ const PetDetailScreen = ({ route, navigation }) => {
                 />
               </View>
               
-              <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>¿Está vacunado?</Text>
+              <View style={styles.switchGroup}>
+                <Text style={styles.inputLabel}>¿Está vacunado?</Text>
                 <Switch
-                  value={editedPet.vaccinated}
-                  onValueChange={(value) => setEditedPet({...editedPet, vaccinated: value})}
+                  value={editedPet.vacunado}
+                  onValueChange={(value) => setEditedPet({...editedPet, vacunado: value})}
                   trackColor={{ false: '#E0E0E0', true: '#a7d1f5' }}
-                  thumbColor={editedPet.vaccinated ? '#1E88E5' : '#f4f3f4'}
+                  thumbColor={editedPet.vacunado ? '#1E88E5' : '#f4f3f4'}
                 />
               </View>
               
@@ -288,12 +381,13 @@ const PetDetailScreen = ({ route, navigation }) => {
                 <Text style={styles.inputLabel}>Necesidades especiales</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
-                  value={editedPet.specialNeeds === 'Ninguna' ? '' : editedPet.specialNeeds}
-                  onChangeText={(text) => setEditedPet({...editedPet, specialNeeds: text || 'Ninguna'})}
+                  value={editedPet.necesidadesEspeciales === 'Ninguna' ? '' : editedPet.necesidadesEspeciales}
+                  onChangeText={(text) => setEditedPet({...editedPet, necesidadesEspeciales: text || 'Ninguna'})}
                   placeholder="Describe cualquier necesidad especial o condición médica"
                   multiline
                   numberOfLines={4}
                 />
+
               </View>
               
               <TouchableOpacity

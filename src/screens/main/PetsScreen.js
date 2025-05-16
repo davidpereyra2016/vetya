@@ -1,4 +1,7 @@
-import React, { useState, useCallback, useMemo, memo } from 'react';
+import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import usePetStore from '../../store/usePetStore';
+import { mascotaService } from '../../services/api';
 import { 
   StyleSheet, 
   Text, 
@@ -12,7 +15,8 @@ import {
   Platform,
   KeyboardAvoidingView,
   Switch,
-  StatusBar
+  StatusBar,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -43,7 +47,9 @@ const MemoizedAddPetModal = memo(({
   handleSelectPetType,
   handleSelectBreed,
   handleSelectGender,
-  addPet
+  addPet,
+  petImage,
+  handleSelectImage
 }) => (
   <Modal
     animationType="slide"
@@ -235,8 +241,18 @@ const MemoizedAddPetModal = memo(({
           {/* Foto */}
           <View style={styles.photoContainer}>
             <Text style={styles.photoText}>Agregar foto</Text>
-            <TouchableOpacity style={styles.photoButton}>
-              <Ionicons name="camera" size={28} color="#1E88E5" />
+            <TouchableOpacity 
+              style={styles.photoButton}
+              onPress={handleSelectImage}
+            >
+              {petImage ? (
+                <Image 
+                  source={{ uri: petImage.uri }} 
+                  style={styles.petImagePreview} 
+                />
+              ) : (
+                <Ionicons name="camera" size={28} color="#1E88E5" />
+              )}
             </TouchableOpacity>
           </View>
           
@@ -254,16 +270,23 @@ const MemoizedAddPetModal = memo(({
 ));
 
 const PetsScreen = ({ navigation }) => {
+  // Estados desde el store de Zustand
+  const { pets, isLoading, error, fetchPets } = usePetStore();
+  
+  // Estados locales para el formulario y UI
   const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedPetType, setSelectedPetType] = useState('all');
   const [petName, setPetName] = useState('');
-  const [petType, setPetType] = useState('');
+  const [petType, setPetType] = useState('Perro');
   const [petAge, setPetAge] = useState('');
   const [petBreed, setPetBreed] = useState('');
-  const [petGender, setPetGender] = useState('');
+  const [petGender, setPetGender] = useState('Macho');
   const [isVaccinated, setIsVaccinated] = useState(false);
   const [petWeight, setPetWeight] = useState('');
   const [specialNeeds, setSpecialNeeds] = useState('');
   const [petColor, setPetColor] = useState('');
+  const [petImage, setPetImage] = useState(null);
   const [showBreedSelector, setShowBreedSelector] = useState(false);
 
   // Datos predefinidos para tipos de mascotas
@@ -318,116 +341,125 @@ const PetsScreen = ({ navigation }) => {
     return petType ? (breedsByType[petType] || []) : [];
   }, [petType]);
 
-  // Datos de ejemplo para las mascotas
-  const [pets, setPets] = useState([
-    {
-      id: '1',
-      name: 'Max',
-      type: 'Perro',
-      breed: 'Golden Retriever',
-      age: '3 años',
-      lastVisit: '10/04/2025',
-      image: null,
-      iconType: 'dog'
-    },
-    {
-      id: '2',
-      name: 'Luna',
-      type: 'Gato',
-      breed: 'Siamés',
-      age: '2 años',
-      lastVisit: '25/04/2025',
-      image: null,
-      iconType: 'cat'
-    },
-    {
-      id: '3',
-      name: 'Rocky',
-      type: 'Perro',
-      breed: 'Bulldog',
-      age: '5 años',
-      lastVisit: '03/05/2025',
-      image: null,
-      iconType: 'dog'
-    }
-  ]);
+  // Filtrar mascotas por tipo
+  const filteredPets = useMemo(() => {
+    if (!pets) return [];
+    if (selectedPetType === 'all') return pets;
+    return pets.filter(pet => pet.tipo === selectedPetType);
+  }, [pets, selectedPetType]);
 
-  const renderPetIcon = (type) => {
-    switch (type.toLowerCase()) {
-      case 'perro':
-      case 'dog':
-        return <Ionicons name="paw" size={40} color="#1E88E5" />;
-      case 'gato':
-      case 'cat':
-        return <Ionicons name="paw" size={40} color="#42A5F5" />;
-      case 'ave':
-      case 'bird':
-        return <Ionicons name="airplane" size={40} color="#64B5F6" />;
-      case 'pez':
-      case 'fish':
-        return <Ionicons name="fish" size={40} color="#2196F3" />;
-      default:
-        return <Ionicons name="paw" size={40} color="#90CAF9" />;
+  // Cargar mascotas al montar el componente
+  useEffect(() => {
+    loadPets();
+  }, []);
+
+  // Función para cargar las mascotas del usuario
+  const loadPets = async () => {
+    await fetchPets();
+  };
+
+  // Función para manejar el pull-to-refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadPets();
+    setRefreshing(false);
+  }, []);
+
+  // Función para seleccionar imagen de mascota
+  const handleSelectImage = async () => {
+    try {
+      const result = await mascotaService.pickPetImage();
+      if (result.success) {
+        setPetImage(result.data);
+      } else {
+        alert(result.error);
+      }
+    } catch (error) {
+      console.error('Error al seleccionar imagen:', error);
+      alert('No se pudo seleccionar la imagen');
     }
   };
 
-  const addPet = useCallback(() => {
-    if (petName && petType && petAge) {
-      const newPet = {
-        id: Date.now().toString(),
-        name: petName,
-        type: petType,
-        breed: petBreed || 'No especificada',
-        age: petAge,
-        gender: petGender || 'No especificado',
-        vaccinated: isVaccinated,
-        weight: petWeight || 'No especificado',
-        specialNeeds: specialNeeds || 'Ninguna',
-        color: petColor || 'No especificado',
-        lastVisit: 'Sin visitas',
-        image: null,
-        iconType: petTypes.find(type => type.name === petType)?.id || 'other'
-      };
-      
-      setPets([...pets, newPet]);
-      // Limpiar todos los campos
-      setPetName('');
-      setPetType('');
-      setPetAge('');
-      setPetBreed('');
-      setPetGender('');
-      setIsVaccinated(false);
-      setPetWeight('');
-      setSpecialNeeds('');
-      setPetColor('');
-      setModalVisible(false);
-    } else {
-      alert('Por favor complete los campos requeridos');
+  // Función para agregar nueva mascota con Zustand
+  const addPet = useCallback(async () => {
+    if (!petName.trim()) {
+      alert('Por favor ingresa el nombre de tu mascota');
+      return;
     }
-  }, [petName, petType, petAge, petBreed, petGender, isVaccinated, petWeight, specialNeeds, petColor, petTypes, pets]);
+    
+    if (!petType) {
+      alert('Por favor selecciona el tipo de mascota');
+      return;
+    }
+    
+    if (!petAge.trim()) {
+      alert('Por favor ingresa la edad de tu mascota');
+      return;
+    }
+    
+    // Preparar datos de la mascota
+    const mascotaData = {
+      nombre: petName,
+      tipo: petType,
+      raza: petBreed || 'No especificada',
+      edad: petAge,
+      genero: petGender || 'No especificado',
+      color: petColor || '',
+      peso: petWeight || '',
+      necesidadesEspeciales: specialNeeds || '',
+      vacunado: isVaccinated,
+      imagen: petImage?.base64 || ''
+    };
+    
+    // Usar el store para agregar la mascota
+    const { createPet } = usePetStore.getState();
+    const result = await createPet(mascotaData);
+    
+    if (result.success) {
+      setModalVisible(false);
+      resetForm();  // Reiniciar formulario
+    } else {
+      alert(result.error || 'Error al agregar mascota');
+    }
+  }, [petName, petType, petAge, petBreed, petGender, isVaccinated, petWeight, specialNeeds, petColor, petImage]);
+  
+  // Reiniciar formulario
+  const resetForm = () => {
+    setPetName('');
+    setPetType('Perro');
+    setPetBreed('');
+    setPetAge('');
+    setPetGender('Macho');
+    setPetColor('');
+    setPetWeight('');
+    setSpecialNeeds('');
+    setIsVaccinated(false);
+    setPetImage(null);
+  };
 
+  // Renderizar cada mascota con datos del backend
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.petCard}
-      onPress={() => navigation.navigate('PetDetailScreen', { pet: item })}
+      onPress={() => navigation.navigate('PetDetailScreen', { petId: item._id })}
     >
       <View style={styles.petImageContainer}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.petImage} />
+        {item.imagen ? (
+          <Image source={{ uri: item.imagen }} style={styles.petImage} />
         ) : (
           <View style={styles.petIconContainer}>
-            {renderPetIcon(item.iconType)}
+            <Ionicons name="paw" size={40} color="#1E88E5" />
           </View>
         )}
       </View>
       <View style={styles.petInfo}>
-        <Text style={styles.petName}>{item.name}</Text>
-        <Text style={styles.petDetails}>{item.type} • {item.breed}</Text>
-        <Text style={styles.petAge}>{item.age}{item.gender ? ` • ${item.gender}` : ''}</Text>
+        <Text style={styles.petName}>{item.nombre}</Text>
+        <Text style={styles.petDetails}>{item.tipo} • {item.raza}</Text>
+        <Text style={styles.petAge}>{item.edad}{item.genero ? ` • ${item.genero}` : ''}</Text>
         
         {/* Badges para características importantes */}
         <View style={styles.badgesContainer}>
-          {item.vaccinated && (
+          {item.vacunado && (
             <View style={styles.vaccinatedBadge}>
               <Ionicons name="checkmark-circle" size={10} color="#fff" />
               <Text style={styles.vaccinatedText}>Vacunado</Text>
@@ -437,7 +469,7 @@ const PetsScreen = ({ navigation }) => {
         
         <View style={styles.lastVisitContainer}>
           <Ionicons name="calendar-outline" size={14} color="#888" />
-          <Text style={styles.lastVisitText}>Última visita: {item.lastVisit}</Text>
+          <Text style={styles.lastVisitText}>Última visita: {item.ultimaVisita ? new Date(item.ultimaVisita).toLocaleDateString() : 'Sin visitas'}</Text>
         </View>
       </View>
       <View style={styles.chevronContainer}>
@@ -446,11 +478,16 @@ const PetsScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  // Función para manejar la selección de tipo de mascota
+  // Función para manejar la selección de tipo de mascota en el modal
   const handleSelectPetType = useCallback((type) => {
     setPetType(type.name);
     setPetBreed(''); // Resetear la raza al cambiar el tipo
     setShowBreedSelector(false);
+  }, []);
+
+  // Función para manejar la selección de filtro por tipo de mascota
+  const handleFilterByType = useCallback((typeValue) => {
+    setSelectedPetType(typeValue);
   }, []);
 
   // Función para manejar la selección de raza
@@ -477,12 +514,28 @@ const PetsScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       
-      {pets.length > 0 ? (
+      {/* Mostrar loader mientras se cargan las mascotas */}
+      {isLoading ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#1E88E5" />
+          <Text style={styles.loaderText}>Cargando mascotas...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={60} color="#F44336" style={styles.errorIcon} />
+          <Text style={styles.errorText}>Error al cargar mascotas</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadPets}>
+            <Text style={styles.retryText}>Intentar nuevamente</Text>
+          </TouchableOpacity>
+        </View>
+      ) : filteredPets.length > 0 ? (
         <FlatList
-          data={pets}
+          data={filteredPets}
           renderItem={renderItem}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item._id}
           contentContainerStyle={styles.listContent}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -525,6 +578,8 @@ const PetsScreen = ({ navigation }) => {
         handleSelectBreed={handleSelectBreed}
         handleSelectGender={handleSelectGender}
         addPet={addPet}
+        petImage={petImage}
+        handleSelectImage={handleSelectImage}
       />
     </View>
   );

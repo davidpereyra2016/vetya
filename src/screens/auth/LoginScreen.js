@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -9,21 +9,35 @@ import {
   ScrollView,
   SafeAreaView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '../../context/AuthContext';
+import useAuthStore from '../../store/useAuthStore';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useContext(AuthContext);
+  
+  // Usar la tienda de Zustand en lugar del contexto
+  const login = useAuthStore(state => state.login);
+  const isLoading = useAuthStore(state => state.isLoading);
+  const error = useAuthStore(state => state.error);
+  const clearError = useAuthStore(state => state.clearError);
 
-  const handleLogin = () => {
-    if (email && password) {
-      login(email, password);
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Por favor ingresa tu correo y contraseña');
+      return;
+    }
+    
+    clearError(); // Limpiar errores anteriores
+    const result = await login(email, password);
+    
+    if (!result.success) {
+      Alert.alert('Error de inicio de sesión', result.error || 'No se pudo iniciar sesión');
     }
   };
 
@@ -82,11 +96,18 @@ const LoginScreen = ({ navigation }) => {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.loginButton}
+              style={styles.loginButton} 
               onPress={handleLogin}
+              disabled={isLoading}
             >
-              <Text style={styles.loginButtonText}>Ingresar</Text>
+              <Text style={styles.loginButtonText}>
+                {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              </Text>
             </TouchableOpacity>
+            
+            {error ? (
+              <Text style={styles.errorText}>{error}</Text>
+            ) : null}
             
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>¿No tienes una cuenta? </Text>
@@ -102,6 +123,13 @@ const LoginScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // Estilo para mensajes de error
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    marginTop: 10,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',

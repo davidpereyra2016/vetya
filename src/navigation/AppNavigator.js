@@ -1,12 +1,12 @@
-import React, { useContext } from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, View } from 'react-native';
 
-// Contexto de autenticación
-import { AuthContext } from '../context/AuthContext';
+// Estado global con Zustand
+import useAuthStore from '../store/useAuthStore';
 
 // Pantallas de autenticación
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -22,6 +22,10 @@ import PetDetailScreen from '../screens/main/PetDetailScreen';
 import VetDetailScreen from '../screens/main/VetDetailScreen';
 import AppointmentsScreen from '../screens/main/AppointmentsScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
+
+// Pantallas de perfil
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
 
 // Pantallas de emergencia
 import EmergencyFormScreen from '../screens/main/EmergencyFormScreen';
@@ -112,6 +116,32 @@ function MainNavigator() {
           }),
         }}
       />
+      {/* Pantallas de perfil */}
+      <Stack.Screen 
+        name="EditProfile" 
+        component={EditProfileScreen} 
+        options={{
+          headerShown: false,
+          cardStyleInterpolator: ({ current }) => ({
+            cardStyle: {
+              opacity: current.progress,
+            },
+          }),
+        }}
+      />
+      <Stack.Screen 
+        name="ChangePassword" 
+        component={ChangePasswordScreen} 
+        options={{
+          headerShown: false,
+          cardStyleInterpolator: ({ current }) => ({
+            cardStyle: {
+              opacity: current.progress,
+            },
+          }),
+        }}
+      />
+      
       <Stack.Screen 
         name="EmergencyForm" 
         component={EmergencyFormScreen} 
@@ -372,7 +402,16 @@ function OnboardingNavigator() {
 
 // Componente principal que controla toda la navegación
 function AppNavigator() {
-  const { isLoading, userToken, isFirstTime } = useContext(AuthContext);
+  // Usar Zustand para el estado de autenticación
+  const isLoading = useAuthStore(state => state.isLoading);
+  const token = useAuthStore(state => state.token);
+  const isFirstTime = useAuthStore(state => state.isFirstTime);
+  const checkAuth = useAuthStore(state => state.checkAuth);
+  
+  // Verificar autenticación al iniciar
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   if (isLoading) {
     return (
@@ -384,7 +423,7 @@ function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {userToken === null ? (
+      {token === null ? (
         <AuthNavigator />
       ) : isFirstTime ? (
         <OnboardingNavigator />

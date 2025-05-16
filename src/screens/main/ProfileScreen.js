@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -9,12 +9,38 @@ import {
   Switch,
   Alert
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '../../context/AuthContext';
+import useAuthStore from '../../store/useAuthStore';
+import { userService } from '../../services/api';
+import { useEffect } from 'react';
+import axios from 'axios';
 
-const ProfileScreen = () => {
-  const { logout, userInfo } = useContext(AuthContext);
+const ProfileScreen = (props) => {
+  // Usar el hook useNavigation para asegurar que siempre tengamos acceso a navigation
+  const navigation = useNavigation();
+  
+  // Usar Zustand en lugar de AuthContext
+  const user = useAuthStore(state => state.user);
+  const logout = useAuthStore(state => state.logout);
+  const updateUser = useAuthStore(state => state.updateUser);
+  
+  // Cargar datos del perfil cuando se monta el componente
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const result = await userService.getProfile();
+        if (result.success) {
+          updateUser(result.data);
+        }
+      } catch (error) {
+        console.log('Error al cargar perfil:', error);
+      }
+    };
+    
+    loadUserProfile();
+  }, []);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
 
@@ -44,24 +70,35 @@ const ProfileScreen = () => {
         <View style={styles.header}>
           <View style={styles.userInfoContainer}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>
-                  {userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : "U"}
-                </Text>
-              </View>
+              {user?.profilePicture ? (
+                <Image 
+                  source={{ uri: user.profilePicture }} 
+                  style={styles.profileImage} 
+                  onError={() => console.log('Error cargando imagen:', user.profilePicture)}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarText}>
+                    {user?.username ? user.username.charAt(0).toUpperCase() : "U"}
+                  </Text>
+                </View>
+              )}
               <TouchableOpacity style={styles.editAvatarButton}>
                 <Ionicons name="camera" size={18} color="#fff" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.userName}>{userInfo?.name || "Usuario"}</Text>
-            <Text style={styles.userEmail}>{userInfo?.email || "usuario@ejemplo.com"}</Text>
+            <Text style={styles.userName}>{user?.username || 'Usuario'}</Text>
+            <Text style={styles.userEmail}>{user?.email || 'usuario@example.com'}</Text>
           </View>
         </View>
 
         {/* Sección de cuenta */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mi cuenta</Text>
-          <TouchableOpacity style={styles.optionItem}>
+          <TouchableOpacity 
+            style={styles.optionItem}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
             <View style={styles.optionIconContainer}>
               <Ionicons name="person-outline" size={22} color="#1E88E5" />
             </View>
@@ -70,7 +107,10 @@ const ProfileScreen = () => {
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
+          <TouchableOpacity 
+            style={styles.optionItem}
+            onPress={() => navigation.navigate('ChangePassword')}
+          >
             <View style={styles.optionIconContainer}>
               <Ionicons name="key-outline" size={22} color="#1E88E5" />
             </View>
@@ -208,12 +248,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#fff',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#1E88E5',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarText: {
     fontSize: 40,

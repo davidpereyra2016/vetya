@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -8,11 +8,12 @@ import {
   ScrollView,
   SafeAreaView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '../../context/AuthContext';
+import useAuthStore from '../../store/useAuthStore';
 
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -21,17 +22,30 @@ const RegisterScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register } = useContext(AuthContext);
+  
+  // Usar la tienda de Zustand en lugar del contexto
+  const register = useAuthStore(state => state.register);
+  const isLoading = useAuthStore(state => state.isLoading);
+  const error = useAuthStore(state => state.error);
+  const clearError = useAuthStore(state => state.clearError);
 
-  const handleRegister = () => {
-    if (name && email && password && confirmPassword) {
-      if (password !== confirmPassword) {
-        alert('Las contraseñas no coinciden');
-        return;
-      }
-      register(name, email, password);
-    } else {
-      alert('Por favor complete todos los campos');
+  const handleRegister = async () => {
+    clearError(); // Limpiar errores anteriores
+    
+    if (!name || !email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Por favor complete todos los campos');
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden');
+      return;
+    }
+    
+    const result = await register(name, email, password, confirmPassword);
+    
+    if (!result.success) {
+      Alert.alert('Error de registro', result.error || 'No se pudo completar el registro');
     }
   };
 
@@ -125,11 +139,18 @@ const RegisterScreen = ({ navigation }) => {
             </View>
             
             <TouchableOpacity 
-              style={styles.registerButton}
+              style={styles.registerButton} 
               onPress={handleRegister}
+              disabled={isLoading}
             >
-              <Text style={styles.registerButtonText}>Registrarme</Text>
+              <Text style={styles.registerButtonText}>
+                {isLoading ? 'Registrando...' : 'Registrarse'}
+              </Text>
             </TouchableOpacity>
+            
+            {error ? (
+              <Text style={styles.errorText}>{error}</Text>
+            ) : null}
             
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>¿Ya tienes una cuenta? </Text>
@@ -145,6 +166,13 @@ const RegisterScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  // Estilo para mensajes de error
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    marginTop: 10,
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',

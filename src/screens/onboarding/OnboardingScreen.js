@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -11,12 +11,13 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import { AuthContext } from '../../context/AuthContext';
+import useAuthStore from '../../store/useAuthStore';
 
 const { width, height } = Dimensions.get('window');
 
 const OnboardingScreen = () => {
-  const { setIsFirstTime } = useContext(AuthContext);
+  // Usar Zustand en lugar de AuthContext
+  const setIsFirstTime = useAuthStore(state => state.setIsFirstTime);
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const slidesRef = useRef(null);
