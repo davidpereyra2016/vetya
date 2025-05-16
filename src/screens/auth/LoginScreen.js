@@ -50,9 +50,9 @@ const LoginScreen = ({ navigation }) => {
       >
         <ScrollView contentContainerStyle={styles.scrollView}>
           <View style={styles.logoContainer}>
-            <Ionicons name="paw" size={80} color="#1E88E5" />
-            <Text style={styles.logoText}>VetYa</Text>
-            <Text style={styles.tagline}>Veterinaria a Domicilio</Text>
+            <Ionicons name="medkit" size={80} color="#1E88E5" />
+            <Text style={styles.logoText}>VetPresta</Text>
+            <Text style={styles.tagline}>Portal de Prestadores</Text>
           </View>
           
           <View style={styles.formContainer}>
@@ -95,6 +95,9 @@ const LoginScreen = ({ navigation }) => {
               <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
             
+            <Text style={styles.providerNote}>Acceso exclusivo para prestadores de servicios veterinarios,
+            pet shops y centros veterinarios.</Text>
+            
             <TouchableOpacity 
               style={styles.loginButton} 
               onPress={handleLogin}
@@ -112,7 +115,7 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>¿No tienes una cuenta? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.registerButtonText}>Regístrate</Text>
+                <Text style={styles.registerButtonText}>Regístrate como prestador</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -129,6 +132,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 10,
     textAlign: 'center',
+  },
+  providerNote: {
+    color: '#666',
+    fontSize: 13,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   container: {
     flex: 1,
