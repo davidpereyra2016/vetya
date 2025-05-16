@@ -249,15 +249,6 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.ratingText}>{item.rating}</Text>
           </View>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.contactButton}
-          onPress={() => navigation.navigate('ChatScreen', { vet: item })}
-        >
-          <Text>
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
-          </Text>
-        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -712,15 +703,6 @@ const styles = StyleSheet.create({
     padding: 15,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  contactButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#1E88E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
   },
   tipCard: {
     backgroundColor: '#fff',
