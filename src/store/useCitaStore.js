@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import citaService from '../services/citaService';
 
 /**
- * Store para gestionar el estado de las citas usando Zustand
+ * Store para gestionar el estado de las citas y prestadores usando Zustand
  */
 const useCitaStore = create((set, get) => ({
   // Estado inicial
@@ -11,6 +11,10 @@ const useCitaStore = create((set, get) => ({
   availableVets: [],
   availableServices: [],
   userAppointments: [],
+  providerTypes: [],
+  selectedProviderType: null,
+  providersByType: [],
+  selectedProvider: null,
   isLoading: false,
   error: null,
 
@@ -116,12 +120,70 @@ const useCitaStore = create((set, get) => ({
   // Limpiar errores
   clearErrors: () => set({ error: null }),
 
+  // Obtener todos los tipos de prestadores disponibles
+  fetchProviderTypes: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await citaService.getProviderTypes();
+      if (result.success) {
+        set({ providerTypes: result.data, isLoading: false });
+        return { success: true, data: result.data };
+      } else {
+        set({ isLoading: false, error: result.error });
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      const errorMessage = error.message || 'Error al obtener tipos de prestadores';
+      set({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Establecer el tipo de prestador seleccionado
+  setSelectedProviderType: (providerType) => {
+    set({ 
+      selectedProviderType: providerType,
+      providersByType: [],
+      selectedProvider: null
+    });
+    return { success: true };
+  },
+
+  // Obtener prestadores por tipo
+  fetchProvidersByType: async (typeId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await citaService.getProvidersByType(typeId);
+      if (result.success) {
+        set({ providersByType: result.data, isLoading: false });
+        return { success: true, data: result.data };
+      } else {
+        set({ isLoading: false, error: result.error });
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      const errorMessage = error.message || 'Error al obtener prestadores por tipo';
+      set({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Establecer el prestador seleccionado
+  setSelectedProvider: (provider) => {
+    set({ selectedProvider: provider });
+    return { success: true };
+  },
+
   // Reset del estado de citas
   resetCitaState: () => set({
     availableDates: [],
     availableTimes: [],
     availableVets: [],
     availableServices: [],
+    providerTypes: [],
+    selectedProviderType: null,
+    providersByType: [],
+    selectedProvider: null,
     isLoading: false,
     error: null
   })

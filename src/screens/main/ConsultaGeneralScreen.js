@@ -140,6 +140,8 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
     }).start();
   };
   
+  // Ninguna función relacionada con prestadores aquí, ya que esa funcionalidad se movió a AgendarCitaScreen
+  
   // Función para agendar la consulta
   const handleScheduleConsultation = async () => {
     // Validaciones
@@ -203,20 +205,24 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
       const result = await createAppointment(consultationData);
       
       if (result.success) {
-        // Navegar a la pantalla de confirmación
-        navigation.navigate('ConsultaConfirmacion', {
+        // Navegar a la pantalla de confirmación con los datos adecuados
+        const navParams = {
           pet: selectedPet,
           date: serializableDate,
           time: selectedTime,
-          vet: selectedVet,
           reason: reasonForVisit,
           appointmentId: result.data.id
-        });
+        };
+        
+        // Añadir el veterinario seleccionado
+        navParams.vet = selectedVet;
+        
+        navigation.navigate('ConsultaConfirmacion', navParams);
       } else {
         Alert.alert('Error', result.error || 'No se pudo agendar la consulta');
       }
     } catch (error) {
-      console.error('Error al agendar consulta:', error);
+      console.error('Error al agendar la consulta:', error);
       Alert.alert('Error', 'Ocurrió un error al agendar la consulta');
     } finally {
       setIsLoading(false);
@@ -349,6 +355,8 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
     );
   };
   
+  // Las funciones para renderizar prestadores se han movido a AgendarCitaScreen
+  
   const renderSectionItem = ({ item }) => {
     switch (item.id) {
       case 'info':
@@ -406,7 +414,13 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
           <React.Fragment key="section-vets">
             <Text style={styles.sectionTitle}>Selecciona un veterinario</Text>
             <View style={styles.vetsList}>
-              {availableVets.map(item => renderVetItem({ item }))}
+              {availableVets.length > 0 ? (
+                availableVets.map(item => renderVetItem({ item }))
+              ) : (
+                <Text style={styles.noProvidersText}>
+                  No hay veterinarios disponibles
+                </Text>
+              )}
             </View>
           </React.Fragment>
         );
@@ -505,6 +519,134 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F2F5',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  toggleButtonText: {
+    color: '#1E88E5',
+    fontSize: 12,
+    fontWeight: '500',
+    marginRight: 5,
+  },
+  subsectionTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#333',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  providerTypesList: {
+    paddingVertical: 5,
+    paddingHorizontal: 5,
+  },
+  providerTypeItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
+    marginRight: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  selectedProviderTypeItem: {
+    backgroundColor: '#1E88E5',
+  },
+  providerTypeIcon: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+    padding: 6,
+    marginRight: 8,
+  },
+  selectedProviderTypeIcon: {
+    backgroundColor: '#fff',
+  },
+  providerTypeName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  selectedProviderTypeText: {
+    color: '#fff',
+  },
+  providersList: {
+    marginTop: 5,
+  },
+  providerItem: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  selectedProviderItem: {
+    backgroundColor: '#1E88E5',
+  },
+  providerImageContainer: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  selectedProviderImageContainer: {
+    backgroundColor: '#fff',
+  },
+  providerImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+  },
+  providerInfo: {
+    flex: 1,
+  },
+  providerName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 2,
+  },
+  providerType: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  selectedProviderText: {
+    color: '#fff',
+  },
+  noProvidersText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+  checkIcon: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
   },
   animatedContainer: {
     flex: 1,

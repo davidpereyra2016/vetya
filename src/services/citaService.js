@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 /**
- * Servicios para gestionar las citas y reservas
+ * Servicios para gestionar las citas y reservas con diferentes prestadores
  */
 const citaService = {
   /**
@@ -111,6 +111,145 @@ const citaService = {
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al obtener veterinarios disponibles' 
+      };
+    }
+  },
+
+  /**
+   * Obtiene los tipos de prestadores disponibles
+   * @returns {Promise<Object>} Resultado de la operación
+   */
+  getProviderTypes: async () => {
+    try {
+      // En un entorno real, esto vendría del backend
+      // Por ahora devolvemos tipos estáticos
+      const types = [
+        { id: '1', name: 'Veterinarios', icon: 'medkit-outline', color: '#1E88E5' },
+        { id: '2', name: 'Peluquerías', icon: 'cut-outline', color: '#9C27B0' },
+        { id: '3', name: 'Pet Shops', icon: 'paw-outline', color: '#4CAF50' },
+        { id: '4', name: 'Centros Veterinarios', icon: 'business-outline', color: '#FF9800' },
+      ];
+      
+      return { success: true, data: types };
+    } catch (error) {
+      console.error('Error al obtener tipos de prestadores:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Error al obtener tipos de prestadores' 
+      };
+    }
+  },
+
+  /**
+   * Obtiene los prestadores por tipo
+   * @param {string} typeId ID del tipo de prestador
+   * @returns {Promise<Object>} Resultado de la operación
+   */
+  getProvidersByType: async (typeId) => {
+    try {
+      // En un entorno real, esto vendría del backend filtrando por tipo
+      // Por ahora simulamos diferentes prestadores según el tipo
+      let providers = [];
+      
+      switch(typeId) {
+        case '1': // Veterinarios
+          providers = [
+            { 
+              id: '1',
+              name: 'Dr. Carlos Rodríguez',
+              type: 'Veterinario',
+              specialty: 'Medicina general',
+              rating: 4.9,
+              image: require('../assets/images/app-usage.png'),
+              experience: '10 años'
+            },
+            { 
+              id: '2',
+              name: 'Dra. María Gómez',
+              type: 'Veterinario',
+              specialty: 'Cirugía',
+              rating: 4.8,
+              image: require('../assets/images/app-usage.png'),
+              experience: '8 años'
+            }
+          ];
+          break;
+        case '2': // Peluquerías
+          providers = [
+            { 
+              id: '4',
+              name: 'Peluquería Canina Happy Dog',
+              type: 'Peluquería',
+              specialty: 'Peluquería canina y felina',
+              rating: 4.7,
+              image: require('../assets/images/app-usage.png'),
+              services: ['Corte', 'Baño', 'Uñas']
+            },
+            { 
+              id: '5',
+              name: 'Pet Style',
+              type: 'Peluquería',
+              specialty: 'Estética animal',
+              rating: 4.5,
+              image: require('../assets/images/app-usage.png'),
+              services: ['Corte', 'Baño especial', 'Tratamientos']
+            }
+          ];
+          break;
+        case '3': // Pet Shops
+          providers = [
+            { 
+              id: '6',
+              name: 'Pet Shop Huellitas',
+              type: 'PetShop',
+              specialty: 'Alimentos y accesorios',
+              rating: 4.6,
+              image: require('../assets/images/app-usage.png'),
+              services: ['Venta', 'Entregas', 'Asesoría']
+            },
+            { 
+              id: '7',
+              name: 'Animal House',
+              type: 'PetShop',
+              specialty: 'Productos premium',
+              rating: 4.9,
+              image: require('../assets/images/app-usage.png'),
+              services: ['Venta', 'Suscripciones']
+            }
+          ];
+          break;
+        case '4': // Centros Veterinarios
+          providers = [
+            { 
+              id: '8',
+              name: 'Centro Veterinario Vida Animal',
+              type: 'Centro Veterinario',
+              specialty: 'Atención integral',
+              rating: 4.9,
+              image: require('../assets/images/app-usage.png'),
+              services: ['Consultas', 'Cirugías', 'Hospitalización', 'Laboratorio']
+            },
+            { 
+              id: '9',
+              name: 'Hospital Veterinario 24h',
+              type: 'Centro Veterinario',
+              specialty: 'Emergencias 24 horas',
+              rating: 4.8,
+              image: require('../assets/images/app-usage.png'),
+              services: ['Emergencias', 'Cuidados intensivos', 'Cirugías']
+            }
+          ];
+          break;
+        default:
+          providers = [];
+      }
+      
+      return { success: true, data: providers };
+    } catch (error) {
+      console.error('Error al obtener prestadores por tipo:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Error al obtener prestadores por tipo' 
       };
     }
   },

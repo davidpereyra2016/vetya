@@ -24,16 +24,18 @@ const AgendarCitaScreen = ({ navigation, route }) => {
   const [selectedPet, setSelectedPet] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [selectedVet, setSelectedVet] = useState(null);
-  const [selectedService, setSelectedService] = useState(null); // Nuevo estado para el servicio
-  const [selectedLocation, setSelectedLocation] = useState(null); // Nuevo estado para la ubicación
   const [reasonForVisit, setReasonForVisit] = useState('');
   const [availableDates, setAvailableDates] = useState([]);
   const [availableTimes, setAvailableTimes] = useState([]);
-  const [availableVets, setAvailableVets] = useState([]);
   const [pets, setPets] = useState([]);
-  const [services, setServices] = useState([]); // Lista de servicios disponibles
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Estados para proveedores de servicios
+  const [providerTypes, setProviderTypes] = useState([]);
+  const [selectedProviderType, setSelectedProviderType] = useState(null);
+  const [providers, setProviders] = useState([]);
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null); // Estado para la ubicación
   
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -74,24 +76,14 @@ const AgendarCitaScreen = ({ navigation, route }) => {
           console.error('Error al cargar fechas:', datesResult.error);
         }
         
-        // Cargar servicios disponibles
-        const { fetchAvailableServices } = useCitaStore.getState();
-        const servicesResult = await fetchAvailableServices();
+        // Cargar tipos de prestadores de servicios
+        const { fetchProviderTypes } = useCitaStore.getState();
+        const typesResult = await fetchProviderTypes();
         
-        if (servicesResult.success) {
-          setServices(servicesResult.data);
+        if (typesResult.success) {
+          setProviderTypes(typesResult.data);
         } else {
-          console.error('Error al cargar servicios:', servicesResult.error);
-        }
-        
-        // Cargar veterinarios disponibles
-        const { fetchAvailableVets } = useCitaStore.getState();
-        const vetsResult = await fetchAvailableVets();
-        
-        if (vetsResult.success) {
-          setAvailableVets(vetsResult.data);
-        } else {
-          console.error('Error al cargar veterinarios:', vetsResult.error);
+          console.error('Error al cargar tipos de prestadores:', typesResult.error);
         }
       } catch (error) {
         console.error('Error al cargar datos iniciales:', error);
@@ -153,6 +145,32 @@ const AgendarCitaScreen = ({ navigation, route }) => {
     }).start();
   };
   
+  // Manejar la selección de tipo de prestador
+  const handleSelectProviderType = async (type) => {
+    setSelectedProviderType(type);
+    setSelectedProvider(null);
+    
+    try {
+      setIsLoading(true);
+      const { fetchProvidersByType } = useCitaStore.getState();
+      const result = await fetchProvidersByType(type.id);
+      
+      if (result.success) {
+        setProviders(result.data);
+      } else {
+        console.error('Error al cargar prestadores:', result.error);
+        Alert.alert('Error', result.error || 'No se pudieron cargar los prestadores');
+        setProviders([]);
+      }
+    } catch (error) {
+      console.error('Error al cargar prestadores por tipo:', error);
+      Alert.alert('Error', 'Ocurrió un error al cargar los prestadores');
+      setProviders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Función para agendar la cita
   const handleScheduleAppointment = async () => {
     // Validaciones
@@ -171,13 +189,13 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       return;
     }
     
-    if (!selectedVet) {
-      Alert.alert('Información requerida', 'Por favor selecciona un veterinario');
+    if (!selectedProviderType) {
+      Alert.alert('Información requerida', 'Por favor selecciona un tipo de servicio');
       return;
     }
     
-    if (!selectedService) {
-      Alert.alert('Información requerida', 'Por favor selecciona un servicio');
+    if (!selectedProvider) {
+      Alert.alert('Información requerida', 'Por favor selecciona un prestador de servicios');
       return;
     }
     
@@ -187,7 +205,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
     }
     
     if (!reasonForVisit.trim()) {
-      Alert.alert('Información requerida', 'Por favor describe el motivo de la consulta');
+      Alert.alert('Información requerida', 'Por favor describe el motivo de la cita');
       return;
     }
     
@@ -215,11 +233,12 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         petId: selectedPet.id,
         date: serializableDate,
         time: selectedTime,
-        vetId: selectedVet.id,
-        serviceId: selectedService.id,
-        location: selectedLocation,
+        providerId: selectedProvider.id,
+        providerType: selectedProviderType.id,
+        locationId: selectedLocation.id,
         reason: reasonForVisit,
-        status: 'pendiente'
+        status: 'pendiente',
+        type: 'cita_agendada'
       };
       
       // Usar el store para crear la cita
@@ -399,30 +418,65 @@ const AgendarCitaScreen = ({ navigation, route }) => {
     );
   };
   
-  // Renderizar veterinarios disponibles
-  const renderVetItem = ({ item }) => {
-    const isSelected = selectedVet && selectedVet.id === item.id;
+  // Renderizar tipos de prestadores
+  const renderProviderTypeItem = (type) => {
+    const isSelected = selectedProviderType && selectedProviderType.id === type.id;
     
     return (
       <TouchableOpacity
-        key={item.id}
-        style={[styles.vetItem, isSelected && styles.selectedVetItem]}
-        onPress={() => setSelectedVet(item)}
+        key={type.id}
+        style={[styles.providerTypeItem, isSelected && styles.selectedProviderTypeItem]}
+        onPress={() => handleSelectProviderType(type)}
       >
-        <View style={[styles.vetImageContainer, isSelected && styles.selectedVetImageContainer]}>
-          <Ionicons name="person-circle-outline" size={40} color={isSelected ? "#fff" : "#1E88E5"} />
+        <View style={[styles.providerTypeIcon, isSelected && styles.selectedProviderTypeIcon]}>
+          <Ionicons 
+            name={type.icon || "business-outline"} 
+            size={24} 
+            color={isSelected ? "#fff" : "#1E88E5"} 
+          />
         </View>
-        <View style={styles.vetInfo}>
-          <Text style={[styles.vetName, isSelected && styles.selectedVetText]}>
-            {item.name}
+        <Text style={[styles.providerTypeName, isSelected && styles.selectedProviderTypeText]}>
+          {type.nombre}
+        </Text>
+        {isSelected && (
+          <Ionicons name="checkmark-circle" size={18} color="#fff" style={styles.checkIcon} />
+        )}
+      </TouchableOpacity>
+    );
+  };
+  
+  // Renderizar prestadores disponibles
+  const renderProviderItem = (provider) => {
+    const isSelected = selectedProvider && selectedProvider.id === provider.id;
+    
+    return (
+      <TouchableOpacity
+        key={provider.id}
+        style={[styles.providerItem, isSelected && styles.selectedProviderItem]}
+        onPress={() => setSelectedProvider(provider)}
+      >
+        <View style={[styles.providerImageContainer, isSelected && styles.selectedProviderImageContainer]}>
+          {provider.imagen ? (
+            <Image 
+              source={{ uri: provider.imagen }} 
+              style={styles.providerImage} 
+              resizeMode="cover"
+            />
+          ) : (
+            <Ionicons name="business-outline" size={32} color={isSelected ? "#fff" : "#1E88E5"} />
+          )}
+        </View>
+        <View style={styles.providerInfo}>
+          <Text style={[styles.providerName, isSelected && styles.selectedProviderText]}>
+            {provider.nombre}
           </Text>
-          <Text style={[styles.vetSpecialty, isSelected && styles.selectedVetText]}>
-            {item.specialty}
+          <Text style={[styles.providerType, isSelected && styles.selectedProviderText]}>
+            {provider.tipo}
           </Text>
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={14} color={isSelected ? "#fff" : "#FFC107"} />
-            <Text style={[styles.ratingText, isSelected && styles.selectedVetText]}>
-              {item.rating} • {item.experience}
+            <Text style={[styles.ratingText, isSelected && styles.selectedProviderText]}>
+              {provider.rating || "4.5"}
             </Text>
           </View>
         </View>
@@ -449,10 +503,32 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       case 'services':
         return (
           <React.Fragment key="section-services">
-            <Text style={styles.sectionTitle}>Selecciona un servicio</Text>
-            <View style={styles.servicesList}>
-              {services.map(renderServiceItem)}
-            </View>
+            <Text style={styles.sectionTitle}>Selecciona un tipo de servicio</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.providerTypesList}
+            >
+              {providerTypes.map(renderProviderTypeItem)}
+            </ScrollView>
+            
+            {/* Lista de prestadores del tipo seleccionado */}
+            {selectedProviderType && (
+              <View>
+                <Text style={styles.subsectionTitle}>
+                  Prestadores disponibles - {selectedProviderType.nombre}
+                </Text>
+                <View style={styles.providersList}>
+                  {providers.length > 0 ? (
+                    providers.map(renderProviderItem)
+                  ) : (
+                    <Text style={styles.noProvidersText}>
+                      No hay prestadores disponibles para este tipo de servicio
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
           </React.Fragment>
         );
       case 'pets':
@@ -514,22 +590,14 @@ const AgendarCitaScreen = ({ navigation, route }) => {
             </View>
           </React.Fragment>
         );
-      case 'vets':
-        return (
-          <React.Fragment key="section-vets">
-            <Text style={styles.sectionTitle}>Selecciona un veterinario</Text>
-            <View style={styles.vetsList}>
-              {availableVets.map(item => renderVetItem({ item }))}
-            </View>
-          </React.Fragment>
-        );
+      // Eliminada la sección de veterinarios, ahora se gestionan como prestadores de servicio
       case 'reason':
         return (
           <React.Fragment key="section-reason">
-            <Text style={styles.sectionTitle}>Motivo de la consulta</Text>
+            <Text style={styles.sectionTitle}>Motivo de la Cita</Text>
             <TextInput
               style={styles.reasonInput}
-              placeholder="Describe el motivo de la consulta..."
+              placeholder="Describe el motivo de la cita..."
               placeholderTextColor="#666"
               multiline
               value={reasonForVisit}
@@ -599,10 +667,9 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         <FlatList
           data={[
             { id: 'info' },
-            { id: 'pets' },
             { id: 'services' },
+            { id: 'pets' },
             { id: 'calendar' },
-            { id: 'vets' },
             { id: 'location' },
             { id: 'reason' },
             { id: 'button' }
@@ -620,6 +687,116 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F2F5',
+  },
+  // Estilos para secciones de prestadores
+  providerTypesList: {
+    paddingVertical: 5,
+    paddingHorizontal: 5,
+  },
+  providerTypeItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 10,
+    marginRight: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  selectedProviderTypeItem: {
+    backgroundColor: '#1E88E5',
+  },
+  providerTypeIcon: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+    padding: 6,
+    marginRight: 8,
+  },
+  selectedProviderTypeIcon: {
+    backgroundColor: '#fff',
+  },
+  providerTypeName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333',
+  },
+  selectedProviderTypeText: {
+    color: '#fff',
+  },
+  subsectionTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#333',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  providersList: {
+    marginTop: 5,
+    marginBottom: 10,
+  },
+  providerItem: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  selectedProviderItem: {
+    backgroundColor: '#1E88E5',
+  },
+  providerImageContainer: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  selectedProviderImageContainer: {
+    backgroundColor: '#fff',
+  },
+  providerImage: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+  },
+  providerInfo: {
+    flex: 1,
+  },
+  providerName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 2,
+  },
+  providerType: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  selectedProviderText: {
+    color: '#fff',
+  },
+  noProvidersText: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+  checkIcon: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
   },
   animatedContainer: {
     flex: 1,
