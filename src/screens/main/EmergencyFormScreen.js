@@ -10,10 +10,13 @@ import {
   Animated,
   Keyboard,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Image,
+  Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import usePetStore from '../../store/usePetStore';
 
 const EmergencyFormScreen = ({ navigation, route }) => {
   const [description, setDescription] = useState('');
@@ -26,13 +29,35 @@ const EmergencyFormScreen = ({ navigation, route }) => {
   const slideAnim = new Animated.Value(0); // Inicializar ya en posición final
   const buttonScale = new Animated.Value(1);
 
-  // Simular obtención de mascotas del usuario
+  // Cargar mascotas del usuario desde el store
   useEffect(() => {
-    setPets([
-      { id: '1', name: 'Max', type: 'Perro', breed: 'Golden Retriever' },
-      { id: '2', name: 'Luna', type: 'Gato', breed: 'Siamés' },
-      { id: '3', name: 'Rocky', type: 'Perro', breed: 'Bulldog' }
-    ]);
+    const loadPets = async () => {
+      try {
+        setIsLoading(true);
+        const { fetchPets } = usePetStore.getState();
+        const result = await fetchPets();
+        
+        if (result.success) {
+          setPets(result.data.map(pet => ({
+            id: pet._id,
+            nombre: pet.nombre,
+            tipo: pet.tipo,
+            raza: pet.raza,
+            imagen: pet.imagen
+          })));
+        } else {
+          console.error('Error al cargar mascotas:', result.error);
+          Alert.alert('Error', 'No se pudieron cargar tus mascotas');
+        }
+      } catch (error) {
+        console.error('Error al cargar mascotas:', error);
+        Alert.alert('Error', 'Ocurrió un error al cargar tus mascotas');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadPets();
 
     // NOTA: Ya iniciamos con valores visibles, así que no necesitamos
     // las animaciones iniciales, pero podemos dejarlas si queremos un efecto
@@ -72,29 +97,59 @@ const EmergencyFormScreen = ({ navigation, route }) => {
   const handleSearchVet = () => {
     if (!selectedPet) {
       // Retroalimentación visual para error
-      alert('Por favor selecciona una mascota');
+      Alert.alert('Información requerida', 'Por favor selecciona una mascota');
       return;
     }
     if (!description.trim()) {
       // Retroalimentación visual para error
-      alert('Por favor describe la emergencia');
+      Alert.alert('Información requerida', 'Por favor describe la emergencia');
       return;
     }
 
     setIsLoading(true);
     
-    // Simulamos una carga para mejorar UX
+    // En una implementación real, aquí se enviarían los datos al backend
+    // y se buscarían veterinarios disponibles para emergencias
+    
+    // Por ahora simulamos una carga para mejorar UX
     setTimeout(() => {
       setIsLoading(false);
       navigation.navigate('EmergencyVetMap', {
         petInfo: selectedPet,
-        emergencyDescription: description
+        emergencyDescription: description,
+        emergencyTime: new Date().toISOString()
       });
     }, 1500);
   };
 
   const renderPetItem = (pet) => {
     const isSelected = selectedPet && selectedPet.id === pet.id;
+    
+    // Función auxiliar para renderizar el icono según el tipo de mascota
+    const renderPetIcon = (type, size = 24, color = isSelected ? '#fff' : '#1E88E5') => {
+      switch ((type || '').toLowerCase()) {
+        case 'perro':
+        case 'dog':
+          return <MaterialCommunityIcons name="dog" size={size} color={color} />;
+        case 'gato':
+        case 'cat':
+          return <MaterialCommunityIcons name="cat" size={size} color={color} />;
+        case 'ave':
+        case 'bird':
+          return <MaterialCommunityIcons name="bird" size={size} color={color} />;
+        case 'pez':
+        case 'fish':
+          return <MaterialCommunityIcons name="fish" size={size} color={color} />;
+        case 'conejo':
+        case 'rabbit':
+          return <MaterialCommunityIcons name="rabbit" size={size} color={color} />;
+        case 'reptil':
+        case 'reptile':
+          return <MaterialCommunityIcons name="turtle" size={size} color={color} />;
+        default:
+          return <Ionicons name="paw" size={size} color={color} />;
+      }
+    };
     
     return (
       <TouchableOpacity
@@ -103,18 +158,22 @@ const EmergencyFormScreen = ({ navigation, route }) => {
         onPress={() => setSelectedPet(pet)}
       >
         <View style={styles.petIconContainer}>
-          <Ionicons 
-            name={pet.type.toLowerCase() === 'perro' ? 'paw' : 'paw-outline'} 
-            size={24} 
-            color={isSelected ? '#fff' : '#1E88E5'} 
-          />
+          {pet.imagen ? (
+            <Image 
+              source={{ uri: pet.imagen }} 
+              style={styles.petItemImage} 
+              resizeMode="cover"
+            />
+          ) : (
+            renderPetIcon(pet.tipo)
+          )}
         </View>
         <View style={styles.petInfo}>
           <Text style={[styles.petName, isSelected && styles.selectedPetText]}>
-            {pet.name}
+            {pet.nombre}
           </Text>
           <Text style={[styles.petBreed, isSelected && styles.selectedPetText]}>
-            {pet.type} • {pet.breed}
+            {pet.tipo} {pet.raza ? `• ${pet.raza}` : ''}
           </Text>
         </View>
         {isSelected && (
@@ -282,10 +341,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#EBF2FA',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
+    overflow: 'hidden'
+  },
+  petItemImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20
   },
   selectedPetIconContainer: {
     backgroundColor: '#fff',

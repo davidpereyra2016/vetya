@@ -11,10 +11,13 @@ import {
   ActivityIndicator,
   Animated,
   Image,
-  FlatList
+  FlatList,
+  Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import usePetStore from '../../store/usePetStore';
+import useCitaStore from '../../store/useCitaStore';
 
 const AgendarCitaScreen = ({ navigation, route }) => {
   // Estados
@@ -37,89 +40,97 @@ const AgendarCitaScreen = ({ navigation, route }) => {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(1)).current;
 
-  // Generar fechas disponibles (próximos 7 días)
+  // Cargar datos iniciales cuando se monte el componente
   useEffect(() => {
-    const dates = [];
-    const today = new Date();
-    
-    for (let i = 1; i <= 14; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      
-      // No incluir domingos
-      if (date.getDay() !== 0) {
-        dates.push({
-          id: i.toString(),
-          date: date,
-          day: date.getDate(),
-          month: date.toLocaleString('es-ES', { month: 'short' }),
-          dayName: date.toLocaleString('es-ES', { weekday: 'short' })
-        });
+    const loadInitialData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Cargar mascotas del usuario desde el store
+        const { fetchPets } = usePetStore.getState();
+        const petsResult = await fetchPets();
+        
+        if (petsResult.success) {
+          setPets(petsResult.data.map(pet => ({
+            id: pet._id,
+            nombre: pet.nombre,
+            tipo: pet.tipo,
+            raza: pet.raza,
+            imagen: pet.imagen,
+            ultimaVisita: pet.ultimaVisita ? new Date(pet.ultimaVisita).toLocaleDateString('es-ES') : 'Sin visitas'
+          })));
+        } else {
+          console.error('Error al cargar mascotas:', petsResult.error);
+          Alert.alert('Error', 'No se pudieron cargar tus mascotas');
+        }
+        
+        // Cargar fechas disponibles
+        const { fetchAvailableDates } = useCitaStore.getState();
+        const datesResult = await fetchAvailableDates();
+        
+        if (datesResult.success) {
+          setAvailableDates(datesResult.data);
+        } else {
+          console.error('Error al cargar fechas:', datesResult.error);
+        }
+        
+        // Cargar servicios disponibles
+        const { fetchAvailableServices } = useCitaStore.getState();
+        const servicesResult = await fetchAvailableServices();
+        
+        if (servicesResult.success) {
+          setServices(servicesResult.data);
+        } else {
+          console.error('Error al cargar servicios:', servicesResult.error);
+        }
+        
+        // Cargar veterinarios disponibles
+        const { fetchAvailableVets } = useCitaStore.getState();
+        const vetsResult = await fetchAvailableVets();
+        
+        if (vetsResult.success) {
+          setAvailableVets(vetsResult.data);
+        } else {
+          console.error('Error al cargar veterinarios:', vetsResult.error);
+        }
+      } catch (error) {
+        console.error('Error al cargar datos iniciales:', error);
+        Alert.alert('Error', 'Ocurrió un error al cargar los datos iniciales');
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
     
-    setAvailableDates(dates);
+    loadInitialData();
     
-    // Simular obtención de mascotas del usuario
-    setPets([
-      { id: '1', name: 'Max', type: 'Perro', breed: 'Golden Retriever', lastVisit: '15 de abril, 2025' },
-      { id: '2', name: 'Luna', type: 'Gato', breed: 'Siamés', lastVisit: '23 de marzo, 2025' },
-      { id: '3', name: 'Rocky', type: 'Perro', breed: 'Bulldog', lastVisit: '5 de mayo, 2025' }
-    ]);
-    
-    // Servicios disponibles
-    setServices([
-      { id: '1', name: 'Consulta General', icon: 'medkit-outline', color: '#1E88E5' },
-      { id: '2', name: 'Vacunación', icon: 'shield-checkmark-outline', color: '#4CAF50' },
-      { id: '3', name: 'Desparasitación', icon: 'bug-outline', color: '#FF9800' },
-      { id: '4', name: 'Peluquería', icon: 'cut-outline', color: '#9C27B0' },
-      { id: '5', name: 'Revisión dental', icon: 'brush-outline', color: '#607D8B' }
-    ]);
-    
-    // Simular obtención de veterinarios disponibles
-    setAvailableVets([
-      { 
-        id: '1',
-        name: 'Dr. Carlos Rodríguez',
-        specialty: 'Medicina general',
-        rating: 4.9,
-        image: require('../../assets/images/app-usage.png'), // Asegúrate de que exista esta imagen o cámbiala
-        experience: '10 años'
-      },
-      { 
-        id: '2',
-        name: 'Dra. María Gómez',
-        specialty: 'Cirugía',
-        rating: 4.8,
-        image: require('../../assets/images/app-usage.png'), // Asegúrate de que exista esta imagen o cámbiala
-        experience: '8 años'
-      },
-      { 
-        id: '3',
-        name: 'Dr. Juan Pérez',
-        specialty: 'Dermatología',
-        rating: 4.7,
-        image: require('../../assets/images/app-usage.png'), // Asegúrate de que exista esta imagen o cámbiala
-        experience: '5 años'
-      }
-    ]);
+    // Limpieza al desmontar
+    return () => {
+      const { resetCitaState } = useCitaStore.getState();
+      resetCitaState();
+    };
   }, []);
   
-  // Generar horarios disponibles cuando se selecciona una fecha
+  // Cargar horarios disponibles cuando se selecciona una fecha
   useEffect(() => {
     if (selectedDate) {
-      // Horarios de ejemplo, en una app real vendrían del backend
-      const times = [
-        { id: '1', time: '09:00', available: true },
-        { id: '2', time: '10:00', available: true },
-        { id: '3', time: '11:00', available: false },
-        { id: '4', time: '12:00', available: true },
-        { id: '5', time: '16:00', available: true },
-        { id: '6', time: '17:00', available: true },
-        { id: '7', time: '18:00', available: false }
-      ];
+      const loadAvailableTimes = async () => {
+        try {
+          const { fetchAvailableTimes } = useCitaStore.getState();
+          const result = await fetchAvailableTimes(selectedDate.id);
+          
+          if (result.success) {
+            setAvailableTimes(result.data);
+          } else {
+            console.error('Error al cargar horarios:', result.error);
+            setAvailableTimes([]);
+          }
+        } catch (error) {
+          console.error('Error al cargar horarios disponibles:', error);
+          setAvailableTimes([]);
+        }
+      };
       
-      setAvailableTimes(times);
+      loadAvailableTimes();
     } else {
       setAvailableTimes([]);
     }
@@ -143,49 +154,46 @@ const AgendarCitaScreen = ({ navigation, route }) => {
   };
   
   // Función para agendar la cita
-  const handleScheduleAppointment = () => {
+  const handleScheduleAppointment = async () => {
     // Validaciones
     if (!selectedPet) {
-      alert('Por favor selecciona una mascota');
+      Alert.alert('Información requerida', 'Por favor selecciona una mascota');
       return;
     }
     
     if (!selectedDate) {
-      alert('Por favor selecciona una fecha');
+      Alert.alert('Información requerida', 'Por favor selecciona una fecha');
       return;
     }
     
     if (!selectedTime) {
-      alert('Por favor selecciona un horario');
+      Alert.alert('Información requerida', 'Por favor selecciona un horario');
       return;
     }
     
     if (!selectedVet) {
-      alert('Por favor selecciona un veterinario');
+      Alert.alert('Información requerida', 'Por favor selecciona un veterinario');
       return;
     }
     
     if (!selectedService) {
-      alert('Por favor selecciona un servicio');
+      Alert.alert('Información requerida', 'Por favor selecciona un servicio');
       return;
     }
     
     if (!selectedLocation) {
-      alert('Por favor selecciona una ubicación');
+      Alert.alert('Información requerida', 'Por favor selecciona una ubicación');
       return;
     }
     
     if (!reasonForVisit.trim()) {
-      alert('Por favor describe el motivo de la consulta');
+      Alert.alert('Información requerida', 'Por favor describe el motivo de la consulta');
       return;
     }
     
     setIsLoading(true);
     
-    // Simulamos procesamiento
-    setTimeout(() => {
-      setIsLoading(false);
-      
+    try {
       // Convertir la fecha a formato serializable
       const serializableDate = selectedDate ? {
         id: selectedDate.id,
@@ -202,17 +210,43 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         })
       } : null;
       
-      // En una app real, aquí enviaríamos los datos al backend
-      navigation.navigate('CitaConfirmacion', {
-        pet: selectedPet,
+      // Crear objeto de datos de la cita
+      const appointmentData = {
+        petId: selectedPet.id,
         date: serializableDate,
         time: selectedTime,
-        service: selectedService,
-        vet: selectedVet,
+        vetId: selectedVet.id,
+        serviceId: selectedService.id,
         location: selectedLocation,
-        reason: reasonForVisit
-      });
-    }, 1500);
+        reason: reasonForVisit,
+        status: 'pendiente'
+      };
+      
+      // Usar el store para crear la cita
+      const { createAppointment } = useCitaStore.getState();
+      const result = await createAppointment(appointmentData);
+      
+      if (result.success) {
+        // Navegar a la pantalla de confirmación
+        navigation.navigate('CitaConfirmacion', {
+          pet: selectedPet,
+          date: serializableDate,
+          time: selectedTime,
+          vet: selectedVet,
+          service: selectedService,
+          location: selectedLocation,
+          reason: reasonForVisit,
+          appointmentId: result.data.id
+        });
+      } else {
+        Alert.alert('Error', result.error || 'No se pudo agendar la cita');
+      }
+    } catch (error) {
+      console.error('Error al agendar cita:', error);
+      Alert.alert('Error', 'Ocurrió un error al agendar la cita');
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // Renderizar servicios disponibles
@@ -283,22 +317,27 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         style={[styles.petItem, isSelected && styles.selectedPetItem]}
         onPress={() => setSelectedPet(pet)}
       >
-        <View style={[styles.petIconContainer, isSelected && styles.selectedPetIconContainer]}>
-          <Ionicons 
-            name={pet.type.toLowerCase() === 'perro' ? 'paw' : 'paw-outline'} 
-            size={24} 
-            color={isSelected ? '#fff' : '#1E88E5'} 
-          />
+        <View style={styles.petIconContainer}>
+          {pet.imagen ? (
+            <Image 
+              source={{ uri: pet.imagen }} 
+              style={styles.petItemImage} 
+              resizeMode="cover"
+            />
+          ) : (
+            <Ionicons 
+              name={(pet.tipo || '').toLowerCase() === 'perro' ? 'paw' : 'paw-outline'} 
+              size={24} 
+              color={isSelected ? '#fff' : '#1E88E5'} 
+            />
+          )}
         </View>
         <View style={styles.petInfo}>
           <Text style={[styles.petName, isSelected && styles.selectedPetText]}>
-            {pet.name}
+            {pet.nombre}
           </Text>
           <Text style={[styles.petBreed, isSelected && styles.selectedPetText]}>
-            {pet.type} • {pet.breed}
-          </Text>
-          <Text style={styles.lastVisit}>
-            Última visita: {pet.lastVisit}
+            {pet.tipo} {pet.raza ? `• ${pet.raza}` : ''}
           </Text>
         </View>
         {isSelected && (
@@ -659,10 +698,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#EBF2FA',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
+    overflow: 'hidden'
+  },
+  petItemImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20
   },
   selectedPetIconContainer: {
     backgroundColor: '#fff',
