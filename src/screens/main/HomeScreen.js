@@ -17,6 +17,12 @@ const HomeScreen = ({ navigation }) => {
   // Datos de ejemplo para los servicios
   const services = [
     {
+      id: 'emergencias', 
+      title: 'Emergencias', 
+      icon: 'alert-circle-outline', 
+      color: '#F44336' 
+    },
+    {
       id: '1',
       title: 'Consulta General',
       icon: 'medkit-outline', 
@@ -33,12 +39,6 @@ const HomeScreen = ({ navigation }) => {
       title: 'Desparasitación',
       icon: 'bug-outline', 
       color: '#FF9800'
-    },
-    {
-      id: 'emergencias', 
-      title: 'Emergencias', 
-      icon: 'alert-circle-outline', 
-      color: '#F44336' 
     },
     {
       id: 'citas',
