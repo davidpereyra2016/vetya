@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, Text } from 'react-native';
 
 // Estado global con Zustand
 import useAuthStore from '../store/useAuthStore';
@@ -17,32 +17,29 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 
 // Pantallas principales
 import HomeScreen from '../screens/main/HomeScreen';
-import PetsScreen from '../screens/main/PetsScreen';
-import PetDetailScreen from '../screens/main/PetDetailScreen';
-import VetDetailScreen from '../screens/main/VetDetailScreen';
-import AppointmentsScreen from '../screens/main/AppointmentsScreen';
-import ProfileScreen from '../screens/main/ProfileScreen';
 
-// Pantallas de perfil
-import EditProfileScreen from '../screens/profile/EditProfileScreen';
-import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
+// Componentes temporales para pantallas que aún no existen
+// Se reemplazarán con las implementaciones reales en futuras iteraciones
+const PlaceholderScreen = ({ route }) => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F7FA' }}>
+    <Ionicons name="construct-outline" size={80} color="#1E88E5" />
+    <Text style={{ fontSize: 18, fontWeight: 'bold', marginTop: 20, color: '#333' }}>
+      {route.name}
+    </Text>
+    <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', marginHorizontal: 40, marginTop: 10 }}>
+      Esta pantalla está en construcción y estará disponible pronto
+    </Text>
+  </View>
+);
 
-// Pantallas de emergencia
-import EmergencyFormScreen from '../screens/main/EmergencyFormScreen';
-import EmergencyVetMapScreen from '../screens/main/EmergencyVetMapScreen';
-import EmergencyConfirmationScreen from '../screens/main/EmergencyConfirmationScreen';
-
-// Pantallas de consulta general
-import ConsultaGeneralScreen from '../screens/main/ConsultaGeneralScreen';
-import ConsultaConfirmacionScreen from '../screens/main/ConsultaConfirmacionScreen';
-
-// Pantallas de citas
-import AgendarCitaScreen from '../screens/main/AgendarCitaScreen';
-import CitaConfirmacionScreen from '../screens/main/CitaConfirmacionScreen';
-
-// Pantallas de consejos de salud
-import HealthTipsScreen from '../screens/main/HealthTipsScreen';
-import HealthTipDetailScreen from '../screens/main/HealthTipDetailScreen';
+// Declaraciones temporales para evitar errores de compilación
+const ProfileScreen = PlaceholderScreen;
+const ServicesScreen = PlaceholderScreen;
+const AppointmentsScreen = PlaceholderScreen;
+const EmergencyDetailsScreen = PlaceholderScreen;
+const AvailabilityScreen = PlaceholderScreen;
+const ReviewsScreen = PlaceholderScreen;
+const EarningsScreen = PlaceholderScreen;
 
 // Creación de navegadores
 const Stack = createStackNavigator();
@@ -58,8 +55,8 @@ function MainTabsNavigator() {
 
           if (route.name === 'Inicio') {
             iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Mascotas') {
-            iconName = focused ? 'paw' : 'paw-outline';
+          } else if (route.name === 'Servicios') {
+            iconName = focused ? 'list' : 'list-outline';
           } else if (route.name === 'Citas') {
             iconName = focused ? 'calendar' : 'calendar-outline';
           } else if (route.name === 'Perfil') {
@@ -80,21 +77,23 @@ function MainTabsNavigator() {
       })}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
-      <Tab.Screen name="Mascotas" component={PetsScreen} />
+      <Tab.Screen name="Servicios" component={ServicesScreen} />
       <Tab.Screen name="Citas" component={AppointmentsScreen} />
       <Tab.Screen name="Perfil" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
 
-// Navegador principal (incluye tabs principales y pantallas de emergencia)
+// Navegador principal (incluye tabs principales y pantallas específicas para prestadores)
 function MainNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={MainTabsNavigator} />
+      
+      {/* Pantallas de emergencias para prestadores */}
       <Stack.Screen 
-        name="PetDetailScreen" 
-        component={PetDetailScreen}
+        name="EmergencyDetails" 
+        component={EmergencyDetailsScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -104,34 +103,11 @@ function MainNavigator() {
           }),
         }}
       />
+      
+      {/* Pantallas para gestión de prestador */}
       <Stack.Screen 
-        name="VetDetailScreen" 
-        component={VetDetailScreen}
-        options={{
-          headerShown: false,
-          cardStyleInterpolator: ({ current }) => ({
-            cardStyle: {
-              opacity: current.progress,
-            },
-          }),
-        }}
-      />
-      {/* Pantallas de perfil */}
-      <Stack.Screen 
-        name="EditProfile" 
-        component={EditProfileScreen} 
-        options={{
-          headerShown: false,
-          cardStyleInterpolator: ({ current }) => ({
-            cardStyle: {
-              opacity: current.progress,
-            },
-          }),
-        }}
-      />
-      <Stack.Screen 
-        name="ChangePassword" 
-        component={ChangePasswordScreen} 
+        name="Services" 
+        component={ServicesScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -143,237 +119,40 @@ function MainNavigator() {
       />
       
       <Stack.Screen 
-        name="EmergencyForm" 
-        component={EmergencyFormScreen} 
+        name="Availability" 
+        component={AvailabilityScreen} 
         options={{
-          // Usar animación simple tipo fade para evitar conflictos
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          // Forzar modo JS para las transiciones
-          cardStyleInterpolator: ({ current: { progress } }) => ({
+          headerShown: false,
+          cardStyleInterpolator: ({ current }) => ({
             cardStyle: {
-              opacity: progress, // Simple fade effect
-            }
-          }),
-        }}
-      />
-      <Stack.Screen 
-        name="EmergencyVetMap" 
-        component={EmergencyVetMapScreen}
-        options={{
-          // Misma configuración para mantener consistencia
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+              opacity: current.progress,
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          cardStyleInterpolator: ({ current: { progress } }) => ({
-            cardStyle: {
-              opacity: progress,
-            }
-          }),
-        }}
-      />
-      <Stack.Screen 
-        name="EmergencyConfirmation" 
-        component={EmergencyConfirmationScreen}
-        options={{
-          // Misma configuración para mantener consistencia
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          cardStyleInterpolator: ({ current: { progress } }) => ({
-            cardStyle: {
-              opacity: progress,
-            }
           }),
         }}
       />
       
-      {/* Pantallas de Consulta General */}
       <Stack.Screen 
-        name="ConsultaGeneral" 
-        component={ConsultaGeneralScreen}
+        name="Reviews" 
+        component={ReviewsScreen} 
         options={{
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          cardStyleInterpolator: ({ current: { progress } }) => ({
+          headerShown: false,
+          cardStyleInterpolator: ({ current }) => ({
             cardStyle: {
-              opacity: progress,
-            }
-          }),
-        }}
-      />
-      <Stack.Screen 
-        name="ConsultaConfirmacion" 
-        component={ConsultaConfirmacionScreen}
-        options={{
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+              opacity: current.progress,
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          cardStyleInterpolator: ({ current: { progress } }) => ({
-            cardStyle: {
-              opacity: progress,
-            }
           }),
         }}
       />
       
-      {/* Pantallas de Agendar Cita */}
       <Stack.Screen 
-        name="AgendarCita" 
-        component={AgendarCitaScreen}
+        name="Earnings" 
+        component={EarningsScreen} 
         options={{
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          cardStyleInterpolator: ({ current: { progress } }) => ({
+          headerShown: false,
+          cardStyleInterpolator: ({ current }) => ({
             cardStyle: {
-              opacity: progress,
-            }
-          }),
-        }}
-      />
-      <Stack.Screen 
-        name="CitaConfirmacion" 
-        component={CitaConfirmacionScreen}
-        options={{
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+              opacity: current.progress,
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          cardStyleInterpolator: ({ current: { progress } }) => ({
-            cardStyle: {
-              opacity: progress,
-            }
-          }),
-        }}
-      />
-      
-      {/* Pantallas de Consejos de Salud */}
-      <Stack.Screen 
-        name="HealthTips" 
-        component={HealthTipsScreen}
-        options={{
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          cardStyleInterpolator: ({ current: { progress } }) => ({
-            cardStyle: {
-              opacity: progress,
-            }
-          }),
-        }}
-      />
-      <Stack.Screen 
-        name="HealthTipDetail" 
-        component={HealthTipDetailScreen}
-        options={{
-          transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
-            },
-          },
-          cardStyleInterpolator: ({ current: { progress } }) => ({
-            cardStyle: {
-              opacity: progress,
-            }
           }),
         }}
       />

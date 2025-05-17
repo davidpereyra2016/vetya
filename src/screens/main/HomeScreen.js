@@ -1,438 +1,426 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
   View, 
+  SafeAreaView,
   ScrollView, 
   TouchableOpacity, 
-  Image, 
+  Switch,
+  Image,
   FlatList,
-  Animated
+  RefreshControl,
+  Alert,
+  Dimensions
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-import ServiceCard from '../../components/ServiceCard'; // Import the new component
+import useAuthStore from '../../store/useAuthStore';
+
+const { width } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
-  // Datos de ejemplo para los servicios
-  const services = [
+  // Estado para el modo disponible/no disponible para emergencias
+  const [availableForEmergencies, setAvailableForEmergencies] = useState(false);
+  
+  // Estado para el panel de estadísticas
+  const [stats, setStats] = useState({
+    emergenciasAtendidas: 12,
+    citasHoy: 3,
+    citasPendientes: 8,
+    valoracionPromedio: 4.8
+  });
+
+  // Estado para solicitudes de emergencia activas
+  const [activeEmergencies, setActiveEmergencies] = useState([
     {
-      id: 'emergencias', 
-      title: 'Emergencias', 
-      icon: 'alert-circle-outline', 
-      color: '#F44336' 
-    },
-    {
-      id: '1',
-      title: 'Consulta General',
-      icon: 'medkit-outline', 
-      color: '#1E88E5'
-    },
-    {
-      id: '2',
-      title: 'Vacunación',
-      icon: 'shield-checkmark-outline', 
-      color: '#4CAF50'
-    },
-    {
-      id: '3',
-      title: 'Desparasitación',
-      icon: 'bug-outline', 
-      color: '#FF9800'
-    },
-    {
-      id: 'citas',
-      title: 'Mis Citas',
-      icon: 'calendar-outline',
-      color: '#9C27B0'
-    },
-    {
-      id: 'mascotas',
-      title: 'Mis Mascotas',
-      icon: 'paw-outline',
-      color: '#795548'
+      id: 'em1',
+      usuarioNombre: 'María García',
+      mascotaNombre: 'Firulais',
+      tipoMascota: 'Perro',
+      descripcion: 'Dificultad para respirar y vómitos',
+      ubicacion: 'Av. Rivadavia 3456, CABA',
+      distancia: '2.3 km',
+      tiempo: '12 min',
+      estado: 'pendiente',
+      fechaHora: new Date().toISOString(),
+      urgencia: 'alta'
     }
-  ];
+  ]);
 
-  // Datos de ejemplo para los veterinarios destacados
-  const featuredVets = [
+  // Estado para próximas citas programadas
+  const [upcomingAppointments, setUpcomingAppointments] = useState([
     {
-      id: '1',
-      name: 'Dr. Carlos Rodríguez',
-      specialty: 'Medicina general',
-      rating: 4.9,
-      experience: '10 años',
-      patients: 120,
-      reviews: 48,
-      available: true,
-      status: 'Destacado',
-      specialties: ['Perros', 'Gatos', 'Aves'],
-      image: null // Usamos placeholder en vez de URL para evitar errores
+      id: 'cita1',
+      usuarioNombre: 'Carlos López',
+      mascotaNombre: 'Michi',
+      tipoMascota: 'Gato',
+      servicio: 'Vacunación',
+      fechaHora: '16/05/2025 15:30',
+      estado: 'confirmada'
     },
     {
-      id: '2',
-      name: 'Dra. María Gómez',
-      specialty: 'Cirugía veterinaria',
-      rating: 4.8,
-      experience: '8 años',
-      patients: 95,
-      reviews: 36,
-      available: true,
-      status: 'Destacado',
-      specialties: ['Perros', 'Gatos', 'Animales exóticos'],
-      image: null
+      id: 'cita2',
+      usuarioNombre: 'Laura Martínez',
+      mascotaNombre: 'Rocky',
+      tipoMascota: 'Perro',
+      servicio: 'Control rutinario',
+      fechaHora: '16/05/2025 17:00',
+      estado: 'confirmada'
     },
     {
-      id: '3',
-      name: 'Dr. Juan Pérez',
-      specialty: 'Dermatología animal',
-      rating: 4.7,
-      experience: '6 años',
-      patients: 78,
-      reviews: 29,
-      available: false,
-      status: 'Destacado',
-      specialties: ['Perros', 'Gatos'],
-      image: null
-    },
-  ];
-
-  // Datos de ejemplo para los veterinarios disponibles ahora
-  const availableVets = [
-    {
-      id: '4',
-      name: 'Dra. Lucía Hernández',
-      specialty: 'Nutrición animal',
-      rating: 4.6,
-      experience: '5 años',
-      patients: 64,
-      reviews: 31,
-      available: true,
-      status: 'Disponible ahora',
-      specialties: ['Perros', 'Gatos', 'Roedores'],
-      image: null
-    },
-    {
-      id: '5',
-      name: 'Dr. Martín Díaz',
-      specialty: 'Cardiología',
-      rating: 4.9,
-      experience: '12 años',
-      patients: 150,
-      reviews: 67,
-      available: true,
-      status: 'Disponible ahora',
-      specialties: ['Perros', 'Gatos'],
-      image: null
-    },
-    {
-      id: '6',
-      name: 'Dra. Sofía López',
-      specialty: 'Oftalmología',
-      rating: 4.7,
-      experience: '7 años',
-      patients: 85,
-      reviews: 42,
-      available: true,
-      status: 'Disponible ahora',
-      specialties: ['Perros', 'Gatos', 'Conejos'],
-      image: null
-    },
-  ];
-
-  const handleServicePress = (service) => {
-    if (service.id === 'emergencias') { // Emergencias
-      navigation.navigate('EmergencyForm');
-    } else if (service.id === '1') { // Consulta General
-      navigation.navigate('ConsultaGeneral');
-    } else if (service.id === 'citas') {
-      navigation.navigate('Citas');
-    } else if (service.id === 'mascotas') {
-      navigation.navigate('Mascotas');
-    } else {
-      // Para otros servicios podríamos mostrar un mensaje o navegar a otras pantallas
-      console.log(`Servicio seleccionado: ${service.title}`);
+      id: 'cita3',
+      usuarioNombre: 'Jorge Méndez',
+      mascotaNombre: 'Pelusa',
+      tipoMascota: 'Conejo',
+      servicio: 'Desparasitación',
+      fechaHora: '17/05/2025 10:15',
+      estado: 'pendiente'
     }
+  ]);
+
+  // Estado para controlar el refreshing
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Obtener información del prestador desde el store
+  const user = useAuthStore(state => state.user);
+  const provider = useAuthStore(state => state.provider);
+
+  // Función para cambiar disponibilidad
+  const toggleAvailability = async () => {
+    // Aquí iría la lógica para actualizar la disponibilidad en el backend
+    setAvailableForEmergencies(!availableForEmergencies);
+    
+    // Mensaje para el usuario
+    Alert.alert(
+      !availableForEmergencies ? 'Modo Disponible' : 'Modo No Disponible',
+      !availableForEmergencies 
+        ? 'Ahora recibirás solicitudes de emergencias cercanas' 
+        : 'Ya no recibirás solicitudes de emergencias',
+      [{ text: 'Entendido' }]
+    );
   };
 
-  // Función para manejar la selección de un veterinario
-  const handleVetPress = (vet) => {
-    // Navegar a la pantalla de detalle del veterinario
-    navigation.navigate('VetDetailScreen', { vet });
+  // Función para manejar la aceptación de una emergencia
+  const handleAcceptEmergency = (emergency) => {
+    Alert.alert(
+      'Aceptar Emergencia',
+      `¿Confirmas que atenderás la emergencia de ${emergency.mascotaNombre}?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Aceptar',
+          onPress: () => {
+            // Aquí iría la lógica para aceptar la emergencia
+            // Y navegar a la pantalla de detalles/mapa
+            navigation.navigate('EmergencyDetails', { emergency });
+          },
+        },
+      ]
+    );
   };
 
-  // Renderizar cada veterinario destacado
-  const renderFeaturedVetItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.featuredVetCard}
-      onPress={() => handleVetPress(item)}
-    >
-      <View style={styles.vetTopSection}>
-        <View style={styles.vetImageContainer}>
-          <View style={[styles.vetImagePlaceholder, { backgroundColor: item.available ? '#4CAF50' : '#FFA000' }]}>
-            <Text>
-              <Ionicons name="person" size={32} color="#fff" />
-            </Text>
+  // Función para manejar el rechazo de una emergencia
+  const handleRejectEmergency = (emergency) => {
+    Alert.alert(
+      'Rechazar Emergencia',
+      '¿Estás seguro de rechazar esta solicitud?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Rechazar',
+          style: 'destructive',
+          onPress: () => {
+            // Aquí iría la lógica para rechazar la emergencia
+            setActiveEmergencies(
+              activeEmergencies.filter(item => item.id !== emergency.id)
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  // Función para manejar la selección de una cita
+  const handleAppointmentPress = (appointment) => {
+    navigation.navigate('AppointmentDetails', { appointment });
+  };
+
+  // Pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    // Aquí iría la lógica para recargar datos
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1500);
+  };
+
+  // Renderizar cada solicitud de emergencia
+  const renderEmergencyItem = ({ item }) => (
+    <View style={styles.emergencyCard}>
+      <View style={styles.emergencyHeader}>
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person-circle" size={40} color="#1E88E5" />
           </View>
-          {item.available && (
-            <View style={styles.statusBadge}>
-              <Text>
-                <Ionicons name="ellipse" size={10} color="#4CAF50" />
-              </Text>
+          <View>
+            <Text style={styles.userName}>{item.usuarioNombre}</Text>
+            <View style={styles.petInfo}>
+              <Ionicons name="paw" size={14} color="#666" />
+              <Text style={styles.petName}>{item.mascotaNombre} ({item.tipoMascota})</Text>
             </View>
-          )}
-        </View>
-        <View style={styles.vetInfo}>
-          <Text style={styles.vetName}>{item.name}</Text>
-          <Text style={styles.vetSpecialty}>{item.specialty}</Text>
-          <View style={styles.ratingContainer}>
-            <Text>
-              <Ionicons name="star" size={16} color="#FFC107" />
-            </Text>
-            <Text style={styles.ratingText}>{item.rating} ({item.reviews} reseñas)</Text>
           </View>
         </View>
-      </View>
-      
-      <View style={styles.vetDetailSection}>
-        <View style={styles.vetDetailItem}>
-          <Text>
-            <Ionicons name="time-outline" size={14} color="#666" />
+        <View style={[styles.urgencyBadge, 
+          item.urgencia === 'alta' ? styles.highUrgency : 
+          item.urgencia === 'media' ? styles.mediumUrgency : 
+          styles.lowUrgency]}>
+          <Text style={styles.urgencyText}>
+            {item.urgencia === 'alta' ? 'URGENTE' : 
+             item.urgencia === 'media' ? 'MEDIA' : 'BAJA'}
           </Text>
-          <Text style={styles.vetDetailText}>{item.experience}</Text>
-        </View>
-        <View style={styles.vetDetailItem}>
-          <Text>
-            <Ionicons name="people-outline" size={14} color="#666" />
-          </Text>
-          <Text style={styles.vetDetailText}>{item.patients} pacientes</Text>
         </View>
       </View>
-      
-      <View style={styles.vetSpecialtiesContainer}>
-        {item.specialties.map((specialty, index) => (
-          <View key={index} style={styles.specialtyBadge}>
-            <Text style={styles.specialtyText}>{specialty}</Text>
-          </View>
-        ))}
-      </View>
-    </TouchableOpacity>
-  );
 
-  // Renderizar cada veterinario disponible
-  const renderAvailableVetItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.availableVetCard}
-      onPress={() => handleVetPress(item)}
-    >
-      <View style={styles.vetStatusContainer}>
-        <View style={styles.vetStatusIndicator} />
-        <Text style={styles.vetStatusText}>{item.status}</Text>
-      </View>
-      
-      <View style={styles.vetAvailableContent}>
-        <View style={styles.vetImageContainer}>
-          <View style={[styles.vetImagePlaceholder, { backgroundColor: '#4CAF50' }]}>
-            <Text>
-              <Ionicons name="person" size={32} color="#fff" />
-            </Text>
-          </View>
+      <View style={styles.emergencyDetails}>
+        <Text style={styles.emergencyDescription}>{item.descripcion}</Text>
+        
+        <View style={styles.locationContainer}>
+          <Ionicons name="location" size={16} color="#F44336" />
+          <Text style={styles.locationText}>{item.ubicacion}</Text>
         </View>
         
-        <View style={styles.vetInfo}>
-          <Text style={styles.vetName}>{item.name}</Text>
-          <Text style={styles.vetSpecialty}>{item.specialty}</Text>
-          <View style={styles.ratingContainer}>
-            <Text>
-              <Ionicons name="star" size={16} color="#FFC107" />
-            </Text>
-            <Text style={styles.ratingText}>{item.rating}</Text>
+        <View style={styles.distanceTimeContainer}>
+          <View style={styles.distanceTime}>
+            <Ionicons name="navigate" size={14} color="#666" />
+            <Text style={styles.distanceTimeText}>{item.distancia}</Text>
           </View>
+          <View style={styles.distanceTime}>
+            <Ionicons name="time" size={14} color="#666" />
+            <Text style={styles.distanceTimeText}>{item.tiempo} en auto</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.emergencyActions}>
+        <TouchableOpacity 
+          style={styles.rejectButton}
+          onPress={() => handleRejectEmergency(item)}
+        >
+          <Text style={styles.rejectButtonText}>Rechazar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.acceptButton}
+          onPress={() => handleAcceptEmergency(item)}
+        >
+          <Text style={styles.acceptButtonText}>Aceptar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // Renderizar cada cita programada
+  const renderAppointmentItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.appointmentCard}
+      onPress={() => handleAppointmentPress(item)}
+    >
+      <View style={styles.appointmentHeader}>
+        <View style={styles.appointmentInfo}>
+          <Text style={styles.appointmentService}>{item.servicio}</Text>
+          <Text style={styles.appointmentDateTime}>{item.fechaHora}</Text>
+        </View>
+        <View style={[styles.statusBadge, 
+          item.estado === 'confirmada' ? styles.confirmedStatus : styles.pendingStatus]}>
+          <Text style={styles.statusText}>
+            {item.estado === 'confirmada' ? 'Confirmada' : 'Pendiente'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.appointmentDetails}>
+        <View style={styles.userInfo}>
+          <Ionicons name="person" size={16} color="#666" />
+          <Text style={styles.appointmentUserName}>{item.usuarioNombre}</Text>
+        </View>
+        <View style={styles.petInfo}>
+          <Ionicons name="paw" size={16} color="#666" />
+          <Text style={styles.appointmentPetName}>{item.mascotaNombre} ({item.tipoMascota})</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Banner principal */}
-        <View style={styles.banner}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerTitle}>¡Bienvenido a VetYa!</Text>
-            <Text style={styles.bannerSubtitle}>
-              Cuidado veterinario profesional en la comodidad de tu hogar
-            </Text>
-            <TouchableOpacity 
-              style={styles.bannerButton}
-              onPress={() => navigation.navigate('AgendarCita')}
-            >
-              <Text style={styles.bannerButtonText}>Agendar cita</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.bannerImageContainer}>
-            <Text>
-              <Ionicons name="paw" size={100} color="#fff" style={{ opacity: 0.3 }} />
-            </Text>
-          </View>
-        </View>
-
-        {/* Servicios */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Nuestros servicios</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>Ver todos</Text>
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={services}
-            renderItem={({ item }) => (
-              <ServiceCard item={item} onPress={handleServicePress} />
-            )}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.servicesList}
-          />
-        </View>
-
-        {/* Próxima cita */}
-        <View style={styles.appointmentContainer}>
-          <View style={styles.appointmentHeader}>
-            <Text style={styles.appointmentTitle}>Tu próxima cita</Text>
-            <Text>
-              <Ionicons name="calendar" size={24} color="#1E88E5" />
-            </Text>
-          </View>
-          <View style={styles.appointmentContent}>
-            <View style={styles.appointmentInfo}>
-              <Text style={styles.appointmentDate}>Miércoles, 15 de Mayo</Text>
-              <Text style={styles.appointmentTime}>15:30 - 16:30</Text>
-              <Text style={styles.appointmentType}>Consulta general</Text>
-              <Text style={styles.appointmentVet}>Dr. Carlos Rodríguez</Text>
-            </View>
-            <TouchableOpacity style={styles.appointmentButton}>
-              <Text style={styles.appointmentButtonText}>Ver detalles</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Veterinarios disponibles ahora */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Veterinarios disponibles</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AllVetsScreen', { filter: 'available' })}>
-              <Text style={styles.seeAllText}>Ver todos</Text>
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={availableVets}
-            renderItem={renderAvailableVetItem}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.vetsList}
-          />
-        </View>
-        
-        {/* Veterinarios destacados */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Veterinarios destacados</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AllVetsScreen', { filter: 'featured' })}>
-              <Text style={styles.seeAllText}>Ver todos</Text>
-            </TouchableOpacity>
-          </View>
-          <FlatList
-            data={featuredVets}
-            renderItem={renderFeaturedVetItem}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.vetsList}
-          />
-        </View>
-
-        {/* Consejos de salud */}
-        <View style={[styles.sectionContainer, styles.lastSection]}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Consejos de salud</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('HealthTips')}>
-              <Text style={styles.seeAllText}>Ver todos</Text>
-            </TouchableOpacity>
+      
+      {/* Encabezado y control de disponibilidad */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.welcome}>¡Bienvenido!</Text>
+            <Text style={styles.providerName}>{provider?.nombre || user?.username || 'Prestador'}</Text>
           </View>
           <TouchableOpacity 
-            style={styles.tipCard}
-            onPress={() => navigation.navigate('HealthTipDetail', {
-              tip: {
-                id: '1',
-                title: 'Alimentación saludable para tu mascota',
-                description: 'Aprende cómo mejorar la dieta de tu mascota para una vida larga y feliz con los mejores consejos nutricionales.',
-                image: null,
-                petType: 'dog',
-                category: 'Nutrición',
-                author: 'Dr. Carlos Rodríguez',
-                date: '12 mayo, 2025',
-                readTime: '5 min'
-              }
-            })}
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Perfil')}
           >
-            <View style={styles.tipImageContainer}>
-              <Text>
-                <Ionicons name="nutrition" size={32} color="#1E88E5" />
+            <Ionicons name="person-circle" size={40} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.availabilityContainer}>
+          <Text style={styles.availabilityTitle}>
+            {availableForEmergencies ? 'Disponible para emergencias' : 'No disponible para emergencias'}
+          </Text>
+          <Switch
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={availableForEmergencies ? "#f5dd4b" : "#f4f3f4"}
+            ios_backgroundColor="#3e3e3e"
+            onValueChange={toggleAvailability}
+            value={availableForEmergencies}
+          />
+        </View>
+      </View>
+
+      <ScrollView 
+        style={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#1E88E5"]}
+          />
+        }
+      >
+        {/* Estadísticas del prestador */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{stats.emergenciasAtendidas}</Text>
+            <Text style={styles.statLabel}>Emergencias</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{stats.citasHoy}</Text>
+            <Text style={styles.statLabel}>Citas hoy</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{stats.citasPendientes}</Text>
+            <Text style={styles.statLabel}>Pendientes</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <View style={styles.ratingContainer}>
+              <Text style={styles.statValue}>{stats.valoracionPromedio}</Text>
+              <Ionicons name="star" size={16} color="#FFC107" />
+            </View>
+            <Text style={styles.statLabel}>Valoración</Text>
+          </View>
+        </View>
+
+        {/* Solicitudes de emergencia */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Solicitudes de Emergencia</Text>
+            {activeEmergencies.length > 0 && (
+              <View style={styles.badgeContainer}>
+                <Text style={styles.badgeText}>{activeEmergencies.length}</Text>
+              </View>
+            )}
+          </View>
+          
+          {activeEmergencies.length > 0 ? (
+            <FlatList
+              data={activeEmergencies}
+              renderItem={renderEmergencyItem}
+              keyExtractor={item => item.id}
+              scrollEnabled={false}
+            />
+          ) : (
+            <View style={styles.emptyStateContainer}>
+              <Ionicons name="medical" size={50} color="#ccc" />
+              <Text style={styles.emptyStateText}>
+                {availableForEmergencies 
+                  ? 'No hay solicitudes de emergencia en este momento' 
+                  : 'Activa tu disponibilidad para recibir solicitudes'}
               </Text>
             </View>
-            <View style={styles.tipContent}>
-              <Text style={styles.tipTitle}>
-                Alimentación saludable para tu mascota
-              </Text>
-              <Text style={styles.tipDescription}>
-                Aprende cómo mejorar la dieta de tu mascota para una vida larga y feliz.
-              </Text>
+          )}
+        </View>
+
+        {/* Próximas citas */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Próximas Citas</Text>
+            {upcomingAppointments.length > 0 && (
+              <TouchableOpacity 
+                style={styles.viewAllButton}
+                onPress={() => navigation.navigate('Citas')}
+              >
+                <Text style={styles.viewAllText}>Ver todas</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {upcomingAppointments.length > 0 ? (
+            <FlatList
+              data={upcomingAppointments.slice(0, 2)} // Mostrar solo las 2 primeras
+              renderItem={renderAppointmentItem}
+              keyExtractor={item => item.id}
+              scrollEnabled={false}
+            />
+          ) : (
+            <View style={styles.emptyStateContainer}>
+              <Ionicons name="calendar" size={50} color="#ccc" />
+              <Text style={styles.emptyStateText}>No hay citas programadas próximamente</Text>
             </View>
-            <Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </Text>
+          )}
+        </View>
+        
+        {/* Botones de acceso rápido */}
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Services')}
+          >
+            <Ionicons name="list" size={24} color="#1E88E5" />
+            <Text style={styles.quickActionText}>Mis Servicios</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.tipCard, { marginTop: 15 }]}
-            onPress={() => navigation.navigate('HealthTipDetail', {
-              tip: {
-                id: '2',
-                title: 'Signos de alerta en la salud de tu mascota',
-                description: 'Conoce los síntomas que indican que debes llevar a tu mascota al veterinario inmediatamente.',
-                image: null,
-                petType: 'cat',
-                category: 'Cuidados Generales',
-                author: 'Dra. María Gómez',
-                date: '10 mayo, 2025',
-                readTime: '4 min'
-              }
-            })}
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Availability')}
           >
-            <View style={styles.tipImageContainer}>
-              <Text>
-                <Ionicons name="alert-circle" size={32} color="#F44336" />
-              </Text>
-            </View>
-            <View style={styles.tipContent}>
-              <Text style={styles.tipTitle}>
-                Signos de alerta en la salud de tu mascota
-              </Text>
-              <Text style={styles.tipDescription}>
-                Conoce los síntomas que indican que debes llevar a tu mascota al veterinario.
-              </Text>
-            </View>
-            <Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </Text>
+            <Ionicons name="time" size={24} color="#4CAF50" />
+            <Text style={styles.quickActionText}>Disponibilidad</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Reviews')}
+          >
+            <Ionicons name="star" size={24} color="#FFC107" />
+            <Text style={styles.quickActionText}>Valoraciones</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Earnings')}
+          >
+            <Ionicons name="cash" size={24} color="#9C27B0" />
+            <Text style={styles.quickActionText}>Ganancias</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -441,50 +429,97 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
-  banner: {
+  header: {
     backgroundColor: '#1E88E5',
-    paddingVertical: 25,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    padding: 20,
+    paddingTop: 40,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
+  },
+  headerContent: {
     flexDirection: 'row',
-    overflow: 'hidden',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  bannerContent: {
-    flex: 3,
+  welcome: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
   },
-  bannerImageContainer: {
+  providerName: {
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  profileButton: {
+    padding: 5,
+  },
+  availabilityContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginTop: 15,
+    padding: 10,
+    borderRadius: 10,
+  },
+  availabilityTitle: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginTop: -20,
+    padding: 15,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bannerTitle: {
-    fontSize: 24,
+  statValue: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
+    color: '#333',
   },
-  bannerSubtitle: {
-    fontSize: 14,
-    color: '#E3F2FD',
-    marginBottom: 15,
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
-  bannerButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
+  statDivider: {
+    width: 1,
+    height: '70%',
+    backgroundColor: '#E0E0E0',
   },
-  bannerButtonText: {
-    color: '#1E88E5',
-    fontWeight: 'bold',
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   sectionContainer: {
-    padding: 20,
-  },
-  lastSection: {
-    paddingBottom: 30,
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginTop: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -497,240 +532,251 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  seeAllText: {
+  badgeContainer: {
+    backgroundColor: '#F44336',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  viewAllButton: {
+    padding: 5,
+  },
+  viewAllText: {
     color: '#1E88E5',
+    fontSize: 14,
     fontWeight: '500',
   },
-  servicesList: {
-    paddingRight: 10,
+  emergencyCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginBottom: 15,
+    overflow: 'hidden',
   },
-  appointmentContainer: {
-    margin: 20,
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+  emergencyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    marginRight: 10,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  petInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  petName: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 5,
+  },
+  urgencyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  highUrgency: {
+    backgroundColor: '#ffebee',
+    borderWidth: 1,
+    borderColor: '#ffcdd2',
+  },
+  mediumUrgency: {
+    backgroundColor: '#fff8e1',
+    borderWidth: 1,
+    borderColor: '#ffecb3',
+  },
+  lowUrgency: {
+    backgroundColor: '#e8f5e9',
+    borderWidth: 1,
+    borderColor: '#c8e6c9',
+  },
+  urgencyText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  emergencyDetails: {
+    padding: 12,
+  },
+  emergencyDescription: {
+    fontSize: 15,
+    color: '#333',
+    marginBottom: 8,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 5,
+    flex: 1,
+  },
+  distanceTimeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+  },
+  distanceTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  distanceTimeText: {
+    fontSize: 13,
+    color: '#666',
+    marginLeft: 4,
+  },
+  emergencyActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  rejectButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#FFF',
+  },
+  acceptButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#E3F2FD',
+  },
+  rejectButtonText: {
+    color: '#F44336',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  acceptButtonText: {
+    color: '#1E88E5',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  appointmentCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginBottom: 12,
+    padding: 12,
   },
   appointmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  appointmentTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  appointmentContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    marginBottom: 8,
   },
   appointmentInfo: {
     flex: 1,
   },
-  appointmentDate: {
+  appointmentService: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E88E5',
-    marginBottom: 5,
+    fontWeight: '600',
+    color: '#333',
   },
-  appointmentTime: {
+  appointmentDateTime: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 5,
-  },
-  appointmentType: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
-  },
-  appointmentVet: {
-    fontSize: 14,
-    color: '#666',
-  },
-  appointmentButton: {
-    backgroundColor: '#E3F2FD',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-  },
-  appointmentButtonText: {
-    color: '#1E88E5',
-    fontWeight: '500',
-  },
-  vetsList: {
-    paddingRight: 10,
-    paddingBottom: 10,
-  },
-  // Estilos para veterinarios destacados
-  featuredVetCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    marginRight: 15,
-    marginBottom: 5,
-    width: 250,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  vetTopSection: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  vetImageContainer: {
-    marginRight: 10,
-    position: 'relative',
-  },
-  vetImagePlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#1E88E5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 2,
   },
   statusBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  confirmedStatus: {
+    backgroundColor: '#e3f2fd',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#bbdefb',
   },
-  vetInfo: {
-    flex: 1,
+  pendingStatus: {
+    backgroundColor: '#fff8e1',
+    borderWidth: 1,
+    borderColor: '#ffecb3',
   },
-  vetName: {
-    fontSize: 16,
+  statusText: {
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 2,
   },
-  vetSpecialty: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 5,
-  },
-  vetDetailSection: {
+  appointmentDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#F0F0F0',
-    marginBottom: 10,
+    marginTop: 4,
   },
-  vetDetailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  vetDetailText: {
-    fontSize: 12,
+  appointmentUserName: {
+    fontSize: 14,
     color: '#666',
     marginLeft: 5,
   },
-  vetSpecialtiesContainer: {
+  appointmentPetName: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 5,
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+  },
+  emptyStateText: {
+    color: '#777',
+    fontSize: 15,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  quickActionsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 30,
   },
-  specialtyBadge: {
-    backgroundColor: '#E3F2FD',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    marginRight: 6,
-    marginBottom: 6,
-  },
-  specialtyText: {
-    fontSize: 11,
-    color: '#1E88E5',
-    fontWeight: '500',
-  },
-  // Estilos para veterinarios disponibles
-  availableVetCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    marginRight: 15,
-    marginBottom: 5,
-    width: 220,
+  quickActionButton: {
+    width: (width - 60) / 2,
+    backgroundColor: '#FFF',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
-    overflow: 'hidden',
-  },
-  vetStatusContainer: {
-    backgroundColor: '#E8F5E9',
-    paddingVertical: 5,
-    paddingHorizontal: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  vetStatusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4CAF50',
-    marginRight: 5,
-  },
-  vetStatusText: {
-    fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '500',
-  },
-  vetAvailableContent: {
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tipCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: 2,
     elevation: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
-  tipImageContainer: {
-    marginRight: 15,
-  },
-  tipContent: {
-    flex: 1,
-  },
-  tipTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
+  quickActionText: {
     color: '#333',
-    marginBottom: 5,
-  },
-  tipDescription: {
-    fontSize: 12,
-    color: '#888',
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 8,
   },
 });
 
