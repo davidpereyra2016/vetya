@@ -30,6 +30,38 @@ const HomeScreen = ({ navigation }) => {
     citasPendientes: 8,
     valoracionPromedio: 4.8
   });
+  
+  // Estado para citas pendientes por confirmar
+  const [pendingAppointments, setPendingAppointments] = useState([
+    {
+      id: 'cita3',
+      usuarioNombre: 'Ana María Rodríguez',
+      mascotaNombre: 'Toby',
+      tipoMascota: 'Perro',
+      raza: 'Golden Retriever',
+      edad: '5 años',
+      servicio: 'Consulta general',
+      fechaHora: '19/05/2025 10:00',
+      motivo: 'Revisión por pérdida de apetito',
+      estado: 'pendiente',
+      ubicacion: 'Domicilio',
+      direccion: 'Av. Corrientes 2500, CABA'
+    },
+    {
+      id: 'cita4',
+      usuarioNombre: 'Jorge Martínez',
+      mascotaNombre: 'Luna',
+      tipoMascota: 'Gato',
+      raza: 'Siamés',
+      edad: '2 años',
+      servicio: 'Vacunación',
+      fechaHora: '20/05/2025 16:15',
+      motivo: 'Vacuna anual',
+      estado: 'pendiente',
+      ubicacion: 'Clínica',
+      direccion: ''
+    }
+  ]);
 
   // Estado para solicitudes de emergencia activas
   const [activeEmergencies, setActiveEmergencies] = useState([
@@ -152,6 +184,73 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('AppointmentDetails', { appointment });
   };
 
+  // Función para confirmar una cita pendiente
+  const handleConfirmAppointment = (appointment) => {
+    Alert.alert(
+      'Confirmar Cita',
+      `¿Confirmar cita con ${appointment.usuarioNombre} para ${appointment.mascotaNombre}?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirmar',
+          onPress: () => {
+            // Aquí iría la lógica para confirmar la cita en el backend
+            // Por ahora, actualizamos el estado local
+            setPendingAppointments(
+              pendingAppointments.filter(item => item.id !== appointment.id)
+            );
+            
+            // Actualizar las estadísticas
+            setStats({
+              ...stats,
+              citasPendientes: stats.citasPendientes - 1
+            });
+            
+            // Mostrar mensaje de éxito
+            Alert.alert('Cita confirmada', 'La cita ha sido confirmada exitosamente.');
+          },
+        },
+      ]
+    );
+  };
+
+  // Función para rechazar una cita pendiente
+  const handleRejectAppointment = (appointment) => {
+    Alert.alert(
+      'Rechazar Cita',
+      `¿Estás seguro de rechazar la cita con ${appointment.usuarioNombre}?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Rechazar',
+          style: 'destructive',
+          onPress: () => {
+            // Aquí iría la lógica para rechazar la cita en el backend
+            // Por ahora, actualizamos el estado local
+            setPendingAppointments(
+              pendingAppointments.filter(item => item.id !== appointment.id)
+            );
+            
+            // Actualizar las estadísticas
+            setStats({
+              ...stats,
+              citasPendientes: stats.citasPendientes - 1
+            });
+            
+            // Mostrar mensaje de éxito
+            Alert.alert('Cita rechazada', 'La cita ha sido rechazada.');
+          },
+        },
+      ]
+    );
+  };
+
   // Pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
@@ -160,6 +259,68 @@ const HomeScreen = ({ navigation }) => {
       setRefreshing(false);
     }, 1500);
   };
+
+  // Renderizar cada cita pendiente por confirmar
+  const renderPendingAppointment = ({ item }) => (
+    <View style={styles.appointmentCard}>
+      <View style={styles.appointmentHeader}>
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person-circle" size={40} color="#1E88E5" />
+          </View>
+          <View>
+            <Text style={styles.userName}>{item.usuarioNombre}</Text>
+            <View style={styles.petInfo}>
+              <Ionicons name="paw" size={14} color="#666" />
+              <Text style={styles.petName}>{item.mascotaNombre} ({item.tipoMascota})</Text>
+            </View>
+          </View>
+        </View>
+        <View style={[styles.appointmentBadge]}>
+          <Text style={styles.appointmentBadgeText}>
+            {item.servicio}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.appointmentDetails}>
+        <View style={styles.appointmentRow}>
+          <View style={styles.appointmentDetail}>
+            <Ionicons name="calendar" size={16} color="#1E88E5" />
+            <Text style={styles.appointmentDetailText}>{item.fechaHora}</Text>
+          </View>
+          
+          <View style={styles.appointmentDetail}>
+            <Ionicons name="location" size={16} color="#1E88E5" />
+            <Text style={styles.appointmentDetailText}>{item.ubicacion}</Text>
+          </View>
+        </View>
+
+        {item.motivo && (
+          <View style={styles.motiveContainer}>
+            <Text style={styles.motiveLabel}>Motivo:</Text>
+            <Text style={styles.motiveText}>{item.motivo}</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.appointmentActions}>
+        <TouchableOpacity 
+          style={[styles.appointmentButton, styles.rejectButton]}
+          onPress={() => handleRejectAppointment(item)}
+        >
+          <Text style={styles.rejectButtonText}>Rechazar</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.appointmentButton, styles.confirmButton]}
+          onPress={() => handleConfirmAppointment(item)}
+        >
+          <Text style={styles.confirmButtonText}>Confirmar</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   // Renderizar cada solicitud de emergencia
   const renderEmergencyItem = ({ item }) => (
@@ -226,10 +387,10 @@ const HomeScreen = ({ navigation }) => {
   );
 
   // Renderizar cada cita programada
-  const renderAppointmentItem = ({ item }) => (
+  const renderAppointmentItem = ({ item, onPress }) => (
     <TouchableOpacity 
       style={styles.appointmentCard}
-      onPress={() => handleAppointmentPress(item)}
+      onPress={onPress || (() => handleAppointmentPress(item))}
     >
       <View style={styles.appointmentHeader}>
         <View style={styles.appointmentInfo}>
@@ -265,7 +426,7 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.welcome}>¡Bienvenido!</Text>
+            <Text style={styles.welcome}>¡Bienvenido a VetPresta!</Text>
             <Text style={styles.providerName}>{provider?.nombre || user?.username || 'Prestador'}</Text>
           </View>
           <TouchableOpacity 
@@ -363,7 +524,7 @@ const HomeScreen = ({ navigation }) => {
             {upcomingAppointments.length > 0 && (
               <TouchableOpacity 
                 style={styles.viewAllButton}
-                onPress={() => navigation.navigate('Citas')}
+                onPress={() => navigation.navigate('Appointments')}
               >
                 <Text style={styles.viewAllText}>Ver todas</Text>
               </TouchableOpacity>
@@ -373,7 +534,9 @@ const HomeScreen = ({ navigation }) => {
           {upcomingAppointments.length > 0 ? (
             <FlatList
               data={upcomingAppointments.slice(0, 2)} // Mostrar solo las 2 primeras
-              renderItem={renderAppointmentItem}
+              renderItem={({item}) => renderAppointmentItem({item, onPress: () => 
+                navigation.navigate('AppointmentDetails', {appointment: item})
+              })}
               keyExtractor={item => item.id}
               scrollEnabled={false}
             />
@@ -391,15 +554,29 @@ const HomeScreen = ({ navigation }) => {
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Services')}
           >
-            <Ionicons name="list" size={24} color="#1E88E5" />
+            <Text>
+              <Ionicons name="list" size={24} color="#1E88E5" />
+            </Text>
             <Text style={styles.quickActionText}>Mis Servicios</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            onPress={() => navigation.navigate('Appointments')}
+          >
+            <Text>
+              <Ionicons name="calendar" size={24} color="#1E88E5" />
+            </Text>
+            <Text style={styles.quickActionText}>Mis Citas</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Availability')}
           >
-            <Ionicons name="time" size={24} color="#4CAF50" />
+            <Text>
+              <Ionicons name="time" size={24} color="#4CAF50" />
+            </Text>
             <Text style={styles.quickActionText}>Disponibilidad</Text>
           </TouchableOpacity>
           
@@ -407,16 +584,10 @@ const HomeScreen = ({ navigation }) => {
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Reviews')}
           >
-            <Ionicons name="star" size={24} color="#FFC107" />
+            <Text>
+              <Ionicons name="star" size={24} color="#FFC107" />
+            </Text>
             <Text style={styles.quickActionText}>Valoraciones</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.quickActionButton}
-            onPress={() => navigation.navigate('Earnings')}
-          >
-            <Ionicons name="cash" size={24} color="#9C27B0" />
-            <Text style={styles.quickActionText}>Ganancias</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -17,6 +17,7 @@ export const COLORS = {
   background: '#F5F7FA', // Fondo general
   card: '#FFFFFF',       // Fondo tarjetas
   overlay: 'rgba(0,0,0,0.5)', // Overlay para modales
+  white: '#FFFFFF',
 };
 
 // Espaciado consistente

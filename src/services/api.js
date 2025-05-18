@@ -149,7 +149,9 @@ export const prestadorService = {
   // Actualizar disponibilidad para emergencias
   updateEmergencyAvailability: async (id, isAvailable) => {
     try {
-      const response = await axios.put(`/prestadores/${id}/emergencias`, { disponible: isAvailable });
+      const response = await axios.patch(`/prestadores/${id}/emergencia`, {
+        disponibleEmergencias: isAvailable
+      });
       return {
         success: true,
         data: response.data
@@ -157,7 +159,126 @@ export const prestadorService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al actualizar disponibilidad para emergencias'
+        error: error.response?.data?.message || 'Error al actualizar disponibilidad de emergencias'
+      };
+    }
+  },
+
+  // Obtener disponibilidad por servicio
+  getAvailability: async (prestadorId) => {
+    try {
+      const response = await axios.get(`/disponibilidad/prestador/${prestadorId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener disponibilidad'
+      };
+    }
+  },
+
+  // Obtener disponibilidad para un servicio específico
+  getServiceAvailability: async (prestadorId, servicioId) => {
+    try {
+      const response = await axios.get(`/disponibilidad/prestador/${prestadorId}/servicio/${servicioId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener disponibilidad del servicio'
+      };
+    }
+  },
+
+  // Actualizar disponibilidad de un servicio
+  updateServiceAvailability: async (prestadorId, servicioId, disponibilidadData) => {
+    try {
+      const response = await axios.put(
+        `/disponibilidad/prestador/${prestadorId}/servicio/${servicioId}`,
+        disponibilidadData
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al actualizar disponibilidad del servicio'
+      };
+    }
+  },
+
+  // Agregar fechas especiales (feriados, vacaciones, etc.)
+  addSpecialDate: async (prestadorId, fechaEspecialData) => {
+    try {
+      const response = await axios.post(
+        `/disponibilidad/prestador/${prestadorId}/fecha-especial`,
+        fechaEspecialData
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al agregar fecha especial'
+      };
+    }
+  },
+
+  // Verificar disponibilidad para una fecha y hora específica
+  checkAvailability: async (prestadorId, servicioId, fecha, hora) => {
+    try {
+      const response = await axios.get(
+        `/disponibilidad/check`, {
+          params: {
+            prestador: prestadorId,
+            servicio: servicioId,
+            fecha,
+            hora
+          }
+        }
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al verificar disponibilidad'
+      };
+    }
+  },
+
+  // Obtener horarios disponibles para una fecha específica
+  getAvailableTimeSlots: async (prestadorId, servicioId, fecha) => {
+    try {
+      const response = await axios.get(
+        `/disponibilidad/horarios-disponibles`, {
+          params: {
+            prestador: prestadorId,
+            servicio: servicioId,
+            fecha
+          }
+        }
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener horarios disponibles'
       };
     }
   }

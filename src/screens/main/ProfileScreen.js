@@ -269,7 +269,7 @@ const ProfileScreen = ({ navigation }) => {
             <StatItem 
               value={providerStats.citasCompletadas}
               label="Citas completadas"
-              icon="calendar-check"
+              icon="calendar-outline"
               color={COLORS.success}
             />
             <StatItem 

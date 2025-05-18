@@ -17,6 +17,19 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 
 // Pantallas principales
 import HomeScreen from '../screens/main/HomeScreen';
+import ProfileScreen from '../screens/main/ProfileScreen';
+
+// Pantallas de perfil
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
+
+// Pantallas de servicios
+import ServicesScreen from '../screens/services/ServicesScreen';
+import AvailabilityScreen from '../screens/availability/AvailabilityScreen';
+
+// Pantallas de citas
+import AppointmentsScreen from '../screens/appointments/AppointmentsScreen';
+import AppointmentDetailsScreen from '../screens/appointments/AppointmentDetailsScreen';
 
 // Componentes temporales para pantallas que aún no existen
 // Se reemplazarán con las implementaciones reales en futuras iteraciones
@@ -32,12 +45,8 @@ const PlaceholderScreen = ({ route }) => (
   </View>
 );
 
-// Declaraciones temporales para evitar errores de compilación
-const ProfileScreen = PlaceholderScreen;
-const ServicesScreen = PlaceholderScreen;
-const AppointmentsScreen = PlaceholderScreen;
+// Declaraciones temporales para pantallas que aún no existen
 const EmergencyDetailsScreen = PlaceholderScreen;
-const AvailabilityScreen = PlaceholderScreen;
 const ReviewsScreen = PlaceholderScreen;
 const EarningsScreen = PlaceholderScreen;
 
@@ -63,7 +72,7 @@ function MainTabsNavigator() {
             iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <Text><Ionicons name={iconName} size={size} color={color} /></Text>;
         },
         tabBarActiveTintColor: '#1E88E5',
         tabBarInactiveTintColor: 'gray',
@@ -104,58 +113,23 @@ function MainNavigator() {
         }}
       />
       
-      {/* Pantallas para gestión de prestador */}
-      <Stack.Screen 
-        name="Services" 
-        component={ServicesScreen}
-        options={{
-          headerShown: false,
-          cardStyleInterpolator: ({ current }) => ({
-            cardStyle: {
-              opacity: current.progress,
-            },
-          }),
-        }}
-      />
+      {/* Pantallas de perfil */}
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }}/>
       
-      <Stack.Screen 
-        name="Availability" 
-        component={AvailabilityScreen} 
-        options={{
-          headerShown: false,
-          cardStyleInterpolator: ({ current }) => ({
-            cardStyle: {
-              opacity: current.progress,
-            },
-          }),
-        }}
-      />
+      {/* Pantallas de servicios */}
+      <Stack.Screen name="Services" component={ServicesScreen} options={{ headerShown: false }}/>
       
-      <Stack.Screen 
-        name="Reviews" 
-        component={ReviewsScreen} 
-        options={{
-          headerShown: false,
-          cardStyleInterpolator: ({ current }) => ({
-            cardStyle: {
-              opacity: current.progress,
-            },
-          }),
-        }}
-      />
+      {/* Otras pantallas */}
+      <Stack.Screen name="Availability" component={AvailabilityScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="Reviews" component={ReviewsScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="Earnings" component={EarningsScreen} options={{ headerShown: false }}/>
       
-      <Stack.Screen 
-        name="Earnings" 
-        component={EarningsScreen} 
-        options={{
-          headerShown: false,
-          cardStyleInterpolator: ({ current }) => ({
-            cardStyle: {
-              opacity: current.progress,
-            },
-          }),
-        }}
-      />
+      {/* Pantallas de citas */}
+      <Stack.Screen name="Appointments" component={AppointmentsScreen} options={{ headerShown: false }}/>
+      <Stack.Screen name="AppointmentDetails" component={AppointmentDetailsScreen} options={{ headerShown: false }}/>
+      
+      {/* Otras pantallas para futuras implementaciones */}
     </Stack.Navigator>
   );
 }
