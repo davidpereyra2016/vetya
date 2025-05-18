@@ -314,7 +314,7 @@ const AppointmentsScreen = ({ navigation }) => {
   );
   
   // Renderizar cada cita confirmada o pasada
-  const renderAppointmentItem = ({ item, type }) => (
+  const renderAppointmentItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.appointmentCard}
       onPress={() => handleViewAppointmentDetails(item)}

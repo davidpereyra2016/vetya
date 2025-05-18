@@ -286,12 +286,16 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.appointmentDetails}>
         <View style={styles.appointmentRow}>
           <View style={styles.appointmentDetail}>
-            <Ionicons name="calendar" size={16} color="#1E88E5" />
+            <Text>
+              <Ionicons name="calendar" size={16} color="#1E88E5" />
+            </Text>
             <Text style={styles.appointmentDetailText}>{item.fechaHora}</Text>
           </View>
           
           <View style={styles.appointmentDetail}>
-            <Ionicons name="location" size={16} color="#1E88E5" />
+            <Text>
+              <Ionicons name="location" size={16} color="#1E88E5" />
+            </Text>
             <Text style={styles.appointmentDetailText}>{item.ubicacion}</Text>
           </View>
         </View>
@@ -353,17 +357,23 @@ const HomeScreen = ({ navigation }) => {
         <Text style={styles.emergencyDescription}>{item.descripcion}</Text>
         
         <View style={styles.locationContainer}>
-          <Ionicons name="location" size={16} color="#F44336" />
+          <Text>
+            <Ionicons name="location" size={16} color="#F44336" />
+          </Text>
           <Text style={styles.locationText}>{item.ubicacion}</Text>
         </View>
         
         <View style={styles.distanceTimeContainer}>
           <View style={styles.distanceTime}>
-            <Ionicons name="navigate" size={14} color="#666" />
+            <Text>
+              <Ionicons name="navigate" size={14} color="#666" />
+            </Text>
             <Text style={styles.distanceTimeText}>{item.distancia}</Text>
           </View>
           <View style={styles.distanceTime}>
-            <Ionicons name="time" size={14} color="#666" />
+            <Text>
+              <Ionicons name="time" size={14} color="#666" />
+            </Text>
             <Text style={styles.distanceTimeText}>{item.tiempo} en auto</Text>
           </View>
         </View>
@@ -407,11 +417,15 @@ const HomeScreen = ({ navigation }) => {
 
       <View style={styles.appointmentDetails}>
         <View style={styles.userInfo}>
-          <Ionicons name="person" size={16} color="#666" />
+          <Text>
+            <Ionicons name="person" size={16} color="#666" />
+          </Text>
           <Text style={styles.appointmentUserName}>{item.usuarioNombre}</Text>
         </View>
         <View style={styles.petInfo}>
-          <Ionicons name="paw" size={16} color="#666" />
+          <Text>
+            <Ionicons name="paw" size={16} color="#666" />
+          </Text>
           <Text style={styles.appointmentPetName}>{item.mascotaNombre} ({item.tipoMascota})</Text>
         </View>
       </View>
@@ -433,7 +447,9 @@ const HomeScreen = ({ navigation }) => {
             style={styles.profileButton}
             onPress={() => navigation.navigate('Perfil')}
           >
-            <Ionicons name="person-circle" size={40} color="#FFF" />
+            <Text>
+              <Ionicons name="person-circle" size={40} color="#FFF" />
+            </Text>
           </TouchableOpacity>
         </View>
         
@@ -481,7 +497,9 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.statItem}>
             <View style={styles.ratingContainer}>
               <Text style={styles.statValue}>{stats.valoracionPromedio}</Text>
-              <Ionicons name="star" size={16} color="#FFC107" />
+              <Text>
+                <Ionicons name="star" size={16} color="#FFC107" />
+              </Text>
             </View>
             <Text style={styles.statLabel}>Valoración</Text>
           </View>
@@ -507,7 +525,9 @@ const HomeScreen = ({ navigation }) => {
             />
           ) : (
             <View style={styles.emptyStateContainer}>
-              <Ionicons name="medical" size={50} color="#ccc" />
+              <Text>
+                <Ionicons name="medical" size={50} color="#ccc" />
+              </Text>
               <Text style={styles.emptyStateText}>
                 {availableForEmergencies 
                   ? 'No hay solicitudes de emergencia en este momento' 
@@ -542,7 +562,9 @@ const HomeScreen = ({ navigation }) => {
             />
           ) : (
             <View style={styles.emptyStateContainer}>
-              <Ionicons name="calendar" size={50} color="#ccc" />
+              <Text>
+                <Ionicons name="calendar" size={50} color="#ccc" />
+              </Text>
               <Text style={styles.emptyStateText}>No hay citas programadas próximamente</Text>
             </View>
           )}
@@ -594,7 +616,7 @@ const HomeScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
+//no analizar solo en el caso de 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
