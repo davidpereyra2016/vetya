@@ -35,9 +35,7 @@ import AppointmentDetailsScreen from '../screens/appointments/AppointmentDetails
 // Se reemplazarán con las implementaciones reales en futuras iteraciones
 const PlaceholderScreen = ({ route }) => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F7FA' }}>
-    <Text>
-      <Ionicons name="construct-outline" size={80} color="#1E88E5" />
-    </Text>
+    <Ionicons name="construct-outline" size={80} color="#1E88E5" />
     <Text style={{ fontSize: 18, fontWeight: 'bold', marginTop: 20, color: '#333' }}>
       {route.name}
     </Text>
@@ -74,7 +72,7 @@ function MainTabsNavigator() {
             iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <Text><Ionicons name={iconName} size={size} color={color} /></Text>;
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#1E88E5',
         tabBarInactiveTintColor: 'gray',

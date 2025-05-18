@@ -27,10 +27,10 @@ const ProfileScreen = ({ navigation }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [availableForEmergencies, setAvailableForEmergencies] = useState(false);
   const [providerStats, setProviderStats] = useState({
-    valoraciones: 0,
-    emergenciasAtendidas: 0,
-    citasCompletadas: 0,
-    clientesAtendidos: 0
+    valoraciones: 10,
+    emergenciasAtendidas: 12,
+    citasCompletadas: 36,
+    clientesAtendidos: 28
   });
 
   // Efectos para cargar datos del prestador
@@ -59,9 +59,9 @@ const ProfileScreen = ({ navigation }) => {
         // Las estadísticas serían parte de la respuesta del backend
         setProviderStats({
           valoraciones: result.data.opiniones?.length || 0,
-          emergenciasAtendidas: 12, // Valor de prueba
-          citasCompletadas: 36, // Valor de prueba
-          clientesAtendidos: 28 // Valor de prueba
+          emergenciasAtendidas: result.data.emergenciasAtendidas || 0,
+          citasCompletadas: result.data.citasCompletadas || 0,
+          clientesAtendidos: result.data.clientesAtendidos || 0
         });
       }
     } catch (error) {

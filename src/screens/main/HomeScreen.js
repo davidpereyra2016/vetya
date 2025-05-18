@@ -266,12 +266,16 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.appointmentHeader}>
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle" size={40} color="#1E88E5" />
+            <Text>
+              <Ionicons name="person-circle" size={40} color="#1E88E5" />
+            </Text>
           </View>
           <View>
             <Text style={styles.userName}>{item.usuarioNombre}</Text>
             <View style={styles.petInfo}>
-              <Ionicons name="paw" size={14} color="#666" />
+              <Text>
+                <Ionicons name="paw" size={14} color="#666" />
+              </Text>
               <Text style={styles.petName}>{item.mascotaNombre} ({item.tipoMascota})</Text>
             </View>
           </View>
@@ -332,12 +336,16 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.emergencyHeader}>
         <View style={styles.userInfo}>
           <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle" size={40} color="#1E88E5" />
+            <Text>
+              <Ionicons name="person-circle" size={40} color="#1E88E5" />
+            </Text>
           </View>
           <View>
             <Text style={styles.userName}>{item.usuarioNombre}</Text>
             <View style={styles.petInfo}>
-              <Ionicons name="paw" size={14} color="#666" />
+              <Text>
+                <Ionicons name="paw" size={14} color="#666" />
+              </Text>
               <Text style={styles.petName}>{item.mascotaNombre} ({item.tipoMascota})</Text>
             </View>
           </View>
@@ -357,23 +365,17 @@ const HomeScreen = ({ navigation }) => {
         <Text style={styles.emergencyDescription}>{item.descripcion}</Text>
         
         <View style={styles.locationContainer}>
-          <Text>
-            <Ionicons name="location" size={16} color="#F44336" />
-          </Text>
+          <Ionicons name="location" size={16} color="#F44336" />
           <Text style={styles.locationText}>{item.ubicacion}</Text>
         </View>
         
         <View style={styles.distanceTimeContainer}>
           <View style={styles.distanceTime}>
-            <Text>
-              <Ionicons name="navigate" size={14} color="#666" />
-            </Text>
+            <Ionicons name="navigate" size={14} color="#666" />
             <Text style={styles.distanceTimeText}>{item.distancia}</Text>
           </View>
           <View style={styles.distanceTime}>
-            <Text>
-              <Ionicons name="time" size={14} color="#666" />
-            </Text>
+            <Ionicons name="time" size={14} color="#666" />
             <Text style={styles.distanceTimeText}>{item.tiempo} en auto</Text>
           </View>
         </View>
@@ -447,9 +449,7 @@ const HomeScreen = ({ navigation }) => {
             style={styles.profileButton}
             onPress={() => navigation.navigate('Perfil')}
           >
-            <Text>
-              <Ionicons name="person-circle" size={40} color="#FFF" />
-            </Text>
+            <Ionicons name="person-circle" size={40} color="#FFF" />
           </TouchableOpacity>
         </View>
         
@@ -497,9 +497,7 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.statItem}>
             <View style={styles.ratingContainer}>
               <Text style={styles.statValue}>{stats.valoracionPromedio}</Text>
-              <Text>
-                <Ionicons name="star" size={16} color="#FFC107" />
-              </Text>
+              <Ionicons name="star" size={16} color="#FFC107" />
             </View>
             <Text style={styles.statLabel}>Valoración</Text>
           </View>
@@ -525,9 +523,7 @@ const HomeScreen = ({ navigation }) => {
             />
           ) : (
             <View style={styles.emptyStateContainer}>
-              <Text>
-                <Ionicons name="medical" size={50} color="#ccc" />
-              </Text>
+              <Ionicons name="medical" size={50} color="#ccc" />
               <Text style={styles.emptyStateText}>
                 {availableForEmergencies 
                   ? 'No hay solicitudes de emergencia en este momento' 

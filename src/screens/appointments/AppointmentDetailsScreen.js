@@ -131,18 +131,14 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Text>
-              <Ionicons name="arrow-back" size={24} color={COLORS.white} />
-            </Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Detalles de la Cita</Text>
           <TouchableOpacity 
             style={styles.optionsButton}
             onPress={() => setShowOptions(!showOptions)}
           >
-            <Text>
-              <Ionicons name="ellipsis-vertical" size={24} color={COLORS.white} />
-            </Text>
+            <Ionicons name="ellipsis-vertical" size={24} color={COLORS.white} />
           </TouchableOpacity>
         </View>
       </View>
@@ -156,9 +152,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
                 style={styles.optionItem}
                 onPress={handleCompleteAppointment}
               >
-                <Text>
-                  <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.success} />
-                </Text>
+                <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.success} />
                 <Text style={styles.optionText}>Marcar como completada</Text>
               </TouchableOpacity>
               
@@ -166,9 +160,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
                 style={styles.optionItem}
                 onPress={handleRescheduleAppointment}
               >
-                <Text>
-                  <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
-                </Text>
+                <Ionicons name="calendar-outline" size={20} color={COLORS.primary} />
                 <Text style={styles.optionText}>Reprogramar</Text>
               </TouchableOpacity>
               
@@ -176,9 +168,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
                 style={styles.optionItem}
                 onPress={handleCancelAppointment}
               >
-                <Text>
-                  <Ionicons name="close-circle-outline" size={20} color={COLORS.accent} />
-                </Text>
+                <Ionicons name="close-circle-outline" size={20} color={COLORS.accent} />
                 <Text style={styles.optionText}>Cancelar cita</Text>
               </TouchableOpacity>
             </>
@@ -189,9 +179,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
               style={styles.optionItem}
               onPress={handleCancelAppointment}
             >
-              <Text>
-                <Ionicons name="close-circle-outline" size={20} color={COLORS.accent} />
-              </Text>
+              <Ionicons name="close-circle-outline" size={20} color={COLORS.accent} />
               <Text style={styles.optionText}>Rechazar cita</Text>
             </TouchableOpacity>
           )}
@@ -208,18 +196,14 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
           
           <View style={styles.dateTimeContainer}>
             <View style={styles.dateTimeItem}>
-              <Text>
-                <Ionicons name="calendar" size={20} color={COLORS.primary} />
-              </Text>
+              <Ionicons name="calendar" size={20} color={COLORS.primary} />
               <Text style={styles.dateTimeText}>
                 {appointment.fechaHora.split(' ')[0]}
               </Text>
             </View>
             
             <View style={styles.dateTimeItem}>
-              <Text>
-                <Ionicons name="time" size={20} color={COLORS.primary} />
-              </Text>
+              <Ionicons name="time" size={20} color={COLORS.primary} />
               <Text style={styles.dateTimeText}>
                 {appointment.fechaHora.split(' ')[1]}
               </Text>
@@ -227,9 +211,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
           </View>
           
           <View style={styles.locationContainer}>
-            <Text>
-              <Ionicons name="location" size={20} color={COLORS.primary} />
-            </Text>
+            <Ionicons name="location" size={20} color={COLORS.primary} />
             <Text style={styles.locationText}>
               {appointment.ubicacion === 'Domicilio' 
                 ? `Domicilio: ${appointment.direccion || 'No especificado'}`
@@ -245,25 +227,19 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
           
           <View style={styles.clientInfo}>
             <View style={styles.avatarContainer}>
-              <Text>
-                <Ionicons name="person-circle" size={60} color={COLORS.primary} />
-              </Text>
+              <Ionicons name="person-circle" size={60} color={COLORS.primary} />
             </View>
             
             <View style={styles.clientDetails}>
               <Text style={styles.clientName}>{appointment.usuarioNombre}</Text>
               
               <View style={styles.infoItem}>
-                <Text>
-                  <Ionicons name="call-outline" size={16} color={COLORS.grey} />
-                </Text>
+                <Ionicons name="call-outline" size={16} color={COLORS.grey} />
                 <Text style={styles.infoText}>+54 11 1234-5678</Text>
               </View>
               
               <View style={styles.infoItem}>
-                <Text>
-                  <Ionicons name="mail-outline" size={16} color={COLORS.grey} />
-                </Text>
+                <Ionicons name="mail-outline" size={16} color={COLORS.grey} />
                 <Text style={styles.infoText}>cliente@ejemplo.com</Text>
               </View>
             </View>
@@ -276,13 +252,11 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
           
           <View style={styles.petInfo}>
             <View style={styles.petAvatar}>
-              <Text>
-                <Ionicons 
-                  name={appointment.tipoMascota === 'Perro' ? 'paw' : 'logo-octocat'} 
-                  size={50} 
-                  color={COLORS.primary} 
-                />
-              </Text>
+              <Ionicons 
+                name={appointment.tipoMascota === 'Perro' ? 'paw' : 'logo-octocat'} 
+                size={50} 
+                color={COLORS.primary} 
+              />
             </View>
             
             <View style={styles.petDetails}>
