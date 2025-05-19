@@ -196,11 +196,26 @@ const useAuthStore = create(
               // Actualizar los datos del usuario con la información actualizada
               set({ user: userResponse.data });
               
+              // Verificar que el ID de usuario existe antes de buscar el prestador
+              const userId = userResponse.data._id || userResponse.data.id;
+              console.log('Usuario cargado correctamente con ID:', userId);
+              
+              if (!userId) {
+                console.log('Error: No se encontró ID de usuario en la respuesta');
+                return;
+              }
+              
               // Intentar cargar el perfil de prestador
               try {
-                const providerResult = await prestadorService.getByUserId(userResponse.data.id);
+                console.log('Obteniendo prestador para usuario ID:', userId);
+                const providerResult = await prestadorService.getByUserId(userId);
                 if (providerResult.success && providerResult.data) {
+                  console.log('Perfil de prestador cargado correctamente:', providerResult.data._id);
                   set({ provider: providerResult.data });
+                } else {
+                  console.log('No se pudo cargar el perfil de prestador:', providerResult.error);
+                  // Si no hay perfil de prestador, mostrar mensaje informativo pero no cerrar sesión
+                  // ya que podría ser que el usuario aún no tenga un perfil completo
                 }
               } catch (providerError) {
                 console.log('Error al cargar perfil de prestador:', providerError);

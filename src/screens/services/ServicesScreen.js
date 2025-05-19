@@ -19,19 +19,29 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
-import { prestadorService } from '../../services/api';
+import useServiceStore from '../../store/useServiceStore';
+import { prestadorService, servicioService } from '../../services/api';
 import globalStyles, { COLORS, SIZES, SHADOWS } from '../../styles/globalStyles';
-import { serviciosPorTipo, todosLosServicios } from '../../data/serviciosPredefinidos';
 
 const ServicesScreen = ({ navigation }) => {
   // Estado global con Zustand
   const user = useAuthStore(state => state.user);
   const provider = useAuthStore(state => state.provider);
   
-  // Estados locales
-  const [myServices, setMyServices] = useState([]); // Servicios seleccionados por el prestador
-  const [availableServices, setAvailableServices] = useState([]); // Servicios disponibles por tipo
-  const [isLoading, setIsLoading] = useState(false);
+  // Estado de servicios usando Zustand
+  const {
+    services: myServices,
+    availableServices,
+    isLoading,
+    error,
+    getProviderServices,
+    getAvailableServices,
+    addServiceToProvider,
+    updateProviderService,
+    removeProviderService
+  } = useServiceStore();
+  
+  // Estados locales para la UI
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('myServices'); // 'myServices' o 'catalog'
@@ -39,58 +49,65 @@ const ServicesScreen = ({ navigation }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [priceInput, setPriceInput] = useState('');
+  const [durationInput, setDurationInput] = useState('');
   
-  // Cargar servicios al iniciar
+  // Mostrar alertas de error si ocurren
   useEffect(() => {
-    loadServices();
-    loadAvailableServices();
-  }, []);
+    if (error) {
+      Alert.alert('Error', error);
+    }
+  }, [error]);
+  
+  // Cargar servicios al iniciar y cada vez que el provider cambie
+  useEffect(() => {
+    if (provider) {
+      loadServices();
+      loadAvailableServices();
+    }
+  }, [provider]);
   
   // Función para cargar los servicios que el prestador ya ha seleccionado
   const loadServices = async () => {
     try {
-      setIsLoading(true);
-      
-      if (!provider?.id) {
-        console.log('No hay ID de prestador disponible');
+      if (!provider) {
+        console.log('No hay información del prestador disponible');
         return;
       }
       
-      // En un escenario real, esto vendría de la API
-      const result = await prestadorService.getById(provider.id);
-      
-      if (result.success && result.data) {
-        // Inicialmente, como aún no hay servicios en la API, usamos datos de muestra
-        // Este código se reemplazaría por: setMyServices(result.data.servicios || []);
-        
-        // Simulamos servicios ya seleccionados por el prestador (3 para prueba)
-        const tipoProvider = provider.tipo || 'Veterinario';
-        const serviciosDisponibles = serviciosPorTipo[tipoProvider] || [];
-        
-        const misServicios = serviciosDisponibles.slice(0, 3).map(servicio => ({
-          ...servicio,
-          precio: servicio.precio || 0, // Usamos el precio predefinido
-          activo: true
-        }));
-        
-        setMyServices(result.data.servicios || misServicios);
-      } else {
-        Alert.alert('Error', 'No se pudieron cargar los servicios');
+      if (!provider.id && !provider._id) {
+        console.log('No se encontró ID del prestador:', provider);
+        return;
       }
+      
+      // Usar el ID correcto (puede venir como id o _id dependiendo de la fuente)
+      const providerId = provider.id || provider._id;
+      console.log('Cargando servicios para el prestador ID:', providerId);
+      
+      // Usar el store para cargar los servicios del prestador
+      setIsRefreshing(true);
+      await getProviderServices(providerId);
+      setIsRefreshing(false);
     } catch (error) {
       console.log('Error al cargar servicios:', error);
-      Alert.alert('Error', 'Ocurrió un problema al cargar los servicios');
-    } finally {
-      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
   
   // Función para cargar los servicios disponibles según el tipo de prestador
-  const loadAvailableServices = () => {
+  const loadAvailableServices = async () => {
     try {
-      const tipoProvider = provider?.tipo || 'Veterinario';
-      const serviciosDisponibles = serviciosPorTipo[tipoProvider] || [];
-      setAvailableServices(serviciosDisponibles);
+      if (!provider) {
+        console.log('No hay información del prestador disponible para cargar catálogo');
+        // Cargar un tipo predeterminado para mostrar algo en el catálogo
+        await getAvailableServices('Veterinario');
+        return;
+      }
+      
+      const tipoProvider = provider.tipo || 'Veterinario';
+      console.log('Cargando catálogo de servicios para tipo de prestador:', tipoProvider);
+      
+      // Usar el store para cargar los servicios disponibles para este tipo de prestador
+      await getAvailableServices(tipoProvider);
     } catch (error) {
       console.log('Error al cargar servicios disponibles:', error);
     }
@@ -98,14 +115,26 @@ const ServicesScreen = ({ navigation }) => {
   
   // Función para ver detalles de un servicio
   const handleViewServiceDetail = (service) => {
+    // Asegurarnos de que estamos almacenando la información completa del servicio
+    console.log('Servicio seleccionado:', service);
     setSelectedService(service);
-    setPriceInput(service.precio.toString());
+    setPriceInput(service.precio ? service.precio.toString() : '0');
+    setDurationInput(service.duracion ? service.duracion.toString() : '0');
     setShowServiceDetailModal(true);
   };
   
   // Función para agregar un servicio del catálogo a mis servicios
   const handleAddServiceFromCatalog = async () => {
-    if (!selectedService) return;
+    if (!selectedService) {
+      console.log('Error: No hay servicio seleccionado');
+      return;
+    }
+    
+    if (!provider || (!provider.id && !provider._id)) {
+      console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
+      Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
+      return;
+    }
     
     // Validación del precio
     const precio = Number(priceInput);
@@ -114,11 +143,32 @@ const ServicesScreen = ({ navigation }) => {
       return;
     }
     
+    // Validación de la duración
+    const duracion = Number(durationInput);
+    if (isNaN(duracion) || duracion < 0) {
+      Alert.alert('Error', 'La duración debe ser un número válido');
+      return;
+    }
+    
     try {
       setIsRefreshing(true);
       
-      // Verificar si el servicio ya está en mi lista
-      const exists = myServices.some(service => service.id === selectedService.id);
+      // Obtener los IDs correctos
+      const providerId = provider._id || provider.id;
+      const serviceId = selectedService._id || selectedService.id;
+      
+      console.log('Datos para agregar servicio:', {
+        providerId,
+        serviceId,
+        precio,
+        duracion
+      });
+      
+      // Verificar si el servicio ya está en mi lista (usar el ID correcto)
+      const exists = Array.isArray(myServices) && myServices.some(service => {
+        const myServiceId = service._id || service.id;
+        return myServiceId === serviceId;
+      });
       
       if (exists) {
         Alert.alert('Información', 'Este servicio ya está en tu lista');
@@ -127,41 +177,41 @@ const ServicesScreen = ({ navigation }) => {
         return;
       }
       
-      const newService = {
-        ...selectedService,
+      const serviceData = {
+        servicioId: serviceId,
         precio: precio,
+        duracion: duracion,
         activo: true
       };
       
-      // En un escenario real, esto enviaría la solicitud a la API
-      // const result = await prestadorService.addService(provider.id, newService);
+      console.log('Enviando solicitud con:', { providerId, serviceData });
       
-      // Simulamos respuesta exitosa
-      const result = { success: true, data: newService };
+      // Usar el store para agregar el servicio a través de la API real
+      const result = await addServiceToProvider(providerId, serviceData);
       
-      if (result.success) {
-        // Actualizar el estado local añadiendo el nuevo servicio
-        setMyServices(prevServices => [
-          ...prevServices,
-          newService
-        ]);
-        
+      if (result) {
         setShowServiceDetailModal(false);
         Alert.alert('Éxito', 'Servicio agregado correctamente');
-      } else {
-        Alert.alert('Error', 'No se pudo agregar el servicio');
       }
     } catch (error) {
       console.log('Error al agregar servicio:', error);
-      Alert.alert('Error', 'Ocurrió un problema al agregar el servicio');
     } finally {
       setIsRefreshing(false);
     }
   };
   
-  // Función para actualizar el precio de un servicio
+  // Función para actualizar el precio y duración de un servicio
   const handleUpdateServicePrice = async () => {
-    if (!selectedService) return;
+    if (!selectedService) {
+      console.log('Error: No hay servicio seleccionado');
+      return;
+    }
+    
+    if (!provider || (!provider.id && !provider._id)) {
+      console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
+      Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
+      return;
+    }
     
     // Validación del precio
     const precio = Number(priceInput);
@@ -170,73 +220,93 @@ const ServicesScreen = ({ navigation }) => {
       return;
     }
     
+    // Validación de la duración
+    const duracion = Number(durationInput);
+    if (isNaN(duracion) || duracion < 0) {
+      Alert.alert('Error', 'La duración debe ser un número válido');
+      return;
+    }
+    
     try {
       setIsRefreshing(true);
       
-      const updatedService = {
-        ...selectedService,
-        precio: precio
+      // Obtener los IDs correctos
+      const providerId = provider._id || provider.id;
+      const serviceId = selectedService._id || selectedService.id;
+      
+      console.log('Datos para actualizar servicio:', {
+        providerId,
+        serviceId,
+        precio,
+        duracion
+      });
+      
+      const serviceData = {
+        precio: precio,
+        duracion: duracion
       };
       
-      // En un escenario real, esto enviaría la solicitud a la API
-      // const result = await prestadorService.updateService(provider.id, selectedService.id, updatedService);
+      // Usar el store para actualizar el servicio a través de la API real
+      const result = await updateProviderService(providerId, serviceId, serviceData);
       
-      // Simulamos respuesta exitosa
-      const result = { success: true, data: updatedService };
-      
-      if (result.success) {
-        // Actualizar el estado local con el servicio actualizado
-        setMyServices(prevServices => 
-          prevServices.map(s => 
-            s.id === selectedService.id ? updatedService : s
-          )
-        );
-        
+      if (result) {
         setShowServiceDetailModal(false);
-        Alert.alert('Éxito', 'Precio actualizado correctamente');
+        Alert.alert('Éxito', 'Servicio actualizado correctamente');
       } else {
-        Alert.alert('Error', 'No se pudo actualizar el precio');
+        Alert.alert('Error', 'No se pudo actualizar el servicio');
       }
     } catch (error) {
       console.log('Error al actualizar servicio:', error);
-      Alert.alert('Error', 'Ocurrió un problema al actualizar el servicio');
+      Alert.alert('Error', 'Ocurrió un error al actualizar el servicio');
     } finally {
       setIsRefreshing(false);
     }
   };
   
-  // Función para cambiar estado activo/inactivo de un servicio
+  // Función para activar/desactivar un servicio
   const handleToggleServiceStatus = async (service) => {
+    if (!service) {
+      console.log('Error: No se proporcionó servicio');
+      return;
+    }
+    
+    if (!provider || (!provider.id && !provider._id)) {
+      console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
+      Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
+      return;
+    }
+    
     try {
       setIsRefreshing(true);
       
-      const updatedService = {
-        ...service,
+      // Obtener los IDs correctos
+      const providerId = provider._id || provider.id;
+      const serviceId = service._id || service.id;
+      
+      console.log('Datos para cambiar estado de servicio:', {
+        providerId,
+        serviceId,
+        activo: !service.activo
+      });
+      
+      // Servicio con el estado actualizado
+      const serviceData = {
         activo: !service.activo
       };
       
-      // En un escenario real, esto enviaría la solicitud a la API
-      // const result = await prestadorService.updateService(provider.id, service.id, updatedService);
+      // Usar el store para actualizar el servicio a través de la API real
+      const result = await updateProviderService(providerId, serviceId, serviceData);
       
-      // Simulamos respuesta exitosa
-      const result = { success: true, data: updatedService };
-      
-      if (result.success) {
-        // Actualizar el estado local con el servicio actualizado
-        setMyServices(prevServices => 
-          prevServices.map(s => 
-            s.id === service.id ? updatedService : s
-          )
-        );
-        
-        const statusText = updatedService.activo ? 'activado' : 'desactivado';
-        Alert.alert('Éxito', `Servicio ${statusText} correctamente`);
+      if (result) {
+        // El store ya actualizó el estado
+        const newStatus = !service.activo;
+        Alert.alert('Estado actualizado', `Servicio ${newStatus ? 'activado' : 'desactivado'} correctamente`);
       } else {
         Alert.alert('Error', 'No se pudo actualizar el estado del servicio');
       }
     } catch (error) {
-      console.log('Error al actualizar estado del servicio:', error);
-      Alert.alert('Error', 'Ocurrió un problema al actualizar el servicio');
+      console.log('Error al cambiar estado del servicio:', error);
+      Alert.alert('Error', 'Ocurrió un error al cambiar el estado del servicio');
     } finally {
       setIsRefreshing(false);
     }
@@ -244,51 +314,62 @@ const ServicesScreen = ({ navigation }) => {
   
   // Función para eliminar un servicio
   const handleRemoveService = (service) => {
+    if (!service) {
+      console.log('Error: No se proporcionó servicio');
+      return;
+    }
+    
+    if (!provider || (!provider.id && !provider._id)) {
+      console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
+      Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
+      return;
+    }
+    
+    // Obtener los IDs correctos antes de mostrar el diálogo
+    const providerId = provider._id || provider.id;
+    const serviceId = service._id || service.id;
+    
     Alert.alert(
       'Eliminar servicio',
-      `¿Estás seguro de que deseas eliminar "${service.nombre}" de tu lista de servicios?`,
+      `¿Estás seguro que deseas eliminar el servicio "${service.nombre}"?`,
       [
         {
           text: 'Cancelar',
-          style: 'cancel'
+          style: 'cancel',
         },
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: () => confirmRemoveService(service)
-        }
-      ]
+          onPress: async () => {
+            try {
+              setIsRefreshing(true);
+              
+              console.log('Eliminando servicio:', {
+                providerId,
+                serviceId
+              });
+              
+              // Usar el store para eliminar el servicio
+              const result = await removeProviderService(providerId, serviceId);
+              
+              if (result) {
+                Alert.alert('Eliminado', 'Servicio eliminado correctamente');
+              } else {
+                Alert.alert('Error', 'No se pudo eliminar el servicio');
+              }
+            } catch (error) {
+              console.log('Error al eliminar servicio:', error);
+              Alert.alert('Error', 'Ocurrió un error al eliminar el servicio');
+            } finally {
+              setIsRefreshing(false);
+            }
+          },
+        },
+      ],
     );
   };
   
-  // Función para confirmar eliminación de un servicio
-  const confirmRemoveService = async (service) => {
-    try {
-      setIsRefreshing(true);
-      
-      // En un escenario real, esto enviaría la solicitud a la API
-      // const result = await prestadorService.removeService(provider.id, service.id);
-      
-      // Simulamos respuesta exitosa
-      const result = { success: true };
-      
-      if (result.success) {
-        // Actualizar el estado local eliminando el servicio
-        setMyServices(prevServices => 
-          prevServices.filter(s => s.id !== service.id)
-        );
-        
-        Alert.alert('Éxito', 'Servicio eliminado correctamente');
-      } else {
-        Alert.alert('Error', 'No se pudo eliminar el servicio');
-      }
-    } catch (error) {
-      console.log('Error al eliminar servicio:', error);
-      Alert.alert('Error', 'Ocurrió un problema al eliminar el servicio');
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+
   
   // Filtrar mis servicios según la búsqueda
   const filteredMyServices = myServices.filter(service => 
@@ -311,9 +392,8 @@ const ServicesScreen = ({ navigation }) => {
   
   // Obtener categorías únicas para el tipo de prestador
   const getUniqueCategories = () => {
-    const tipoProvider = provider?.tipo || 'Veterinario';
-    const serviciosDisponibles = serviciosPorTipo[tipoProvider] || [];
-    const categorias = ['Todos', ...new Set(serviciosDisponibles.map(s => s.categoria))];
+    // Usar los servicios disponibles del store en lugar de los datos mock
+    const categorias = ['Todos', ...new Set(availableServices.map(s => s.categoria))];
     return categorias;
   };
   
@@ -450,19 +530,29 @@ const ServicesScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
   
-  // Renderizar contenido cuando no hay servicios
+  // Renderizar contenido cuando no hay servicios propios
   const renderEmptyMyServicesList = () => (
     <View style={globalStyles.emptyStateContainer}>
       <Ionicons name="list" size={50} color="#ccc" />
       <Text style={globalStyles.emptyStateText}>
         No tienes servicios agregados
       </Text>
-      <TouchableOpacity 
-        style={[globalStyles.primaryButton, { width: 200, marginTop: 20 }]}
-        onPress={() => setViewMode('catalog')}
-      >
-        <Text style={globalStyles.primaryButtonText}>Explorar catálogo</Text>
-      </TouchableOpacity>
+      <View style={styles.actionButtonsContainer}>
+        <TouchableOpacity
+          style={[globalStyles.primaryButton, { marginTop: 20, marginRight: 10 }]}
+          onPress={() => setViewMode('catalog')}
+        >
+          <Text style={globalStyles.primaryButtonText}>Explorar catálogo</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[globalStyles.secondaryButton, { marginTop: 20 }]}
+          onPress={loadServices}
+        >
+          <Ionicons name="refresh-outline" size={20} color={COLORS.primary} style={{marginRight: 5}} />
+          <Text style={globalStyles.secondaryButtonText}>Recargar</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
   
@@ -572,7 +662,7 @@ const ServicesScreen = ({ navigation }) => {
         <FlatList
           data={filteredMyServices}
           renderItem={renderMyServiceItem}
-          keyExtractor={item => item.id.toString()}
+          keyExtractor={item => item._id ? item._id.toString() : item.id.toString()}
           contentContainerStyle={styles.servicesList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmptyMyServicesList}
@@ -598,12 +688,14 @@ const ServicesScreen = ({ navigation }) => {
           <FlatList
             data={filteredCatalogServices}
             renderItem={renderCatalogServiceItem}
-            keyExtractor={item => item.id}
+            keyExtractor={item => item._id ? item._id.toString() : `catalog-${item.id}`}
             numColumns={2}
             columnWrapperStyle={styles.catalogRow}
             contentContainerStyle={styles.catalogList}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={renderEmptyCatalogSearch}
+            refreshing={isRefreshing}
+            onRefresh={loadAvailableServices}
           />
         </View>
       )}
@@ -678,7 +770,7 @@ const ServicesScreen = ({ navigation }) => {
                       
                       {/* Campo de precio */}
                       <Text style={[styles.inputLabel, {marginTop: 20}]}>
-                        Precio (USD)*
+                        Precio (Pesos)*
                       </Text>
                       <View style={globalStyles.inputContainer}>
                         <Ionicons name="cash-outline" size={20} color={COLORS.grey} style={{marginRight: 10}} />
@@ -693,6 +785,25 @@ const ServicesScreen = ({ navigation }) => {
                       
                       <Text style={styles.priceHint}>
                         Establece el precio que cobrarás por este servicio
+                      </Text>
+                      
+                      {/* Campo de duración */}
+                      <Text style={[styles.inputLabel, {marginTop: 15}]}>
+                        Duración (minutos)*
+                      </Text>
+                      <View style={globalStyles.inputContainer}>
+                        <Ionicons name="time-outline" size={20} color={COLORS.grey} style={{marginRight: 10}} />
+                        <TextInput
+                          style={globalStyles.input}
+                          placeholder="Ej: 60"
+                          keyboardType="numeric"
+                          value={durationInput}
+                          onChangeText={setDurationInput}
+                        />
+                      </View>
+                      
+                      <Text style={styles.priceHint}>
+                        Define la duración aproximada de este servicio
                       </Text>
                     </View>
                   </ScrollView>

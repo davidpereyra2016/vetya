@@ -14,8 +14,8 @@ import AppSplashScreen from './src/screens/splash/SplashScreen';
 // Para dispositivos físicos, usa la IP de tu red WiFi
 // Para emuladores Android, 10.0.2.2 apunta a la máquina host
 const API_URL = Platform.OS === 'android' 
-  ? 'http://192.168.137.1:3000/api'  // Para emulador Android
-  : 'http://192.168.137.1:3000/api';  // REEMPLAZA X con tu última posición IP
+  ? 'http://192.168.100.146:3000/api'  // Para emulador Android
+  : 'http://192.168.100.146:3000/api';  // REEMPLAZA X con tu última posición IP
 
 export default function App() {
   // Estado para controlar la visibilidad de la pantalla de splash

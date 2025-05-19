@@ -485,9 +485,9 @@ const serviciosPorTipo = {
 // Todos los servicios en una sola lista (para búsquedas globales)
 const todosLosServicios = [
   ...serviciosVeterinario,
+  ...serviciosCentroVeterinario,
   ...serviciosPeluqueria,
   ...serviciosPetShop,
-  ...serviciosCentroVeterinario,
   ...serviciosOtros,
 ];
 
