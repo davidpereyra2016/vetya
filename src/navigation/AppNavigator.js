@@ -37,6 +37,9 @@ import ReviewsScreen from '../screens/reviews/ReviewsScreen';
 // Pantallas de ganancias
 import EarningsScreen from '../screens/earnings/EarningsScreen';
 
+// Pantallas de emergencia
+import EmergencyDetailsScreen from '../screens/emergency/EmergencyDetailsScreen';
+
 // Componentes temporales para pantallas que aún no existen
 // Se reemplazarán con las implementaciones reales en futuras iteraciones
 const PlaceholderScreen = ({ route }) => (
@@ -52,7 +55,6 @@ const PlaceholderScreen = ({ route }) => (
 );
 
 // Declaraciones temporales para pantallas que aún no existen
-const EmergencyDetailsScreen = PlaceholderScreen;
 
 // Creación de navegadores
 const Stack = createStackNavigator();
