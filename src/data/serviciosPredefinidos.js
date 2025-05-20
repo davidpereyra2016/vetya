@@ -272,6 +272,7 @@ const serviciosPetShop = [
     duracion: 0, // No aplica
     icono: 'nutrition-outline',
     color: '#4CAF50',
+    disponibleParaTipos: ['Perro', 'Gato', 'Ave', 'Reptil', 'Roedor', 'Otro']
   },
   {
     id: 'pet-2',
@@ -342,6 +343,7 @@ const serviciosPetShop = [
     duracion: 0, // No aplica
     icono: 'flask-outline',
     color: '#00BCD4',
+    disponibleParaTipos: ['Perro', 'Gato', 'Ave', 'Reptil', 'Roedor', 'Otro']
   },
   {
     id: 'pet-9',

@@ -183,51 +183,80 @@ const useAuthStore = create(
 
       // Verificar token al iniciar la app
       checkAuth: async () => {
-        const { token, user } = get();
-        if (token) {
+        set({ isLoading: true });
+        
+        try {
+          // Obtener el token almacenado
+          const { token } = get();
+          
+          if (!token) {
+            // No hay token, ir a login
+            set({ isLoading: false, token: null, user: null, provider: null });
+            return false;
+          }
+          
           // Configurar token en axios
           setupAxiosInterceptors(token);
           
-          // Cargar datos actualizados del perfil desde el backend
           try {
-            // Actualizar datos de usuario
+            // Obtener información del usuario
             const userResponse = await axios.get('/users/profile');
-            if (userResponse.data) {
-              // Actualizar los datos del usuario con la información actualizada
-              set({ user: userResponse.data });
+            
+            if (!userResponse || !userResponse.data) {
+              // Error al obtener usuario, resetear todo
+              console.log('No se pudieron obtener los datos del usuario');
+              set({ isLoading: false, token: null, user: null, provider: null });
+              return false;
+            }
+            
+            // Actualizar datos del usuario
+            const userData = userResponse.data;
+            set({ user: userData });
+            
+            // Verificar que el ID de usuario existe
+            const userId = userData._id || userData.id;
+            
+            if (!userId) {
+              console.log('Error: No se encontró ID de usuario');
+              set({ isLoading: false });
+              return false;
+            }
+            
+            // Intentar cargar el perfil de prestador
+            try {
+              const providerResult = await prestadorService.getByUserId(userId);
               
-              // Verificar que el ID de usuario existe antes de buscar el prestador
-              const userId = userResponse.data._id || userResponse.data.id;
-              console.log('Usuario cargado correctamente con ID:', userId);
-              
-              if (!userId) {
-                console.log('Error: No se encontró ID de usuario en la respuesta');
-                return;
+              if (!providerResult.success || !providerResult.data) {
+                // Prestador no encontrado o eliminado, forzar logout
+                console.log('Prestador no encontrado o eliminado');
+                set({ isLoading: false, token: null, user: null, provider: null });
+                return false;
               }
               
-              // Intentar cargar el perfil de prestador
-              try {
-                console.log('Obteniendo prestador para usuario ID:', userId);
-                const providerResult = await prestadorService.getByUserId(userId);
-                if (providerResult.success && providerResult.data) {
-                  console.log('Perfil de prestador cargado correctamente:', providerResult.data._id);
-                  set({ provider: providerResult.data });
-                } else {
-                  console.log('No se pudo cargar el perfil de prestador:', providerResult.error);
-                  // Si no hay perfil de prestador, mostrar mensaje informativo pero no cerrar sesión
-                  // ya que podría ser que el usuario aún no tenga un perfil completo
-                }
-              } catch (providerError) {
-                console.log('Error al cargar perfil de prestador:', providerError);
-              }
+              // Todo correcto, establecer datos del prestador
+              console.log('Prestador cargado correctamente:', providerResult.data._id);
+              set({ 
+                provider: providerResult.data,
+                isLoading: false,
+                error: null
+              });
+              
+              return true;
+            } catch (providerError) {
+              console.log('Error al cargar perfil de prestador:', providerError);
+              set({ isLoading: false, token: null, user: null, provider: null });
+              return false;
             }
           } catch (error) {
-            console.log('Error al actualizar perfil:', error);
+            console.log('Error al obtener perfil de usuario:', error);
+            set({ isLoading: false, token: null, user: null, provider: null });
+            return false;
           }
-          
-          return true;
+        } catch (error) {
+          console.log('Error general en checkAuth:', error);
+          set({ isLoading: false, token: null, user: null, provider: null });
+          return false;
         }
-        return false;
       },
 
       // Acción para actualizar el estado de primera vez

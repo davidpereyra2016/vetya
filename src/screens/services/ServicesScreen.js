@@ -20,7 +20,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
 import useServiceStore from '../../store/useServiceStore';
+import usePrestadorStore from '../../store/usePrestadorStore';
 import { prestadorService, servicioService } from '../../services/api';
+// import { prestadorService } from '../../services/apiPrestador';
 import globalStyles, { COLORS, SIZES, SHADOWS } from '../../styles/globalStyles';
 
 const ServicesScreen = ({ navigation }) => {
@@ -41,6 +43,12 @@ const ServicesScreen = ({ navigation }) => {
     removeProviderService
   } = useServiceStore();
   
+  // Estado del prestador (para configuración de emergencias)
+  const {
+    prestador: prestadorDetails,
+    updateEmergencySettings,
+  } = usePrestadorStore();
+  
   // Estados locales para la UI
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +58,9 @@ const ServicesScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [priceInput, setPriceInput] = useState('');
   const [durationInput, setDurationInput] = useState('');
+  const [emergencyPriceInput, setEmergencyPriceInput] = useState('');
+  const [emergencyAvailable, setEmergencyAvailable] = useState(false);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   
   // Mostrar alertas de error si ocurren
   useEffect(() => {
@@ -63,8 +74,27 @@ const ServicesScreen = ({ navigation }) => {
     if (provider) {
       loadServices();
       loadAvailableServices();
+      // Cargar detalles completos del prestador
+      loadPrestadorDetails();
     }
   }, [provider]);
+  
+  // Cargar detalles del prestador para configuración de emergencias
+  const loadPrestadorDetails = async () => {
+    try {
+      if (!user || !user._id) return;
+      
+      const result = await usePrestadorStore.getState().loadPrestador(user._id);
+      
+      if (result) {
+        // Inicializar los estados de emergencia
+        setEmergencyPriceInput(result.precioEmergencia ? result.precioEmergencia.toString() : '0');
+        setEmergencyAvailable(result.disponibleEmergencias || false);
+      }
+    } catch (error) {
+      console.log('Error al cargar detalles del prestador:', error);
+    }
+  };
   
   // Función para cargar los servicios que el prestador ya ha seleccionado
   const loadServices = async () => {
@@ -307,6 +337,50 @@ const ServicesScreen = ({ navigation }) => {
     } catch (error) {
       console.log('Error al cambiar estado del servicio:', error);
       Alert.alert('Error', 'Ocurrió un error al cambiar el estado del servicio');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
+  // Función para actualizar configuración de emergencias
+  const handleUpdateEmergencySettings = async () => {
+    if (!prestadorDetails || !prestadorDetails._id) {
+      Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
+      return;
+    }
+    
+    // Validar que el prestador sea Veterinario
+    if (prestadorDetails.tipo !== 'Veterinario') {
+      Alert.alert('Información', 'Solo los veterinarios pueden configurar el servicio de emergencias.');
+      return;
+    }
+    
+    // Validar precio
+    const precioEmergencia = Number(emergencyPriceInput);
+    if (isNaN(precioEmergencia) || precioEmergencia < 0) {
+      Alert.alert('Error', 'El precio de emergencia debe ser un número válido');
+      return;
+    }
+    
+    try {
+      setIsRefreshing(true);
+      
+      console.log('Actualizando configuración de emergencias:', {
+        precioEmergencia,
+        disponibleEmergencias: emergencyAvailable
+      });
+      
+      const result = await updateEmergencySettings(precioEmergencia, emergencyAvailable);
+      
+      if (result) {
+        setShowEmergencyModal(false);
+        Alert.alert('Éxito', 'Configuración de emergencias actualizada correctamente');
+      } else {
+        Alert.alert('Error', 'No se pudo actualizar la configuración de emergencias');
+      }
+    } catch (error) {
+      console.log('Error al actualizar configuración de emergencias:', error);
+      Alert.alert('Error', 'Ocurrió un error al actualizar la configuración de emergencias');
     } finally {
       setIsRefreshing(false);
     }
@@ -566,6 +640,22 @@ const ServicesScreen = ({ navigation }) => {
     </View>
   );
   
+  // Renderizar botón de configuración de emergencias (solo para veterinarios)
+  const renderEmergencySettingsButton = () => {
+    // Solo mostrar para veterinarios
+    if (prestadorDetails?.tipo !== 'Veterinario') return null;
+    
+    return (
+      <TouchableOpacity
+        style={styles.emergencyButton}
+        onPress={() => setShowEmergencyModal(true)}
+      >
+        <Ionicons name="medkit" size={20} color="#F44336" style={{marginRight: 8}} />
+        <Text style={styles.emergencyButtonText}>Configurar Servicio de Emergencia</Text>
+      </TouchableOpacity>
+    );
+  };
+  
   // Renderizar pantalla principal
   return (
     <SafeAreaView style={globalStyles.container}>
@@ -584,6 +674,9 @@ const ServicesScreen = ({ navigation }) => {
           <View style={{ width: 24 }} />
         </View>
       </View>
+      
+      {/* Botón de configuración de emergencias (solo para veterinarios) */}
+      {renderEmergencySettingsButton()}
       
       {/* Selector de modo de vista */}
       <View style={styles.viewModeSelector}>
@@ -836,6 +929,107 @@ const ServicesScreen = ({ navigation }) => {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
+      
+      {/* Modal para configuración de emergencias (solo veterinarios) */}
+      <Modal
+        visible={showEmergencyModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowEmergencyModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{flex: 1}}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Configurar Servicio de Emergencia</Text>
+                  <TouchableOpacity onPress={() => setShowEmergencyModal(false)}>
+                    <Ionicons name="close" size={24} color={COLORS.dark} />
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView style={styles.modalBody}>
+                  {/* Icono y descripción */}
+                  <View style={styles.serviceDetailHeader}>
+                    <View style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 30,
+                      backgroundColor: '#F44336' + '20',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginBottom: 15
+                    }}>
+                      <Ionicons name="medkit" size={30} color="#F44336" />
+                    </View>
+                    
+                    <Text style={styles.serviceDetailName}>Servicio de Emergencia</Text>
+                    
+                    <Text style={styles.serviceDetailDescription}>
+                      Configura el precio de tus servicios de emergencia a domicilio.
+                      Los clientes podrán ver este precio cuando busquen veterinarios disponibles para emergencias.
+                    </Text>
+                    
+                    {/* Opción para habilitar/deshabilitar disponibilidad */}
+                    <View style={styles.switchContainer}>
+                      <Text style={styles.switchLabel}>Disponible para emergencias</Text>
+                      <TouchableOpacity 
+                        style={[styles.toggleButton, emergencyAvailable ? styles.toggleButtonActive : {}]}
+                        onPress={() => setEmergencyAvailable(!emergencyAvailable)}
+                      >
+                        <View style={[styles.toggleDot, emergencyAvailable ? styles.toggleDotActive : {}]} />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {/* Campo de precio de emergencia */}
+                    <Text style={[styles.inputLabel, {marginTop: 20}]}>
+                      Precio de Emergencia (Pesos)*
+                    </Text>
+                    <View style={globalStyles.inputContainer}>
+                      <Ionicons name="cash-outline" size={20} color={COLORS.grey} style={{marginRight: 10}} />
+                      <TextInput
+                        style={globalStyles.input}
+                        placeholder="Ej: 150000"
+                        keyboardType="numeric"
+                        value={emergencyPriceInput}
+                        onChangeText={setEmergencyPriceInput}
+                      />
+                    </View>
+                    
+                    <Text style={styles.priceHint}>
+                      Establece el precio que cobrarás por atender una emergencia a domicilio
+                    </Text>
+                  </View>
+                </ScrollView>
+                
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity 
+                    style={[globalStyles.secondaryButton, { flex: 1, marginRight: 10 }]}
+                    onPress={() => setShowEmergencyModal(false)}
+                  >
+                    <Text style={globalStyles.secondaryButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[globalStyles.primaryButton, { flex: 1 }]}
+                    onPress={handleUpdateEmergencySettings}
+                    disabled={isRefreshing}
+                  >
+                    {isRefreshing ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <Text style={globalStyles.primaryButtonText}>Guardar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -844,6 +1038,64 @@ const ServicesScreen = ({ navigation }) => {
 const styles = {
   keyboardView: {
     flex: 1,
+  },
+  // Botón para configuración de emergencias
+  emergencyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#F44336',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 10,
+    ...SHADOWS.small,
+  },
+  emergencyButtonText: {
+    color: '#F44336',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  // Estilos para toggle switch
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  switchLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.dark,
+  },
+  toggleButton: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E0E0E0',
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: COLORS.primary + '40',
+  },
+  toggleDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFF',
+    ...SHADOWS.small,
+  },
+  toggleDotActive: {
+    backgroundColor: COLORS.primary,
+    alignSelf: 'flex-end',
   },
   // Selector de modo de vista
   viewModeSelector: {

@@ -32,9 +32,7 @@ const RegisterScreen = ({ navigation }) => {
   
   // Tipos de prestadores disponibles
   const providerTypes = [
-    'Veterinario', 
-    'Peluquería', 
-    'PetShop', 
+    'Veterinario',  
     'Centro Veterinario', 
     'Otro'
   ];
@@ -138,7 +136,7 @@ const RegisterScreen = ({ navigation }) => {
               <Ionicons name="business-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Nombre del establecimiento"
+                placeholder="Nombre o razón social"
                 placeholderTextColor="#888"
                 value={name}
                 onChangeText={setName}
