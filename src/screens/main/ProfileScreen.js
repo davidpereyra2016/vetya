@@ -1,364 +1,482 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
   ScrollView,
+  TouchableOpacity,
   Image,
   Switch,
-  Alert
+  Alert,
+  ActivityIndicator,
+  SafeAreaView
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
-import { userService } from '../../services/api';
-import { useEffect } from 'react';
-import axios from 'axios';
+import { prestadorService } from '../../services/api';
+import globalStyles, { COLORS, SIZES } from '../../styles/globalStyles';
 
-const ProfileScreen = (props) => {
-  // Usar el hook useNavigation para asegurar que siempre tengamos acceso a navigation
-  const navigation = useNavigation();
-  
-  // Usar Zustand en lugar de AuthContext
+const ProfileScreen = ({ navigation }) => {
+  // Estado global con Zustand
   const user = useAuthStore(state => state.user);
+  const provider = useAuthStore(state => state.provider);
   const logout = useAuthStore(state => state.logout);
-  const updateUser = useAuthStore(state => state.updateUser);
   
-  // Cargar datos del perfil cuando se monta el componente
-  useEffect(() => {
-    const loadUserProfile = async () => {
-      try {
-        const result = await userService.getProfile();
-        if (result.success) {
-          updateUser(result.data);
-        }
-      } catch (error) {
-        console.log('Error al cargar perfil:', error);
-      }
-    };
-    
-    loadUserProfile();
-  }, []);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [locationEnabled, setLocationEnabled] = useState(true);
+  // Estados locales
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [availableForEmergencies, setAvailableForEmergencies] = useState(false);
+  const [providerStats, setProviderStats] = useState({
+    valoraciones: 10,
+    emergenciasAtendidas: 12,
+    citasCompletadas: 36,
+    clientesAtendidos: 28
+  });
 
+  // Efectos para cargar datos del prestador
+  useEffect(() => {
+    loadProviderData();
+  }, []);
+
+  useEffect(() => {
+    if (provider) {
+      setAvailableForEmergencies(provider.disponibleEmergencias || false);
+    }
+  }, [provider]);
+
+  // Función para cargar datos del prestador
+  const loadProviderData = async () => {
+    try {
+      setIsLoading(true);
+      
+      if (!user?.id) return;
+      
+      // En una implementación real, se obtendría el perfil completo del prestador
+      // y las estadísticas desde el backend
+      const result = await prestadorService.getByUserId(user.id);
+      
+      if (result.success && result.data) {
+        // Las estadísticas serían parte de la respuesta del backend
+        setProviderStats({
+          valoraciones: result.data.opiniones?.length || 0,
+          emergenciasAtendidas: result.data.emergenciasAtendidas || 0,
+          citasCompletadas: result.data.citasCompletadas || 0,
+          clientesAtendidos: result.data.clientesAtendidos || 0
+        });
+      }
+    } catch (error) {
+      console.log('Error al cargar datos del perfil:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Función para actualizar disponibilidad para emergencias
+  const handleToggleAvailability = async () => {
+    if (!provider?.id) return;
+
+    try {
+      setIsRefreshing(true);
+      const newAvailability = !availableForEmergencies;
+      
+      const result = await prestadorService.updateEmergencyAvailability(
+        provider.id,
+        newAvailability
+      );
+      
+      if (result.success) {
+        setAvailableForEmergencies(newAvailability);
+        Alert.alert(
+          newAvailability ? 'Disponibilidad activada' : 'Disponibilidad desactivada',
+          newAvailability 
+            ? 'Ahora recibirás notificaciones de emergencias cercanas' 
+            : 'Ya no recibirás notificaciones de emergencias'
+        );
+      } else {
+        Alert.alert('Error', 'No se pudo actualizar tu disponibilidad');
+      }
+    } catch (error) {
+      console.log('Error al actualizar disponibilidad:', error);
+      Alert.alert('Error', 'Ocurrió un problema al actualizar tu disponibilidad');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Función para cerrar sesión
   const handleLogout = () => {
     Alert.alert(
-      "Cerrar sesión",
-      "¿Estás seguro que deseas cerrar sesión?",
+      'Cerrar sesión',
+      '¿Estás seguro de que deseas cerrar sesión?',
       [
         {
-          text: "Cancelar",
-          style: "cancel"
+          text: 'Cancelar',
+          style: 'cancel'
         },
-        { 
-          text: "Cerrar sesión", 
-          onPress: () => logout(),
-          style: "destructive"
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: () => logout()
         }
       ]
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header con información del usuario */}
-        <View style={styles.header}>
-          <View style={styles.userInfoContainer}>
-            <View style={styles.avatarContainer}>
-              {user?.profilePicture ? (
-                <Image 
-                  source={{ uri: user.profilePicture }} 
-                  style={styles.profileImage} 
-                  onError={() => console.log('Error cargando imagen:', user.profilePicture)}
-                />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarText}>
-                    {user?.username ? user.username.charAt(0).toUpperCase() : "U"}
-                  </Text>
-                </View>
-              )}
-              <TouchableOpacity style={styles.editAvatarButton}>
-                <Ionicons name="camera" size={18} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.userName}>{user?.username || 'Usuario'}</Text>
-            <Text style={styles.userEmail}>{user?.email || 'usuario@example.com'}</Text>
-          </View>
-        </View>
+  if (isLoading) {
+    return (
+      <View style={globalStyles.centeredContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
-        {/* Sección de cuenta */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mi cuenta</Text>
+  return (
+    <SafeAreaView style={globalStyles.container}>
+      <StatusBar style="light" />
+      
+      {/* Header con información básica */}
+      <View style={globalStyles.header}>
+        <View style={globalStyles.headerContent}>
+          <Text style={globalStyles.headerTitle}>Mi Perfil</Text>
+          <TouchableOpacity onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+      
+      <ScrollView 
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 30 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Tarjeta de perfil */}
+        <View style={[globalStyles.card, { 
+          marginHorizontal: 20,
+          marginTop: -20,
+          paddingVertical: 20,
+          alignItems: 'center'
+        }]}>
+          <View style={[globalStyles.avatarContainer, { marginBottom: 15 }]}>
+            {provider?.imagen ? (
+              <Image
+                source={{ uri: provider.imagen }}
+                style={globalStyles.avatar}
+              />
+            ) : (
+              <View style={[globalStyles.avatar, { 
+                backgroundColor: COLORS.primary,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }]}>
+                <Ionicons name="business" size={40} color="#FFF" />
+              </View>
+            )}
+          </View>
+          
+          <Text style={[globalStyles.title, { marginBottom: 5 }]}>
+            {provider?.nombre || user?.username || 'Prestador de servicios'}
+          </Text>
+          
+          <View style={{ 
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 5
+          }}>
+            <Ionicons name="location" size={16} color={COLORS.grey} />
+            <Text style={[globalStyles.captionText, { marginLeft: 5 }]}>
+              {provider?.direccion?.ciudad || 'Ciudad no especificada'}
+            </Text>
+          </View>
+          
+          {provider?.tipo && (
+            <View style={{
+              backgroundColor: COLORS.primary + '20',
+              paddingVertical: 5,
+              paddingHorizontal: 10,
+              borderRadius: 15,
+              marginTop: 5
+            }}>
+              <Text style={{ color: COLORS.primary, fontWeight: '600' }}>
+                {provider.tipo}
+              </Text>
+            </View>
+          )}
+          
+          <View style={{ 
+            flexDirection: 'row', 
+            marginTop: 15,
+            backgroundColor: availableForEmergencies ? COLORS.success + '15' : COLORS.accent + '15',
+            padding: 10,
+            borderRadius: 10,
+            alignItems: 'center',
+            width: '100%',
+            justifyContent: 'space-between'
+          }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ 
+                fontWeight: 'bold',
+                color: availableForEmergencies ? COLORS.success : COLORS.accent,
+                marginBottom: 3
+              }}>
+                {availableForEmergencies ? 'Disponible para emergencias' : 'No disponible para emergencias'}
+              </Text>
+              <Text style={{ fontSize: 12, color: COLORS.dark }}>
+                {availableForEmergencies 
+                  ? 'Está recibiendo solicitudes de emergencia' 
+                  : 'No está recibiendo solicitudes de emergencia'}
+              </Text>
+            </View>
+            <Switch
+              trackColor={{ false: "#767577", true: COLORS.success + '50' }}
+              thumbColor={availableForEmergencies ? COLORS.success : "#f4f3f4"}
+              ios_backgroundColor="#3e3e3e"
+              onValueChange={handleToggleAvailability}
+              value={availableForEmergencies}
+              disabled={isRefreshing}
+            />
+          </View>
+          
           <TouchableOpacity 
-            style={styles.optionItem}
+            style={[globalStyles.primaryButton, { marginTop: 20, width: '100%' }]}
             onPress={() => navigation.navigate('EditProfile')}
           >
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="person-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Información personal</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </View>
+            <Text style={globalStyles.primaryButtonText}>Editar Perfil</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.optionItem}
+        </View>
+        
+        {/* Estadísticas */}
+        <View style={globalStyles.sectionContainer}>
+          <Text style={globalStyles.sectionTitle}>Estadísticas</Text>
+          
+          <View style={{ 
+            flexDirection: 'row', 
+            justifyContent: 'space-between',
+            marginTop: 15,
+            flexWrap: 'wrap'
+          }}>
+            <StatItem 
+              value={providerStats.valoraciones}
+              label="Valoraciones"
+              icon="star"
+              color={COLORS.warning}
+            />
+            <StatItem 
+              value={providerStats.emergenciasAtendidas}
+              label="Emergencias"
+              icon="alert-circle"
+              color={COLORS.accent}
+            />
+            <StatItem 
+              value={providerStats.citasCompletadas}
+              label="Citas completadas"
+              icon="calendar-outline"
+              color={COLORS.success}
+            />
+            <StatItem 
+              value={providerStats.clientesAtendidos}
+              label="Clientes atendidos"
+              icon="people"
+              color={COLORS.info}
+            />
+          </View>
+        </View>
+        
+        {/* Especialidades */}
+        {provider?.especialidades && provider.especialidades.length > 0 && (
+          <View style={globalStyles.sectionContainer}>
+            <Text style={globalStyles.sectionTitle}>Especialidades</Text>
+            
+            <View style={{ 
+              flexDirection: 'row', 
+              flexWrap: 'wrap',
+              marginTop: 10
+            }}>
+              {provider.especialidades.map((especialidad, index) => (
+                <View 
+                  key={index}
+                  style={{
+                    backgroundColor: COLORS.primary + '15',
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 20,
+                    marginRight: 8,
+                    marginBottom: 8
+                  }}
+                >
+                  <Text style={{ color: COLORS.primary }}>{especialidad}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        
+        {/* Opciones del perfil */}
+        <View style={globalStyles.sectionContainer}>
+          <Text style={globalStyles.sectionTitle}>Opciones</Text>
+          
+          <ProfileOption 
+            icon="list" 
+            title="Mis servicios" 
+            subtitle="Gestiona los servicios que ofreces"
+            onPress={() => navigation.navigate('Services')}
+          />
+          
+          <ProfileOption 
+            icon="time" 
+            title="Disponibilidad" 
+            subtitle="Configura tus horarios disponibles"
+            onPress={() => navigation.navigate('Availability')}
+          />
+          
+          <ProfileOption 
+            icon="calendar" 
+            title="Historial de citas" 
+            subtitle="Revisa tus citas pasadas y futuras"
+            onPress={() => navigation.navigate('Citas')}
+          />
+          
+          <ProfileOption 
+            icon="star" 
+            title="Valoraciones" 
+            subtitle="Ver opiniones de tus clientes"
+            onPress={() => navigation.navigate('Reviews')}
+          />
+          
+          <ProfileOption 
+            icon="cash" 
+            title="Ganancias" 
+            subtitle="Gestiona tus ingresos y pagos"
+            onPress={() => navigation.navigate('Earnings')}
+          />
+          
+          <ProfileOption 
+            icon="lock-closed" 
+            title="Cambiar contraseña" 
+            subtitle="Actualiza tu contraseña de acceso"
             onPress={() => navigation.navigate('ChangePassword')}
-          >
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="key-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Cambiar contraseña</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="card-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Métodos de pago</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="location-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Direcciones</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </View>
-          </TouchableOpacity>
+          />
         </View>
-
-        {/* Sección de notificaciones */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notificaciones</Text>
-          <View style={styles.optionItem}>
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="notifications-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Notificaciones push</Text>
-              <Switch
-                trackColor={{ false: "#E0E0E0", true: "#90CAF9" }}
-                thumbColor={notificationsEnabled ? "#1E88E5" : "#f4f3f4"}
-                ios_backgroundColor="#E0E0E0"
-                onValueChange={() => setNotificationsEnabled(!notificationsEnabled)}
-                value={notificationsEnabled}
-              />
-            </View>
-          </View>
-          <View style={styles.optionItem}>
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="location-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Ubicación en segundo plano</Text>
-              <Switch
-                trackColor={{ false: "#E0E0E0", true: "#90CAF9" }}
-                thumbColor={locationEnabled ? "#1E88E5" : "#f4f3f4"}
-                ios_backgroundColor="#E0E0E0"
-                onValueChange={() => setLocationEnabled(!locationEnabled)}
-                value={locationEnabled}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Sección de más opciones */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Más</Text>
-          <TouchableOpacity style={styles.optionItem}>
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="help-circle-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Ayuda y soporte</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="star-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Calificar la app</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="document-text-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Términos y condiciones</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.optionItem}>
-            <View style={styles.optionIconContainer}>
-              <Ionicons name="shield-checkmark-outline" size={22} color="#1E88E5" />
-            </View>
-            <View style={styles.optionContent}>
-              <Text style={styles.optionText}>Política de privacidad</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Botón de cerrar sesión */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color="#F44336" />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
+        
+        {/* Botón de soporte */}
+        <TouchableOpacity 
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginHorizontal: 20,
+            marginTop: 20
+          }}
+          onPress={() => Alert.alert('Soporte', 'Contacta a soporte@vetpresta.com para cualquier consulta o problema con la aplicación.')}
+        >
+          <Ionicons name="help-circle-outline" size={20} color={COLORS.primary} />
+          <Text style={{ 
+            color: COLORS.primary,
+            marginLeft: 8,
+            fontWeight: '500'
+          }}>
+            Contactar soporte
+          </Text>
         </TouchableOpacity>
-
+        
         {/* Versión de la app */}
-        <Text style={styles.versionText}>Versión 1.0.0</Text>
+        <Text style={{ 
+          textAlign: 'center',
+          marginTop: 30,
+          color: COLORS.lightGrey,
+          fontSize: 12
+        }}>
+          VetPresta v1.0.0
+        </Text>
       </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+// Componente para las estadísticas
+const StatItem = ({ value, label, icon, color }) => {
+  return (
+    <View style={{
+      width: '48%',
+      backgroundColor: '#FFF',
+      borderRadius: 10,
+      padding: 15,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: color + '30',
+    }}>
+      <View style={{ 
+        width: 40, 
+        height: 40, 
+        borderRadius: 20,
+        backgroundColor: color + '20',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 10
+      }}>
+        <Ionicons name={icon} size={20} color={color} />
+      </View>
+      <Text style={{ 
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: COLORS.dark
+      }}>
+        {value}
+      </Text>
+      <Text style={{ 
+        fontSize: 14,
+        color: COLORS.grey
+      }}>
+        {label}
+      </Text>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  header: {
-    backgroundColor: '#1E88E5',
-    paddingTop: 20,
-    paddingBottom: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  userInfoContainer: {
-    alignItems: 'center',
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 10,
-  },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#1E88E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  avatarText: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#1E88E5',
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#1E88E5',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#E3F2FD',
-  },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    margin: 15,
-    marginBottom: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  optionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E3F2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  optionContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    margin: 15,
-    marginBottom: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F44336',
-    marginLeft: 10,
-  },
-  versionText: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-});
+// Componente para las opciones del perfil
+const ProfileOption = ({ icon, title, subtitle, onPress }) => {
+  return (
+    <TouchableOpacity 
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0'
+      }}
+      onPress={onPress}
+    >
+      <View style={{
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: COLORS.primary + '15',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15
+      }}>
+        <Ionicons name={icon} size={20} color={COLORS.primary} />
+      </View>
+      
+      <View style={{ flex: 1 }}>
+        <Text style={{ 
+          fontSize: 16,
+          fontWeight: '600',
+          color: COLORS.dark
+        }}>
+          {title}
+        </Text>
+        <Text style={{ 
+          fontSize: 13,
+          color: COLORS.grey,
+          marginTop: 2
+        }}>
+          {subtitle}
+        </Text>
+      </View>
+      
+      <Ionicons name="chevron-forward" size={20} color={COLORS.grey} />
+    </TouchableOpacity>
+  );
+};
 
 export default ProfileScreen;

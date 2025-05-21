@@ -48,6 +48,266 @@ export const authService = {
   }
 };
 
+// Servicios para prestadores
+export const prestadorService = {
+  // Obtener todos los prestadores
+  getAll: async () => {
+    try {
+      const response = await axios.get('/prestadores');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener prestadores'
+      };
+    }
+  },
+
+  // Obtener un prestador por ID
+  getById: async (id) => {
+    try {
+      const response = await axios.get(`/prestadores/${id}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener prestador'
+      };
+    }
+  },
+
+  // Obtener un prestador por ID de usuario
+  getByUserId: async (userId) => {
+    try {
+      const response = await axios.get(`/prestadores/usuario/${userId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener prestador por usuario'
+      };
+    }
+  },
+  
+  // Actualizar el precio de emergencia del prestador
+  actualizarPrecioEmergencia: async (prestadorId, precioEmergencia, disponibleEmergencias) => {
+    try {
+      const response = await axios.patch(`/prestadores/${prestadorId}/precio-emergencia`, {
+        precioEmergencia,
+        disponibleEmergencias
+      });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.log('Error al actualizar precio emergencia:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al actualizar precio de emergencia'
+      };
+    }
+  },
+
+  // Crear un nuevo prestador
+  create: async (prestadorData) => {
+    try {
+      const response = await axios.post('/prestadores', prestadorData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al crear prestador'
+      };
+    }
+  },
+
+  // Actualizar un prestador
+  update: async (id, prestadorData) => {
+    try {
+      const response = await axios.put(`/prestadores/${id}`, prestadorData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al actualizar prestador'
+      };
+    }
+  },
+
+  // Agregar servicio a un prestador
+  addService: async (id, serviceData) => {
+    try {
+      console.log(`Añadiendo servicio para prestador ID:`, id, serviceData);
+      const response = await axios.post(`/prestadores/${id}/servicios`, serviceData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.log('Error al agregar servicio:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al agregar servicio'
+      };
+    }
+  },
+  
+  
+
+  // Actualizar disponibilidad para emergencias
+  updateEmergencyAvailability: async (id, isAvailable) => {
+    try {
+      const response = await axios.patch(`/prestadores/${id}/emergencia`, {
+        disponibleEmergencias: isAvailable
+      });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al actualizar disponibilidad de emergencias'
+      };
+    }
+  },
+
+  // Obtener disponibilidad por servicio
+  getAvailability: async (prestadorId) => {
+    try {
+      const response = await axios.get(`/disponibilidad/prestador/${prestadorId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener disponibilidad'
+      };
+    }
+  },
+
+  // Obtener disponibilidad para un servicio específico
+  getServiceAvailability: async (prestadorId, servicioId) => {
+    try {
+      const response = await axios.get(`/disponibilidad/prestador/${prestadorId}/servicio/${servicioId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener disponibilidad del servicio'
+      };
+    }
+  },
+
+  // Actualizar disponibilidad de un servicio
+  updateServiceAvailability: async (prestadorId, servicioId, disponibilidadData) => {
+    try {
+      const response = await axios.put(
+        `/disponibilidad/prestador/${prestadorId}/servicio/${servicioId}`,
+        disponibilidadData
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al actualizar disponibilidad del servicio'
+      };
+    }
+  },
+
+  // Agregar fechas especiales (feriados, vacaciones, etc.)
+  addSpecialDate: async (prestadorId, fechaEspecialData) => {
+    try {
+      const response = await axios.post(
+        `/disponibilidad/prestador/${prestadorId}/fecha-especial`,
+        fechaEspecialData
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al agregar fecha especial'
+      };
+    }
+  },
+
+  // Verificar disponibilidad para una fecha y hora específica
+  checkAvailability: async (prestadorId, servicioId, fecha, hora) => {
+    try {
+      const response = await axios.get(
+        `/disponibilidad/check`, {
+          params: {
+            prestador: prestadorId,
+            servicio: servicioId,
+            fecha,
+            hora
+          }
+        }
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al verificar disponibilidad'
+      };
+    }
+  },
+
+  // Obtener horarios disponibles para una fecha específica
+  getAvailableTimeSlots: async (prestadorId, servicioId, fecha) => {
+    try {
+      const response = await axios.get(
+        `/disponibilidad/horarios-disponibles`, {
+          params: {
+            prestador: prestadorId,
+            servicio: servicioId,
+            fecha
+          }
+        }
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener horarios disponibles'
+      };
+    }
+  }
+};
+
 // Servicios para veterinarios
 export const veterinarioService = {
   // Obtener todos los veterinarios
@@ -498,6 +758,233 @@ export const userService = {
     }
   }
 };
+
+// Servicios para manejo de servicios ofrecidos
+export const servicioService = {
+  // Obtener todos los servicios disponibles
+  getAll: async () => {
+    try {
+      const response = await axios.get('/servicios');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener servicios'
+      };
+    }
+  },
+  
+  // Obtener servicios predefinidos del catálogo por tipo de prestador
+  getCatalogServices: async (tipoPrestador) => {
+    try {
+      console.log(`Obteniendo catálogo de servicios para tipo:`, tipoPrestador);
+      const response = await axios.get(`/catalogo/servicios/${tipoPrestador}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.log('Error al obtener catálogo de servicios:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener catálogo de servicios'
+      };
+    }
+  },
+  
+  // Obtener servicios de un prestador específico
+  getProviderServices: async (prestadorId) => {
+    try {
+      console.log(`Obteniendo servicios del prestador ID:`, prestadorId);
+      const response = await axios.get(`/prestadores/${prestadorId}/servicios`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.log('Error al obtener servicios del prestador:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener servicios del prestador'
+      };
+    }
+  },
+  
+  // Obtener servicios disponibles por tipo de prestador
+  getByProviderType: async (tipoPrestador) => {
+    try {
+      console.log(`Obteniendo servicios disponibles para tipo:`, tipoPrestador);
+      const response = await axios.get(`/catalogo/servicios/${tipoPrestador}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.log('Error al obtener servicios disponibles:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener servicios disponibles'
+      };
+    }
+  },
+  
+  // Añadir un servicio del catálogo al prestador
+  addServiceFromCatalog: async (prestadorId, servicioId, datos) => {
+    try {
+      console.log(`Añadiendo servicio ${servicioId} al prestador ${prestadorId}`);
+      const response = await axios.post(`/prestadores/${prestadorId}/servicios`, {
+        servicioId,
+        ...datos
+      });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.log('Error al añadir servicio:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al añadir servicio'
+      };
+    }
+  },
+
+  // Obtener un servicio por ID
+  getById: async (id) => {
+    try {
+      const response = await axios.get(`/servicios/${id}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener servicio'
+      };
+    }
+  },
+
+  // Obtener servicios por tipo de prestador
+  getByProviderType: async (providerType) => {
+    try {
+      // Filtrar por el tipo de prestador que se está requiriendo
+      const response = await axios.get(`/servicios?tipoPrestador=${providerType}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener servicios para este tipo de prestador'
+      };
+    }
+  },
+
+  // Obtener servicios que ofrece un prestador
+  getProviderServices: async (providerId) => {
+    try {
+      const response = await axios.get(`/prestadores/${providerId}/servicios`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener servicios del prestador'
+      };
+    }
+  },
+
+  // Agregar un servicio a un prestador
+  addToProvider: async (providerId, serviceData) => {
+    try {
+      const response = await axios.post(`/prestadores/${providerId}/servicios`, serviceData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al agregar servicio al prestador'
+      };
+    }
+  },
+
+  // Actualizar un servicio de un prestador
+  updateProviderService: async (providerId, serviceId, serviceData) => {
+    try {
+      const response = await axios.put(`/prestadores/${providerId}/servicios/${serviceId}`, serviceData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al actualizar servicio'
+      };
+    }
+  },
+
+  // Eliminar un servicio de un prestador
+  removeFromProvider: async (providerId, serviceId) => {
+    try {
+      await axios.delete(`/prestadores/${providerId}/servicios/${serviceId}`);
+      return {
+        success: true
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al eliminar servicio del prestador'
+      };
+    }
+  },
+
+  // Actualizar la disponibilidad de un servicio
+  updateAvailability: async (providerId, serviceId, availabilityData) => {
+    try {
+      const response = await axios.put(
+        `/prestadores/${providerId}/servicios/${serviceId}/disponibilidad`, 
+        availabilityData
+      );
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al actualizar disponibilidad del servicio'
+      };
+    }
+  },
+
+  // Crear un nuevo servicio base (solo para administradores)
+  create: async (servicioData) => {
+    try {
+      const response = await axios.post('/servicios', servicioData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al crear servicio'
+      };
+    }
+  },
+};
+
+// Ya agregamos estas funciones a la declaración anterior del servicioService
 
 // Configurar interceptor para incluir automáticamente el token de autenticación
 export const setupAxiosInterceptors = (token) => {

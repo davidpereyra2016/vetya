@@ -25,22 +25,22 @@ const OnboardingScreen = () => {
   const slides = [
     {
       id: '1',
-      title: 'Registra a tus mascotas',
-      description: 'Agrega los datos de tus mascotas para recibir atención personalizada. Puedes incluir fotos, historial médico y detalles importantes.',
+      title: 'Recibe solicitudes de emergencia',
+      description: 'Como prestador, recibirás notificaciones de emergencias cercanas que requieren atención veterinaria inmediata a domicilio.',
       image: require('../../assets/images/pet-register.png'),
-      icon: 'paw'
+      icon: 'alert-circle'
     },
     {
       id: '2',
-      title: 'Usa la aplicación',
-      description: 'Agenda citas, consulta el historial de visitas y recibe recordatorios para vacunas y medicamentos de tus mascotas.',
+      title: 'Gestiona tus servicios',
+      description: 'Configura los servicios que ofreces, tus tarifas y horarios de disponibilidad para atender a las mascotas de los clientes.',
       image: require('../../assets/images/app-usage.png'),
-      icon: 'calendar'
+      icon: 'briefcase'
     },
     {
       id: '3',
-      title: 'Contacto con el veterinario',
-      description: 'Nuestros veterinarios llegarán a tu domicilio en el horario acordado. Puedes hacer seguimiento de su ubicación en tiempo real.',
+      title: 'Atiende a domicilio',
+      description: 'Acepta las solicitudes, consulta la ubicación del cliente y brinda atención veterinaria profesional en el domicilio.',
       image: require('../../assets/images/vet-contact.png'),
       icon: 'medkit'
     },
