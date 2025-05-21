@@ -11,17 +11,21 @@ import {
   FlatList,
   RefreshControl,
   Alert,
-  Dimensions
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
+import { prestadorService } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
   // Estado para el modo disponible/no disponible para emergencias
   const [availableForEmergencies, setAvailableForEmergencies] = useState(false);
+  const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
+  const [isVeterinarian, setIsVeterinarian] = useState(false);
   
   // Estado para el panel de estadísticas
   const [stats, setStats] = useState({
@@ -118,19 +122,94 @@ const HomeScreen = ({ navigation }) => {
   const user = useAuthStore(state => state.user);
   const provider = useAuthStore(state => state.provider);
 
+  // Efecto para cargar información inicial del prestador
+  useEffect(() => {
+    if (provider) {
+      // Verificar si el prestador es veterinario
+      setIsVeterinarian(provider.tipo === 'Veterinario');
+      
+      // Cargar estado de disponibilidad de emergencias
+      if (provider.tipo === 'Veterinario') {
+        setAvailableForEmergencies(provider.disponibleEmergencias || false);
+        console.log('Estado de disponibilidad para emergencias:', provider.disponibleEmergencias);
+        console.log('Precio de emergencia:', provider.precioEmergencia);
+      }
+    }
+  }, [provider]);
+
+  // Función para actualizar disponibilidad de emergencias en la base de datos
+  const updateEmergencyAvailability = async (newStatus) => {
+    if (!provider || !provider._id) {
+      Alert.alert('Error', 'No se pudo identificar el prestador.');
+      return false;
+    }
+
+    try {
+      setIsUpdatingAvailability(true);
+      
+      // Obtener el precio de emergencia actual (o usar 0 si no hay)
+      const precioEmergencia = provider.precioEmergencia || 0;
+      
+      // Llamar al servicio para actualizar en la base de datos
+      const result = await prestadorService.actualizarPrecioEmergencia(
+        provider._id, 
+        precioEmergencia, 
+        newStatus
+      );
+      
+      if (result.success) {
+        // Actualizar el state local
+        setAvailableForEmergencies(newStatus);
+        
+        // Actualizar el provider en el state global
+        // Idealmente deberíamos recargar los datos completos, pero para simplicidad
+        // solo actualizamos esta propiedad
+        const updatedProvider = {
+          ...provider,
+          disponibleEmergencias: newStatus
+        };
+        useAuthStore.getState().updateUser(updatedProvider);
+        
+        return true;
+      } else {
+        Alert.alert('Error', result.error || 'Error al actualizar disponibilidad');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error al actualizar disponibilidad:', error);
+      Alert.alert('Error', 'Ocurrió un error al actualizar la disponibilidad');
+      return false;
+    } finally {
+      setIsUpdatingAvailability(false);
+    }
+  };
+
   // Función para cambiar disponibilidad
   const toggleAvailability = async () => {
-    // Aquí iría la lógica para actualizar la disponibilidad en el backend
-    setAvailableForEmergencies(!availableForEmergencies);
+    if (!isVeterinarian) {
+      Alert.alert(
+        'No disponible', 
+        'Solo los veterinarios pueden configurar la disponibilidad para emergencias.'
+      );
+      return;
+    }
     
-    // Mensaje para el usuario
-    Alert.alert(
-      !availableForEmergencies ? 'Modo Disponible' : 'Modo No Disponible',
-      !availableForEmergencies 
-        ? 'Ahora recibirás solicitudes de emergencias cercanas' 
-        : 'Ya no recibirás solicitudes de emergencias',
-      [{ text: 'Entendido' }]
-    );
+    // Nuevo estado de disponibilidad
+    const newStatus = !availableForEmergencies;
+    
+    // Actualizar en la base de datos
+    const success = await updateEmergencyAvailability(newStatus);
+    
+    if (success) {
+      // Mensaje para el usuario
+      Alert.alert(
+        newStatus ? 'Modo Disponible' : 'Modo No Disponible',
+        newStatus 
+          ? 'Ahora recibirás solicitudes de emergencias cercanas' 
+          : 'Ya no recibirás solicitudes de emergencias',
+        [{ text: 'Entendido' }]
+      );
+    }
   };
 
   // Función para manejar la aceptación de una emergencia
@@ -251,14 +330,42 @@ const HomeScreen = ({ navigation }) => {
     );
   };
 
-  // Pull to refresh
+  // Función para actualizar datos (pull-to-refresh)
   const onRefresh = async () => {
     setRefreshing(true);
-    // Aquí iría la lógica para recargar datos
-    setTimeout(() => {
+    
+    try {
+      if (provider && provider._id) {
+        // Cargar datos actualizados del prestador desde la API
+        const result = await prestadorService.getById(provider._id);
+        
+        if (result.success && result.data) {
+          // Actualizar datos en el estado global
+          useAuthStore.getState().updateUser(result.data);
+          
+          // Actualizar estado local de disponibilidad para emergencias
+          if (result.data.tipo === 'Veterinario') {
+            setIsVeterinarian(true);
+            setAvailableForEmergencies(result.data.disponibleEmergencias || false);
+          } else {
+            setIsVeterinarian(false);
+          }
+          
+          // Aquí se actualizarían otras partes de los datos (citas, estadísticas, etc)
+          // en una implementación real conectada al backend
+        }
+      }
+    } catch (error) {
+      console.error('Error al refrescar datos:', error);
+    } finally {
       setRefreshing(false);
-    }, 1500);
+    }
   };
+  
+  // Cargar datos iniciales al montar el componente
+  useEffect(() => {
+    onRefresh();
+  }, []);
 
   // Renderizar cada cita pendiente por confirmar
   const renderPendingAppointment = ({ item }) => (
@@ -453,18 +560,26 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
         
-        <View style={styles.availabilityContainer}>
-          <Text style={styles.availabilityTitle}>
-            {availableForEmergencies ? 'Disponible para emergencias' : 'No disponible para emergencias'}
-          </Text>
-          <Switch
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={availableForEmergencies ? "#f5dd4b" : "#f4f3f4"}
-            ios_backgroundColor="#3e3e3e"
-            onValueChange={toggleAvailability}
-            value={availableForEmergencies}
-          />
-        </View>
+        {/* Solo mostrar control de disponibilidad para veterinarios */}
+        {isVeterinarian && (
+          <View style={styles.availabilityContainer}>
+            <Text style={styles.availabilityTitle}>
+              {availableForEmergencies ? 'Disponible para emergencias' : 'No disponible para emergencias'}
+            </Text>
+            {isUpdatingAvailability ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Switch
+                trackColor={{ false: "#767577", true: "#81b0ff" }}
+                thumbColor={availableForEmergencies ? "#f5dd4b" : "#f4f3f4"}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={toggleAvailability}
+                value={availableForEmergencies}
+                disabled={isUpdatingAvailability}
+              />
+            )}
+          </View>
+        )}
       </View>
 
       <ScrollView 
@@ -504,34 +619,36 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         {/* Solicitudes de emergencia */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Solicitudes de Emergencia</Text>
-            {activeEmergencies.length > 0 && (
-              <View style={styles.badgeContainer}>
-                <Text style={styles.badgeText}>{activeEmergencies.length}</Text>
+        {isVeterinarian && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Solicitudes de Emergencia</Text>
+              {activeEmergencies.length > 0 && (
+                <View style={styles.badgeContainer}>
+                  <Text style={styles.badgeText}>{activeEmergencies.length}</Text>
+                </View>
+              )}
+            </View>
+            
+            {activeEmergencies.length > 0 ? (
+              <FlatList
+                data={activeEmergencies}
+                renderItem={renderEmergencyItem}
+                keyExtractor={item => item.id}
+                scrollEnabled={false}
+              />
+            ) : (
+              <View style={styles.emptyStateContainer}>
+                <Ionicons name="medical" size={50} color="#ccc" />
+                <Text style={styles.emptyStateText}>
+                  {availableForEmergencies 
+                    ? 'No hay solicitudes de emergencia en este momento' 
+                    : 'Activa tu disponibilidad para recibir solicitudes'}
+                </Text>
               </View>
             )}
           </View>
-          
-          {activeEmergencies.length > 0 ? (
-            <FlatList
-              data={activeEmergencies}
-              renderItem={renderEmergencyItem}
-              keyExtractor={item => item.id}
-              scrollEnabled={false}
-            />
-          ) : (
-            <View style={styles.emptyStateContainer}>
-              <Ionicons name="medical" size={50} color="#ccc" />
-              <Text style={styles.emptyStateText}>
-                {availableForEmergencies 
-                  ? 'No hay solicitudes de emergencia en este momento' 
-                  : 'Activa tu disponibilidad para recibir solicitudes'}
-              </Text>
-            </View>
-          )}
-        </View>
+        )}
 
         {/* Próximas citas */}
         <View style={styles.sectionContainer}>

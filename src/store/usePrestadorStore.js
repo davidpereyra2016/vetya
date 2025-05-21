@@ -52,6 +52,39 @@ const usePrestadorStore = create((set, get) => ({
     }
   },
   
+  // Cargar el prestador directamente por su ID
+  loadPrestadorById: async (prestadorId) => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      console.log('Obteniendo prestador por ID directo:', prestadorId);
+      const result = await prestadorService.getById(prestadorId);
+      
+      if (result.success) {
+        console.log('Perfil de prestador cargado correctamente por ID:', result.data._id);
+        set({ 
+          prestador: result.data,
+          isLoading: false
+        });
+        return result.data;
+      } else {
+        console.log('Error al cargar perfil de prestador por ID:', result.error);
+        set({ 
+          error: result.error,
+          isLoading: false
+        });
+        return null;
+      }
+    } catch (error) {
+      console.log('Error al cargar prestador por ID:', error);
+      set({ 
+        error: "Error al cargar información del prestador",
+        isLoading: false
+      });
+      return null;
+    }
+  },
+  
   // Actualizar el precio de emergencia y disponibilidad
   updateEmergencySettings: async (precioEmergencia, disponibleEmergencias) => {
     const { prestador } = get();

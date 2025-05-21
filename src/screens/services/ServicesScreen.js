@@ -82,14 +82,28 @@ const ServicesScreen = ({ navigation }) => {
   // Cargar detalles del prestador para configuración de emergencias
   const loadPrestadorDetails = async () => {
     try {
-      if (!user || !user._id) return;
+      if (!provider) return;
       
-      const result = await usePrestadorStore.getState().loadPrestador(user._id);
+      // Usar el ID del prestador directamente en lugar del ID de usuario
+      const prestadorId = provider._id || provider.id;
+      
+      if (!prestadorId) {
+        console.log('Error: No se encontró ID de prestador válido');
+        return;
+      }
+      
+      console.log('Cargando detalles del prestador usando ID:', prestadorId);
+      
+      // Cargar detalles del prestador directamente
+      const result = await usePrestadorStore.getState().loadPrestadorById(prestadorId);
       
       if (result) {
         // Inicializar los estados de emergencia
         setEmergencyPriceInput(result.precioEmergencia ? result.precioEmergencia.toString() : '0');
         setEmergencyAvailable(result.disponibleEmergencias || false);
+        console.log('Datos de emergencia cargados - Precio:', result.precioEmergencia, 'Disponible:', result.disponibleEmergencias);
+      } else {
+        console.log('No se pudieron cargar los detalles del prestador');
       }
     } catch (error) {
       console.log('Error al cargar detalles del prestador:', error);
