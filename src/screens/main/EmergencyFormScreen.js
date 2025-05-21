@@ -17,51 +17,155 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import usePetStore from '../../store/usePetStore';
+import useEmergencyStore from '../../store/useEmergencyStore';
+import * as Location from 'expo-location';
 
 const EmergencyFormScreen = ({ navigation, route }) => {
   const [description, setDescription] = useState('');
   const [selectedPet, setSelectedPet] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [pets, setPets] = useState([]);
+  const [emergencyType, setEmergencyType] = useState('Otro');
+  const [urgencyLevel, setUrgencyLevel] = useState('Media');
+  const [location, setLocation] = useState(null);
+  const [locationError, setLocationError] = useState(null);
+  const [images, setImages] = useState([]);
+  
+  // Obtener funciones del store de emergencias
+  const { createEmergency } = useEmergencyStore();
   
   // Animaciones
   const fadeAnim = new Animated.Value(1); // Inicializar ya visible
   const slideAnim = new Animated.Value(0); // Inicializar ya en posición final
   const buttonScale = new Animated.Value(1);
 
-  // Cargar mascotas del usuario desde el store
+  // Cargar mascotas del usuario desde el store y obtener ubicación
   useEffect(() => {
-    const loadPets = async () => {
-      try {
-        setIsLoading(true);
-        const { fetchPets } = usePetStore.getState();
-        const result = await fetchPets();
-        
-        if (result.success) {
-          setPets(result.data.map(pet => ({
-            id: pet._id,
-            nombre: pet.nombre,
-            tipo: pet.tipo,
-            raza: pet.raza,
-            imagen: pet.imagen
-          })));
-        } else {
-          console.error('Error al cargar mascotas:', result.error);
-          Alert.alert('Error', 'No se pudieron cargar tus mascotas');
-        }
-      } catch (error) {
-        console.error('Error al cargar mascotas:', error);
-        Alert.alert('Error', 'Ocurrió un error al cargar tus mascotas');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     loadPets();
+    getLocation();
+  }, []);
 
-    // NOTA: Ya iniciamos con valores visibles, así que no necesitamos
-    // las animaciones iniciales, pero podemos dejarlas si queremos un efecto
-    // sutil de refuerzo
+  // Función para cargar las mascotas del usuario
+  const loadPets = async () => {
+    try {
+      setIsLoading(true);
+      const { fetchPets } = usePetStore.getState();
+      const result = await fetchPets();
+      
+      if (result.success) {
+        setPets(result.data.map(pet => ({
+          id: pet._id,
+          nombre: pet.nombre,
+          tipo: pet.tipo,
+          raza: pet.raza,
+          imagen: pet.imagen
+        })));
+      } else {
+        console.error('Error al cargar mascotas:', result.error);
+        Alert.alert('Error', 'No se pudieron cargar tus mascotas');
+      }
+    } catch (error) {
+      console.error('Error al cargar mascotas:', error);
+      Alert.alert('Error', 'Ocurrió un error al cargar tus mascotas');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Obtener la ubicación actual del usuario
+  const getLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      
+      if (status !== 'granted') {
+        setLocationError('Se requiere permiso para acceder a la ubicación');
+        Alert.alert(
+          'Permiso de ubicación requerido', 
+          'Para solicitar una emergencia, necesitamos conocer tu ubicación.'
+        );
+        return;
+      }
+      
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      setLocation(currentLocation.coords);
+      
+      // Obtener dirección a partir de coordenadas (geocodificación inversa)
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude
+      });
+      
+      if (geocode.length > 0) {
+        const address = geocode[0];
+        console.log('Dirección obtenida:', address);
+      }
+    } catch (error) {
+      console.error('Error al obtener la ubicación:', error);
+      setLocationError('No se pudo obtener tu ubicación');
+      Alert.alert('Error', 'No pudimos obtener tu ubicación actual. Por favor, inténtalo de nuevo.');
+    }
+  };
+
+  // Función para enviar la solicitud de emergencia
+  const handleSubmit = async () => {
+    // Validar que se hayan completado todos los campos requeridos
+    if (!selectedPet) {
+      Alert.alert('Información requerida', 'Por favor selecciona una mascota');
+      return;
+    }
+    if (!description.trim()) {
+      Alert.alert('Información requerida', 'Por favor describe la emergencia');
+      return;
+    }
+    
+    if (!location) {
+      Alert.alert('Error', 'No podemos determinar tu ubicación. Por favor, inténtalo de nuevo o ingresa una dirección manual.');
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Preparar datos para la solicitud
+      const emergencyData = {
+        mascota: selectedPet.id,
+        descripcion: description,
+        tipoEmergencia: emergencyType,
+        nivelUrgencia: urgencyLevel,
+        ubicacion: {
+          direccion: 'Obtenida por GPS', // Esto se podría mejorar con geocodificación inversa completa
+          ciudad: 'Detección automática',
+          coordenadas: {
+            latitud: location.latitude,
+            longitud: location.longitude
+          }
+        }
+      };
+      
+      // Almacenar temporalmente los datos de la emergencia para usarlos después
+      // de seleccionar un veterinario
+      setIsLoading(false);
+      
+      // Navegar primero a la pantalla del mapa para seleccionar veterinario
+      navigation.navigate('EmergencyVetMap', { 
+        petInfo: selectedPet,
+        emergencyDescription: description,
+        emergencyData: emergencyData,
+        images: images,
+        emergencyType: emergencyType,
+        urgencyLevel: urgencyLevel
+      });
+      
+    } catch (error) {
+      console.error('Error al procesar solicitud de emergencia:', error);
+      Alert.alert('Error', 'Ocurrió un error al procesar tu solicitud. Por favor, inténtalo de nuevo.');
+      setIsLoading(false);
+    }
+  };
+  
+  // Efectos de animación cuando se monta el componente
+  useEffect(() => {
+    // Iniciar animaciones
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -234,27 +338,59 @@ const EmergencyFormScreen = ({ navigation, route }) => {
             textAlignVertical="top"
           />
           
-          <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-            <TouchableOpacity
-              style={styles.searchButton}
-              onPress={handleSearchVet}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
-              disabled={isLoading}
+          {/* Tipo de emergencia */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.sectionLabel}>Tipo de emergencia</Text>
+            <View style={styles.emergencyTypesContainer}>
+              {['Accidente', 'Envenenamiento', 'Dificultad respiratoria', 'Herida grave', 'Convulsiones', 'Otro'].map(type => (
+                <TouchableOpacity
+                  key={type}
+                  style={[styles.typeButton, emergencyType === type && styles.selectedTypeButton]}
+                  onPress={() => setEmergencyType(type)}
+                >
+                  <Text style={[styles.typeButtonText, emergencyType === type && styles.selectedTypeText]}>{type}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          {/* Nivel de urgencia */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.sectionLabel}>Nivel de urgencia</Text>
+            <View style={styles.urgencyContainer}>
+              {['Baja', 'Media', 'Alta'].map(level => (
+                <TouchableOpacity
+                  key={level}
+                  style={[styles.urgencyButton, urgencyLevel === level && styles.selectedUrgencyButton,
+                    level === 'Baja' && styles.lowUrgencyButton,
+                    level === 'Media' && styles.mediumUrgencyButton,
+                    level === 'Alta' && styles.highUrgencyButton
+                  ]}
+                  onPress={() => setUrgencyLevel(level)}
+                >
+                  <Text style={[styles.urgencyButtonText, urgencyLevel === level && styles.selectedUrgencyText]}>{level}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={[styles.submitButton, 
+                (!selectedPet || !description.trim() || isLoading) && styles.disabledButton]}
+              disabled={!selectedPet || !description.trim() || isLoading}
+              onPress={handleSubmit}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <>
-                  <Text style={styles.searchButtonText}>Buscar Veterinario</Text>
-                  <Ionicons name="search" size={20} color="#fff" style={styles.searchIcon} />
-                </>
+                <Text style={styles.submitButtonText}>Solicitar ayuda de emergencia</Text>
               )}
             </TouchableOpacity>
-          </Animated.View>
+          </View>
           
           <Text style={styles.disclaimer}>
-            Al presionar "Buscar Veterinario" aceptas los {' '}
+            Al presionar "Solicitar ayuda de emergencia" aceptas los {' '}
             <Text style={styles.link}>términos del servicio de emergencia</Text>
           </Text>
         </Animated.View>
@@ -408,6 +544,98 @@ const styles = StyleSheet.create({
   link: {
     color: '#1E88E5',
     textDecorationLine: 'underline',
+  },
+  // Estilos para la sección de tipo de emergencia
+  fieldContainer: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  emergencyTypesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -5,
+  },
+  typeButton: {
+    backgroundColor: '#F5F7FA',
+    borderWidth: 1,
+    borderColor: '#B0B8C4',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    margin: 5,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  selectedTypeButton: {
+    backgroundColor: '#1E88E5',
+    borderColor: '#1976D2',
+  },
+  typeButtonText: {
+    fontSize: 14,
+    color: '#555',
+    fontWeight: '500',
+  },
+  selectedTypeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  // Estilos para la sección de nivel de urgencia
+  urgencyContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  urgencyButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#B0B8C4',
+  },
+  lowUrgencyButton: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#90CAF9',
+  },
+  mediumUrgencyButton: {
+    backgroundColor: '#FFF3E0',
+    borderColor: '#FFB74D',
+  },
+  highUrgencyButton: {
+    backgroundColor: '#FFEBEE',
+    borderColor: '#EF5350',
+  },
+  selectedUrgencyButton: {
+    borderWidth: 2,
+  },
+  urgencyButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selectedUrgencyText: {
+    fontWeight: 'bold',
+  },
+  // Estilos para el botón de envío de emergencia
+  submitButton: {
+    backgroundColor: '#F44336',
+    borderRadius: 10,
+    padding: 15,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#BDBDBD',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

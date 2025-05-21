@@ -14,7 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 const { width } = Dimensions.get('window');
 
 const EmergencyConfirmationScreen = ({ navigation, route }) => {
-  const { petInfo, vetInfo } = route.params || {};
+  const { emergency } = route.params || {};
+  
+  // Usar datos de la emergencia o valores por defecto si no están disponibles
+  const petInfo = emergency?.mascota || {};
+  const vetInfo = emergency?.veterinario;
+  const emergencyStatus = emergency?.estado || 'Solicitada';
   
   // Animaciones
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -119,9 +124,29 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
             }
           ]}
         >
-          <Text style={styles.title}>Veterinario confirmado</Text>
+          <Text style={styles.title}>
+            {emergencyStatus === 'Solicitada' && 'Solicitud enviada'}
+            {emergencyStatus === 'Asignada' && 'Veterinario asignado'}
+            {emergencyStatus === 'En camino' && 'Veterinario en camino'}
+            {emergencyStatus === 'Atendida' && 'Emergencia atendida'}
+            {emergencyStatus === 'Cancelada' && 'Emergencia cancelada'}
+          </Text>
           <Text style={styles.subtitle}>
-            {vetInfo?.name} está en camino para atender a {petInfo?.name}
+            {emergencyStatus === 'Solicitada' && 
+              `Tu solicitud para ${petInfo?.nombre || 'tu mascota'} ha sido enviada y se está procesando`
+            }
+            {emergencyStatus === 'Asignada' && 
+              `${vetInfo?.nombre || 'Un veterinario'} ha sido asignado para atender a ${petInfo?.nombre || 'tu mascota'}`
+            }
+            {emergencyStatus === 'En camino' && 
+              `${vetInfo?.nombre || 'El veterinario'} está en camino para atender a ${petInfo?.nombre || 'tu mascota'}`
+            }
+            {emergencyStatus === 'Atendida' && 
+              `La emergencia de ${petInfo?.nombre || 'tu mascota'} ha sido atendida exitosamente`
+            }
+            {emergencyStatus === 'Cancelada' && 
+              'La solicitud de emergencia ha sido cancelada'
+            }
           </Text>
           
           <View style={styles.infoCard}>
@@ -143,7 +168,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
               </View>
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Costo de la consulta</Text>
-                <Text style={styles.infoValue}>${vetInfo?.price || '60.000'}</Text>
+                <Text style={styles.infoValue}>${vetInfo?.precio || emergency?.precio || '50.000'}</Text>
               </View>
             </View>
             

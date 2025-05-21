@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -7,13 +7,23 @@ import {
   TouchableOpacity, 
   Image, 
   FlatList,
-  Animated
+  Animated,
+  RefreshControl,
+  ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import ServiceCard from '../../components/ServiceCard'; // Import the new component
+import useEmergencyStore from '../../store/useEmergencyStore';
+import { useFocusEffect } from '@react-navigation/native';
 
 const HomeScreen = ({ navigation }) => {
+  // Estado para manejar la carga de datos
+  const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Obtener veterinarios disponibles del store
+  const { availableVets, loadAvailableVets, activeEmergencies, loadActiveEmergencies } = useEmergencyStore();
   // Datos de ejemplo para los servicios
   const services = [
     {
@@ -54,8 +64,75 @@ const HomeScreen = ({ navigation }) => {
     }
   ];
 
-  // Datos de ejemplo para los veterinarios destacados
-  const featuredVets = [
+  // Cargar datos cuando el componente se monta o cuando la pantalla obtiene el foco
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+  
+  useFocusEffect(
+    useCallback(() => {
+      loadInitialData();
+      return () => {};
+    }, [])
+  );
+  
+  // Función para cargar datos iniciales
+  const loadInitialData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([loadAvailableVets(), loadActiveEmergencies()]);
+    } catch (error) {
+      console.log('Error al cargar datos:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Función para actualizar datos (pull-to-refresh)
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadAvailableVets(), loadActiveEmergencies()]);
+    } catch (error) {
+      console.log('Error al actualizar datos:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  
+  // Manejar la solicitud de emergencia
+  const handleEmergencyRequest = () => {
+    navigation.navigate('EmergencyForm');
+  };
+  
+  // Manejar la selección de servicio
+  const handleServiceSelect = (service) => {
+    if (service.id === 'emergencias') {
+      handleEmergencyRequest();
+    } else if (service.id === 'mascotas') {
+      navigation.navigate('Pets');
+    } else if (service.id === 'citas') {
+      navigation.navigate('Appointments');
+    } else {
+      // Otros servicios
+      navigation.navigate('ServiceDetails', { service });
+    }
+  };
+  
+  // Datos para la sección de veterinarios destacados (usar datos reales de la API si están disponibles)
+  const featuredVets = availableVets.length > 0 ? availableVets.slice(0, 3).map(vet => ({
+    id: vet._id,
+    name: vet.nombre,
+    specialty: vet.especialidad || 'Medicina general',
+    rating: vet.rating || 4.5,
+    experience: vet.experiencia || '5 años',
+    patients: vet.pacientesAtendidos || 50,
+    reviews: vet.resenas?.length || 10,
+    available: vet.disponibleEmergencias,
+    status: 'Destacado',
+    specialties: vet.especialidades || ['Perros', 'Gatos'],
+    image: vet.imagen
+  })) : [
     {
       id: '1',
       name: 'Dr. Carlos Rodríguez',
@@ -97,8 +174,16 @@ const HomeScreen = ({ navigation }) => {
     },
   ];
 
-  // Datos de ejemplo para los veterinarios disponibles ahora
-  const availableVets = [
+  // Veterinarios disponibles para emergencias
+  const availableVetsList = availableVets.length > 0 ? availableVets.filter(vet => vet.disponibleEmergencias).map(vet => ({
+    id: vet._id,
+    name: vet.nombre,
+    specialty: vet.especialidad || 'Medicina general',
+    rating: vet.rating || 4.5,
+    distance: vet.distancia || '3 km',
+    available: true,
+    image: vet.imagen
+  })) : [
     {
       id: '4',
       name: 'Dra. Lucía Hernández',
@@ -256,7 +341,15 @@ const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
+        }
+      >
         {/* Banner principal */}
         <View style={styles.banner}>
           <View style={styles.bannerContent}>
@@ -327,14 +420,25 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
           </View>
-          <FlatList
-            data={availableVets}
-            renderItem={renderAvailableVetItem}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.vetsList}
-          />
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#1E88E5" style={{marginVertical: 20}} />
+          ) : (
+            <FlatList
+              data={availableVetsList}
+              renderItem={renderAvailableVetItem}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.vetsList}
+              ListEmptyComponent={(
+                <View style={styles.emptyStateContainer}>
+                  <Text style={styles.emptyStateText}>
+                    No hay veterinarios disponibles en este momento
+                  </Text>
+                </View>
+              )}
+            />
+          )}
         </View>
         
         {/* Veterinarios destacados */}

@@ -86,25 +86,53 @@ const useAuthStore = create(
 
       // Verificar token al iniciar la app
       checkAuth: async () => {
-        const { token } = get();
-        if (token) {
-          // Configurar token en axios
-          setupAxiosInterceptors(token);
+        set({ isLoading: true });
+        
+        try {
+          // Verificar token almacenado
+          const storedToken = await AsyncStorage.getItem('auth-storage');
+          const parsedStorage = storedToken ? JSON.parse(storedToken) : null;
+          const token = parsedStorage?.state?.token;
           
-          // Cargar datos actualizados del perfil desde el backend
-          try {
-            const response = await axios.get('/users/profile');
-            if (response.data) {
-              // Actualizar los datos del usuario con la información actualizada
-              set({ user: response.data });
-            }
-          } catch (error) {
-            console.log('Error al actualizar perfil:', error);
+          if (!token) {
+            // No hay token, ir a login
+            set({ isLoading: false, token: null, user: null });
+            return false;
           }
           
-          return true;
+          // Configurar interceptor con el token
+          setupAxiosInterceptors(token);
+          
+          // Obtener información del usuario
+          try {
+            const response = await axios.get('/users/profile');
+            
+            if (response.data) {
+              // Todo bien, actualizar los datos del usuario
+              set({
+                isLoading: false,
+                user: response.data,
+                token: token
+              });
+              return true;
+            } else {
+              // No se encontró el usuario, forzar logout
+              console.log('Usuario no encontrado o eliminado');
+              set({ isLoading: false, token: null, user: null });
+              return false;
+            }
+          } catch (error) {
+            // Error al obtener usuario, resetear todo
+            console.log('Error al verificar perfil:', error);
+            set({ isLoading: false, token: null, user: null });
+            return false;
+          }
+        } catch (error) {
+          // Cualquier error, resetear la sesión
+          console.error('Error en checkAuth:', error);
+          set({ isLoading: false, token: null, user: null });
+          return false;
         }
-        return false;
       },
 
       // Acción para actualizar el estado de primera vez
