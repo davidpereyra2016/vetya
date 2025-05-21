@@ -341,6 +341,25 @@ export const veterinarioService = {
       };
     }
   },
+  
+  // Obtener veterinarios disponibles para emergencias
+  getAvailableForEmergencies: async () => {
+    try {
+      console.log('Solicitando veterinarios disponibles...');
+      const response = await axios.get('/disponibilidad');
+      console.log('Respuesta de disponibilidad recibida:', response.data);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.log('Error en getAvailableForEmergencies:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener veterinarios disponibles'
+      };
+    }
+  },
 
   // Buscar veterinarios por especialidad
   getByEspecialidad: async (especialidad) => {
@@ -358,6 +377,95 @@ export const veterinarioService = {
     }
   }
 };
+// Servicio para manejo de emergencias
+export const emergenciaService = {
+  // Crear una nueva solicitud de emergencia
+  create: async (emergenciaData) => {
+    try {
+      const response = await axios.post('/emergencias', emergenciaData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al crear solicitud de emergencia'
+      };
+    }
+  },
+
+  // Obtener emergencias activas del usuario
+  getActiveEmergencies: async () => {
+    try {
+      const response = await axios.get('/emergencias/activas');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener emergencias activas'
+      };
+    }
+  },
+
+  // Cancelar una emergencia
+  cancelEmergency: async (emergenciaId) => {
+    try {
+      const response = await axios.put(`/emergencias/${emergenciaId}/cancelar`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al cancelar la emergencia'
+      };
+    }
+  },
+
+  // Subir imágenes para una emergencia
+  uploadEmergencyImages: async (images) => {
+    try {
+      const formData = new FormData();
+      
+      for (let i = 0; i < images.length; i++) {
+        const imageUri = images[i];
+        const filename = imageUri.split('/').pop();
+        
+        // Determine mime type
+        const match = /\.([\w\d_]+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        
+        formData.append('imagenes', {
+          uri: imageUri,
+          name: filename,
+          type
+        });
+      }
+      
+      const response = await axios.post('/upload/emergencia', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al subir imágenes'
+      };
+    }
+  }
+};
+
 // Servicio para manejo de mascotas
 export const mascotaService = {
   // Obtener todas las mascotas del usuario

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+import React, { useState, useEffect, useCallback } from 'react';
+=======
 import React, { useState, useEffect } from 'react';
+>>>>>>> e4ccb3e9d82b3e4202eea3a04659dece14a4b700
 import { 
   StyleSheet, 
   Text, 
@@ -9,6 +13,27 @@ import {
   Switch,
   Image,
   FlatList,
+<<<<<<< HEAD
+  Animated,
+  RefreshControl,
+  ActivityIndicator
+} from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+import ServiceCard from '../../components/ServiceCard'; // Import the new component
+import useEmergencyStore from '../../store/useEmergencyStore';
+import { useFocusEffect } from '@react-navigation/native';
+
+const HomeScreen = ({ navigation }) => {
+  // Estado para manejar la carga de datos
+  const [isLoading, setIsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Obtener veterinarios disponibles del store
+  const { availableVets, loadAvailableVets, activeEmergencies, loadActiveEmergencies } = useEmergencyStore();
+  // Datos de ejemplo para los servicios
+  const services = [
+=======
   RefreshControl,
   Alert,
   Dimensions,
@@ -37,6 +62,7 @@ const HomeScreen = ({ navigation }) => {
   
   // Estado para citas pendientes por confirmar
   const [pendingAppointments, setPendingAppointments] = useState([
+>>>>>>> e4ccb3e9d82b3e4202eea3a04659dece14a4b700
     {
       id: 'cita3',
       usuarioNombre: 'Ana María Rodríguez',
@@ -67,6 +93,181 @@ const HomeScreen = ({ navigation }) => {
     }
   ]);
 
+<<<<<<< HEAD
+  // Cargar datos cuando el componente se monta o cuando la pantalla obtiene el foco
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+  
+  useFocusEffect(
+    useCallback(() => {
+      loadInitialData();
+      return () => {};
+    }, [])
+  );
+  
+  // Función para cargar datos iniciales
+  const loadInitialData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([loadAvailableVets(), loadActiveEmergencies()]);
+    } catch (error) {
+      console.log('Error al cargar datos:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Función para actualizar datos (pull-to-refresh)
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadAvailableVets(), loadActiveEmergencies()]);
+    } catch (error) {
+      console.log('Error al actualizar datos:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  
+  // Manejar la solicitud de emergencia
+  const handleEmergencyRequest = () => {
+    navigation.navigate('EmergencyForm');
+  };
+  
+  // Manejar la selección de servicio
+  const handleServiceSelect = (service) => {
+    if (service.id === 'emergencias') {
+      handleEmergencyRequest();
+    } else if (service.id === 'mascotas') {
+      navigation.navigate('Pets');
+    } else if (service.id === 'citas') {
+      navigation.navigate('Appointments');
+    } else {
+      // Otros servicios
+      navigation.navigate('ServiceDetails', { service });
+    }
+  };
+  
+  // Datos para la sección de veterinarios destacados (usar datos reales de la API si están disponibles)
+  const featuredVets = availableVets.length > 0 ? availableVets.slice(0, 3).map(vet => ({
+    id: vet._id,
+    name: vet.nombre,
+    specialty: vet.especialidad || 'Medicina general',
+    rating: vet.rating || 4.5,
+    experience: vet.experiencia || '5 años',
+    patients: vet.pacientesAtendidos || 50,
+    reviews: vet.resenas?.length || 10,
+    available: vet.disponibleEmergencias,
+    status: 'Destacado',
+    specialties: vet.especialidades || ['Perros', 'Gatos'],
+    image: vet.imagen
+  })) : [
+    {
+      id: '1',
+      name: 'Dr. Carlos Rodríguez',
+      specialty: 'Medicina general',
+      rating: 4.9,
+      experience: '10 años',
+      patients: 120,
+      reviews: 48,
+      available: true,
+      status: 'Destacado',
+      specialties: ['Perros', 'Gatos', 'Aves'],
+      image: null // Usamos placeholder en vez de URL para evitar errores
+    },
+    {
+      id: '2',
+      name: 'Dra. María Gómez',
+      specialty: 'Cirugía veterinaria',
+      rating: 4.8,
+      experience: '8 años',
+      patients: 95,
+      reviews: 36,
+      available: true,
+      status: 'Destacado',
+      specialties: ['Perros', 'Gatos', 'Animales exóticos'],
+      image: null
+    },
+    {
+      id: '3',
+      name: 'Dr. Juan Pérez',
+      specialty: 'Dermatología animal',
+      rating: 4.7,
+      experience: '6 años',
+      patients: 78,
+      reviews: 29,
+      available: false,
+      status: 'Destacado',
+      specialties: ['Perros', 'Gatos'],
+      image: null
+    },
+  ];
+
+  // Veterinarios disponibles para emergencias
+  const availableVetsList = availableVets.length > 0 ? availableVets.filter(vet => vet.disponibleEmergencias).map(vet => ({
+    id: vet._id,
+    name: vet.nombre,
+    specialty: vet.especialidad || 'Medicina general',
+    rating: vet.rating || 4.5,
+    distance: vet.distancia || '3 km',
+    available: true,
+    image: vet.imagen
+  })) : [
+    {
+      id: '4',
+      name: 'Dra. Lucía Hernández',
+      specialty: 'Nutrición animal',
+      rating: 4.6,
+      experience: '5 años',
+      patients: 64,
+      reviews: 31,
+      available: true,
+      status: 'Disponible ahora',
+      specialties: ['Perros', 'Gatos', 'Roedores'],
+      image: null
+    },
+    {
+      id: '5',
+      name: 'Dr. Martín Díaz',
+      specialty: 'Cardiología',
+      rating: 4.9,
+      experience: '12 años',
+      patients: 150,
+      reviews: 67,
+      available: true,
+      status: 'Disponible ahora',
+      specialties: ['Perros', 'Gatos'],
+      image: null
+    },
+    {
+      id: '6',
+      name: 'Dra. Sofía López',
+      specialty: 'Oftalmología',
+      rating: 4.7,
+      experience: '7 años',
+      patients: 85,
+      reviews: 42,
+      available: true,
+      status: 'Disponible ahora',
+      specialties: ['Perros', 'Gatos', 'Conejos'],
+      image: null
+    },
+  ];
+
+  const handleServicePress = (service) => {
+    if (service.id === 'emergencias') { // Emergencias
+      navigation.navigate('EmergencyForm');
+    } else if (service.id === '1') { // Consulta General
+      navigation.navigate('ConsultaGeneral');
+    } else if (service.id === 'citas') {
+      navigation.navigate('Citas');
+    } else if (service.id === 'mascotas') {
+      navigation.navigate('Mascotas');
+    } else {
+      // Para otros servicios podríamos mostrar un mensaje o navegar a otras pantallas
+      console.log(`Servicio seleccionado: ${service.title}`);
+=======
   // Estado para solicitudes de emergencia activas
   const [activeEmergencies, setActiveEmergencies] = useState([
     {
@@ -81,6 +282,7 @@ const HomeScreen = ({ navigation }) => {
       estado: 'pendiente',
       fechaHora: new Date().toISOString(),
       urgencia: 'alta'
+>>>>>>> e4ccb3e9d82b3e4202eea3a04659dece14a4b700
     }
   ]);
 
@@ -544,6 +746,133 @@ const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
+<<<<<<< HEAD
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+          />
+        }
+      >
+        {/* Banner principal */}
+        <View style={styles.banner}>
+          <View style={styles.bannerContent}>
+            <Text style={styles.bannerTitle}>¡Bienvenido a VetYa!</Text>
+            <Text style={styles.bannerSubtitle}>
+              Cuidado veterinario profesional en la comodidad de tu hogar
+            </Text>
+            <TouchableOpacity 
+              style={styles.bannerButton}
+              onPress={() => navigation.navigate('AgendarCita')}
+            >
+              <Text style={styles.bannerButtonText}>Agendar cita</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.bannerImageContainer}>
+            <Text>
+              <Ionicons name="paw" size={100} color="#fff" style={{ opacity: 0.3 }} />
+            </Text>
+          </View>
+        </View>
+
+        {/* Servicios */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Nuestros servicios</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>Ver todos</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={services}
+            renderItem={({ item }) => (
+              <ServiceCard item={item} onPress={handleServicePress} />
+            )}
+            keyExtractor={item => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.servicesList}
+          />
+        </View>
+
+        {/* Próxima cita */}
+        <View style={styles.appointmentContainer}>
+          <View style={styles.appointmentHeader}>
+            <Text style={styles.appointmentTitle}>Tu próxima cita</Text>
+            <Text>
+              <Ionicons name="calendar" size={24} color="#1E88E5" />
+            </Text>
+          </View>
+          <View style={styles.appointmentContent}>
+            <View style={styles.appointmentInfo}>
+              <Text style={styles.appointmentDate}>Miércoles, 15 de Mayo</Text>
+              <Text style={styles.appointmentTime}>15:30 - 16:30</Text>
+              <Text style={styles.appointmentType}>Consulta general</Text>
+              <Text style={styles.appointmentVet}>Dr. Carlos Rodríguez</Text>
+            </View>
+            <TouchableOpacity style={styles.appointmentButton}>
+              <Text style={styles.appointmentButtonText}>Ver detalles</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Veterinarios disponibles ahora */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Veterinarios disponibles</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AllVetsScreen', { filter: 'available' })}>
+              <Text style={styles.seeAllText}>Ver todos</Text>
+            </TouchableOpacity>
+          </View>
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#1E88E5" style={{marginVertical: 20}} />
+          ) : (
+            <FlatList
+              data={availableVetsList}
+              renderItem={renderAvailableVetItem}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.vetsList}
+              ListEmptyComponent={(
+                <View style={styles.emptyStateContainer}>
+                  <Text style={styles.emptyStateText}>
+                    No hay veterinarios disponibles en este momento
+                  </Text>
+                </View>
+              )}
+            />
+          )}
+        </View>
+        
+        {/* Veterinarios destacados */}
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Veterinarios destacados</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AllVetsScreen', { filter: 'featured' })}>
+              <Text style={styles.seeAllText}>Ver todos</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={featuredVets}
+            renderItem={renderFeaturedVetItem}
+            keyExtractor={item => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.vetsList}
+          />
+        </View>
+
+        {/* Consejos de salud */}
+        <View style={[styles.sectionContainer, styles.lastSection]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Consejos de salud</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('HealthTips')}>
+              <Text style={styles.seeAllText}>Ver todos</Text>
+            </TouchableOpacity>
+=======
       
       {/* Encabezado y control de disponibilidad */}
       <View style={styles.header}>
@@ -551,6 +880,7 @@ const HomeScreen = ({ navigation }) => {
           <View>
             <Text style={styles.welcome}>¡Bienvenido a VetPresta!</Text>
             <Text style={styles.providerName}>{provider?.nombre || user?.username || 'Prestador'}</Text>
+>>>>>>> e4ccb3e9d82b3e4202eea3a04659dece14a4b700
           </View>
           <TouchableOpacity 
             style={styles.profileButton}
