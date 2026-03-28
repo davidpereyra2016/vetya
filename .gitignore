@@ -67,3 +67,9 @@ android/app/build/
 ios/build/
 *.apk
 *.ipa
+
+# Agent Reviewer
+agent-reviewer/node_modules/
+agent-reviewer/.env
+agent-reviewer/review-report.json
+agent-reviewer
