@@ -3,28 +3,24 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 // Mock de axios - DEBE estar antes de importar el store
 jest.mock('axios', () => ({
   __esModule: true,
-  default: {
-    create: jest.fn(() => ({
+  default: (() => {
+    const axiosMock = {
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+      patch: jest.fn(),
       interceptors: {
         request: { use: jest.fn(), eject: jest.fn() },
         response: { use: jest.fn(), eject: jest.fn() },
       },
       defaults: { headers: { common: {} } },
-      get: jest.fn(),
-      post: jest.fn(),
-      put: jest.fn(),
-      delete: jest.fn(),
-    })),
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-    interceptors: {
-      request: { use: jest.fn(), eject: jest.fn() },
-      response: { use: jest.fn(), eject: jest.fn() },
-    },
-    defaults: { headers: { common: {} } },
-  },
+    };
+
+    axiosMock.create = jest.fn(() => axiosMock);
+
+    return axiosMock;
+  })(),
 }));
 
 // Importar después del mock
@@ -34,6 +30,12 @@ import axios from 'axios';
 describe('usePetStore - Gestión de Mascotas', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    usePetStore.setState({
+      pets: [],
+      currentPet: null,
+      isLoading: false,
+      error: null,
+    });
   });
 
   describe('Obtener Mascotas', () => {
@@ -259,7 +261,7 @@ describe('usePetStore - Gestión de Mascotas', () => {
 
       // Primero agregar una mascota al store
       act(() => {
-        result.current.pets = [{ _id: 'pet123', nombre: 'Rocky' }];
+        usePetStore.setState({ pets: [{ _id: 'pet123', nombre: 'Rocky' }] });
       });
 
       await act(async () => {

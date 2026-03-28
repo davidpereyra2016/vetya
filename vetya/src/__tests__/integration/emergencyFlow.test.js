@@ -9,10 +9,24 @@ import { renderHook, act, waitFor } from '@testing-library/react-native';
 // Mocks de axios
 jest.mock('axios', () => ({
   __esModule: true,
-  default: {
-    get: jest.fn(),
-    post: jest.fn(),
-  },
+  default: (() => {
+    const axiosMock = {
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      delete: jest.fn(),
+      patch: jest.fn(),
+      interceptors: {
+        request: { use: jest.fn(), eject: jest.fn() },
+        response: { use: jest.fn(), eject: jest.fn() },
+      },
+      defaults: { headers: { common: {} } },
+    };
+
+    axiosMock.create = jest.fn(() => axiosMock);
+
+    return axiosMock;
+  })(),
 }));
 
 jest.mock('../../services/api', () => ({
