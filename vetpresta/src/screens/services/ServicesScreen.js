@@ -149,6 +149,7 @@ const ServicesScreen = ({ navigation }) => {
     if (provider) {
       loadServices();
       loadAvailableServices();
+      loadPrestadorDetails();
     }
   }, [provider]);
   
