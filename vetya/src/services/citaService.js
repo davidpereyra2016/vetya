@@ -229,6 +229,9 @@ const citaService = {
         precio: servicio.precio,
         duracion: servicio.duracion || 30,
         categoria: servicio.categoria,
+        modalidadAtencion: Array.isArray(servicio.modalidadAtencion) && servicio.modalidadAtencion.length > 0
+          ? servicio.modalidadAtencion
+          : ['Clínica'],
         icon: citaService.getServiceIcon(servicio.categoria),
         color: servicio.color || '#1E88E5'
       }));

@@ -83,6 +83,37 @@ const AgendarCitaScreen = ({ navigation, route }) => {
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
 
+  const getLocationOptionsForService = () => {
+    const modalidades = Array.isArray(selectedService?.modalidadAtencion)
+      ? selectedService.modalidadAtencion
+      : [];
+
+    const normalized = modalidades.map((modalidad) =>
+      modalidad === 'Clinica' ? 'Clínica' : modalidad
+    );
+
+    const optionsCatalog = {
+      Domicilio: {
+        id: 'domicilio',
+        type: 'Domicilio',
+        description: 'El profesional te visitará',
+        icon: 'home-outline'
+      },
+      'Clínica': {
+        id: 'clinica',
+        type: 'Clínica',
+        description: 'Asistirás a la clínica',
+        icon: 'business-outline'
+      }
+    };
+
+    const options = normalized
+      .filter((modalidad) => optionsCatalog[modalidad])
+      .map((modalidad) => optionsCatalog[modalidad]);
+
+    return options.length > 0 ? options : [optionsCatalog['Clínica']];
+  };
+
   // Animaciones y referencias
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scrollViewRef = useRef(null);
@@ -199,6 +230,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
     setProviders([]);
     setSelectedService(null);
     setServices([]);
+    setSelectedLocation(null);
     
     try {
       const { fetchProvidersByType } = useCitaStore.getState();
@@ -222,6 +254,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
     // Limpiar selección de servicio
     setSelectedService(null);
     setServices([]);
+    setSelectedLocation(null);
     try {
       const { getProviderServices } = useCitaStore.getState();
       const result = await getProviderServices(provider._id);
@@ -237,6 +270,27 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const locationOptions = getLocationOptionsForService();
+
+    if (!selectedService) {
+      setSelectedLocation(null);
+      return;
+    }
+
+    if (!selectedLocation) {
+      if (locationOptions.length === 1) {
+        setSelectedLocation(locationOptions[0]);
+      }
+      return;
+    }
+
+    const selectedStillValid = locationOptions.some((option) => option.type === selectedLocation.type);
+    if (!selectedStillValid) {
+      setSelectedLocation(locationOptions.length === 1 ? locationOptions[0] : null);
+    }
+  }, [selectedService]);
   
   // Función para preparar los datos de la cita y navegar a confirmación
   // NOTA: La cita NO se crea aquí, se crea cuando el usuario confirma el pago
@@ -440,10 +494,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
     </View>);
 
     const renderDetailsStep = () => {
-      const locationOptions = [
-        { id: '1', type: 'Domicilio', description: 'El profesional te visitará', icon: 'home-outline' },
-        { id: '2', type: 'Clínica', description: 'Asistirás a la clínica', icon: 'business-outline' }
-      ];
+      const locationOptions = getLocationOptionsForService();
 
       return(
         <View>
@@ -461,6 +512,12 @@ const AgendarCitaScreen = ({ navigation, route }) => {
                     </TouchableOpacity>
                 );
             })}
+
+            {selectedService?.modalidadAtencion?.length === 1 && (
+              <Text style={newStyles.helperText}>
+                Este servicio solo está disponible en {selectedService.modalidadAtencion[0]}.
+              </Text>
+            )}
 
             {renderSectionTitle('Motivo de la Cita')}
             <TextInput
@@ -819,6 +876,13 @@ const newStyles = StyleSheet.create({
     borderRadius: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#FFC107',
+  },
+  helperText: {
+    marginTop: -2,
+    marginBottom: 8,
+    color: '#666',
+    fontSize: 13,
+    fontStyle: 'italic',
   },
   reasonInput: {
     backgroundColor: '#fff',

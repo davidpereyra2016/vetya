@@ -17,7 +17,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import useCitaStore from '../../store/useCitaStore';
 import usePagoStore from '../../store/usePagoStore';
-import citaService from '../../services/citaService';
 
 const CitaConfirmacionScreen = ({ navigation, route }) => {
   const { appointmentData, pet, provider, service, date, time, location, reason } = route.params || {};
@@ -62,52 +61,42 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   // Función para confirmar cita con efectivo
   const handleEfectivoPayment = async () => {
     if (!appointmentData) {
-      Alert.alert('Error', 'No se puede confirmar la cita sin información');
+      Alert.alert('Error', 'No se puede reservar la cita sin informacion');
       return;
     }
 
     try {
       setProcessingPayment(true);
-      
-      console.log('🔄 Creando cita con pago en efectivo...');
-      
-      // 1. Crear la cita en la base de datos
-      const citaResult = await createAppointment(appointmentData);
-      
+
+      console.log('Creando cita pendiente con pago en efectivo...');
+
+      const citaResult = await createAppointment({
+        ...appointmentData,
+        metodoPago: 'Efectivo',
+        estado: 'Pendiente',
+      });
+
       if (!citaResult.success) {
         Alert.alert('Error', citaResult.error || 'No se pudo crear la cita');
         return;
       }
-      
+
       const nuevaCita = citaResult.data;
-      console.log('✅ Cita creada:', nuevaCita._id);
-      
-      // 2. Confirmar la cita con método de pago efectivo
-      const confirmResult = await citaService.confirmarCitaConPago(
-        nuevaCita.prestador._id,
-        nuevaCita._id,
-        'Efectivo'
+      console.log('Cita creada:', nuevaCita._id);
+
+      Alert.alert(
+        'Reserva enviada',
+        'Tu cita quedara pendiente de aprobacion del prestador. Si la acepta, la veras como confirmada. El pago en efectivo se realiza al momento de la consulta.',
+        [{ text: 'OK', onPress: () => navigation.navigate('MainTabs', { screen: 'Citas' }) }]
       );
-      
-      if (confirmResult.success) {
-        console.log('✅ Cita confirmada con pago en efectivo');
-        Alert.alert(
-          'Cita Confirmada',
-          'Tu cita ha sido confirmada. Recuerda pagar en efectivo al momento de la consulta.',
-          [{ text: 'OK', onPress: () => navigation.navigate('MainTabs', { screen: 'Citas' }) }]
-        );
-      } else {
-        Alert.alert('Error', confirmResult.error || 'No se pudo confirmar la cita');
-      }
     } catch (error) {
-      console.error('❌ Error al confirmar cita con efectivo:', error);
-      Alert.alert('Error', 'Ocurrió un problema al confirmar la cita. Intenta nuevamente.');
+      console.error('Error al crear cita con efectivo:', error);
+      Alert.alert('Error', 'Ocurrio un problema al enviar la reserva. Intenta nuevamente.');
     } finally {
       setProcessingPayment(false);
     }
   };
 
-  // Función para procesar el pago con Mercado Pago
   const handleMercadoPagoPayment = async () => {
     if (!appointmentData) {
       Alert.alert('Error', 'No se puede procesar el pago sin información de la cita');
@@ -120,7 +109,11 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       console.log('🔄 Creando cita para pago con Mercado Pago...');
       
       // 1. Crear la cita en la base de datos (estado: Pendiente)
-      const citaResult = await createAppointment(appointmentData);
+      const citaResult = await createAppointment({
+        ...appointmentData,
+        metodoPago: 'MercadoPago',
+        estado: 'Pendiente',
+      });
       
       if (!citaResult.success) {
         Alert.alert('Error', citaResult.error || 'No se pudo crear la cita');
@@ -132,7 +125,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       setCreatedAppointment(nuevaCita);
       
       // 2. Crear preferencia de pago
-      // La cita se confirmará automáticamente cuando Mercado Pago notifique el pago exitoso
+      // Aunque el pago se apruebe, la cita debe seguir pendiente hasta que el prestador la acepte
       const result = await crearPreferencia(
         null, // emergenciaId
         nuevaCita._id, // citaId
@@ -148,7 +141,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         
         Alert.alert(
           'Proceder al Pago',
-          'Serás redirigido a Mercado Pago para completar el pago. La cita se confirmará automáticamente cuando el pago sea exitoso.',
+          'Seras redirigido a Mercado Pago para completar el pago. Luego, tu cita seguira pendiente hasta que el prestador la acepte o rechace.',
           [
             {
               text: 'Ir a Mercado Pago',
@@ -165,7 +158,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                     // Navegar a la pantalla de citas mientras el usuario paga
                     Alert.alert(
                       'Redirigido a Mercado Pago',
-                      'Completa el pago en la página de Mercado Pago. Tu cita se confirmará automáticamente cuando el pago sea exitoso.',
+                      'Completa el pago en la pagina de Mercado Pago. Tu reserva quedara pendiente hasta que el prestador la apruebe.',
                       [{ text: 'OK', onPress: () => navigation.navigate('MainTabs', { screen: 'Citas' }) }]
                     );
                   } else {
@@ -220,7 +213,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
           
           <Text style={styles.confirmationTitle}>¡Casi listo!</Text>
           <Text style={styles.confirmationMessage}>
-            Revisa los detalles de tu cita y selecciona el método de pago para confirmar tu reserva.
+            Revisa los detalles de tu cita y selecciona el metodo de pago para enviar la reserva al prestador.
           </Text>
           
           <View style={styles.divider} />
@@ -283,7 +276,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
           <View style={styles.statusContainer}>
             <Text style={styles.statusLabel}>Estado:</Text>
             <View style={[styles.statusBadge, { backgroundColor: '#FFC107' }]}>
-              <Text style={styles.statusText}>Pendiente de Pago</Text>
+              <Text style={styles.statusText}>Pendiente de aprobacion</Text>
             </View>
           </View>
           
@@ -371,7 +364,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                 <Text style={[
                   selectedPaymentMethod === 'MercadoPago' ? styles.mercadoPagoButtonText : styles.secondaryButtonText
                 ]}>
-                  {selectedPaymentMethod === 'MercadoPago' ? 'Pagar con Mercado Pago' : 'Confirmar Cita'}
+                  {selectedPaymentMethod === 'MercadoPago' ? 'Pagar con Mercado Pago' : 'Enviar Reserva'}
                 </Text>
               )}
             </TouchableOpacity>
