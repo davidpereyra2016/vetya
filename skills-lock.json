@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "building-native-ui": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "computedHash": "a0316d2ce842d2dd8067a144e339cf502329dc7701f9f5122268fdb3d4c980f7"
+    },
+    "expo-deployment": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "computedHash": "2a26de7ec3faaf19333ec5660152e5e711ef000a29d75324dff51967bc382755"
+    },
+    "mongoose-mongodb": {
+      "source": "pluginagentmarketplace/custom-plugin-nodejs",
+      "sourceType": "github",
+      "computedHash": "f5fd5d7ec4a82dff2e0282fec53e8c5b55e59b689cf717377e91331be09c80eb"
+    },
+    "react-native-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "2cc71a5b89cf42bac7a8442843a84486a815c00a02e67dff85781fc8a2691e1f"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "ff602214356ac15c65aa8702aff5a2aedaf958d66d301e3279f1dfeaf18c94e9"
+    },
+    "zustand": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "d2a57f2b03831bd613a7925ff5d83659a34caff0d68f0a78cb34f71aece7c9dd"
+    }
+  }
+}
