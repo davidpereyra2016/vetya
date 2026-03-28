@@ -614,13 +614,11 @@ router.post("/mercadopago/webhook", async (req, res) => {
           });
           console.log('✅ Emergencia actualizada con método de pago');
         } else if (pago.referencia.tipo === 'Cita') {
-          // Confirmar la cita cuando el pago es exitoso
+          // Registrar el pago, pero la cita debe seguir pendiente hasta que el prestador la acepte
           await Cita.findByIdAndUpdate(pago.referencia.id, {
-            metodoPago: 'MercadoPago',
-            estado: 'Confirmada',
-            fechaConfirmacion: new Date()
+            metodoPago: 'MercadoPago'
           });
-          console.log('✅ Cita confirmada automáticamente por pago exitoso');
+          console.log('✅ Pago de cita registrado. La aprobación sigue pendiente del prestador');
         }
       }
 
