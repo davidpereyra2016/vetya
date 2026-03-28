@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación de Email - Panel Administrativo Vetya</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8f9fc;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+    .card {
+      border: none;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+    }
+    .verification-icon {
+      font-size: 4rem;
+      color: #1E88E5;
+    }
+    .code-input {
+      width: 50px;
+      height: 50px;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: 0 5px;
+      border: 2px solid #dee2e6;
+      border-radius: 8px;
+    }
+    .code-input:focus {
+      border-color: #1E88E5;
+      box-shadow: 0 0 0 0.2rem rgba(30, 136, 229, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+          <div class="card-body p-5">
+            <div class="text-center mb-4">
+              <div class="verification-icon mb-3">
+                <i class="fas fa-envelope-circle-check"></i>
+              </div>
+              <h2 class="fw-bold">Verifica tu correo</h2>
+              <h4 class="text-muted">Panel Administrativo Vetya</h4>
+            </div>
+            
+            <% if (error) { %>
+              <div class="alert alert-danger" role="alert">
+                <%= error %>
+              </div>
+            <% } %>
+            
+            <% if (mensaje) { %>
+              <div class="alert alert-success" role="alert">
+                <%= mensaje %>
+              </div>
+            <% } %>
+            
+            <div class="text-center mb-4">
+              <p class="text-muted">
+                Hemos enviado un código de verificación a:<br>
+                <strong><%= email %></strong>
+              </p>
+            </div>
+            
+            <form action="/admin/verify-email" method="POST">
+              <input type="hidden" name="email" value="<%= email %>">
+              
+              <div class="mb-4">
+                <label class="form-label text-center d-block">Ingresa el código de 6 dígitos</label>
+                <div class="d-flex justify-content-center">
+                  <input type="text" class="form-control code-input" name="code1" maxlength="1" pattern="[0-9]" required>
+                  <input type="text" class="form-control code-input" name="code2" maxlength="1" pattern="[0-9]" required>
+                  <input type="text" class="form-control code-input" name="code3" maxlength="1" pattern="[0-9]" required>
+                  <input type="text" class="form-control code-input" name="code4" maxlength="1" pattern="[0-9]" required>
+                  <input type="text" class="form-control code-input" name="code5" maxlength="1" pattern="[0-9]" required>
+                  <input type="text" class="form-control code-input" name="code6" maxlength="1" pattern="[0-9]" required>
+                </div>
+              </div>
+              
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                  <i class="fas fa-check-circle me-2"></i>Verificar Email
+                </button>
+              </div>
+            </form>
+            
+            <div class="text-center mt-4">
+              <p class="text-muted mb-2">¿No recibiste el código?</p>
+              <form action="/admin/resend-verification" method="POST" class="d-inline">
+                <input type="hidden" name="email" value="<%= email %>">
+                <button type="submit" class="btn btn-link p-0 text-decoration-none" <%= isResending ? 'disabled' : '' %>>
+                  <i class="fas fa-redo me-1"></i>
+                  <%= isResending ? 'Enviando...' : 'Reenviar código' %>
+                </button>
+              </form>
+            </div>
+            
+            <div class="text-center mt-3">
+              <a href="/admin/login" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al login
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Auto-focus next input
+    document.querySelectorAll('.code-input').forEach((input, index) => {
+      input.addEventListener('input', function(e) {
+        if (this.value.length === 1) {
+          if (index < 5) {
+            document.querySelectorAll('.code-input')[index + 1].focus();
+          }
+        }
+      });
+      
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && this.value === '' && index > 0) {
+          document.querySelectorAll('.code-input')[index - 1].focus();
+        }
+      });
+      
+      // Only allow numbers
+      input.addEventListener('keypress', function(e) {
+        if (!/[0-9]/.test(e.key)) {
+          e.preventDefault();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

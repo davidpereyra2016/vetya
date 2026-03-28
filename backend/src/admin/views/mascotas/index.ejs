@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mascotas - Panel Administrativo Vetya</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+  <style>
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8f9fc;
+    }
+    .sidebar {
+      min-height: 100vh;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    .sidebar .nav-item {
+      margin-bottom: 0.5rem;
+    }
+    .sidebar .nav-link {
+      border-radius: 0.35rem;
+      margin: 0 0.5rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s;
+    }
+    .sidebar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .card {
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      border: none;
+    }
+    .table th {
+      border-top: none;
+      font-weight: 600;
+      color: #5a5c69;
+    }
+    .pet-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
+    .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
+    .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
+    .border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'mascotas'; %>
+      <%- include('../partials/sidebar') %>
+      
+      <!-- Main Content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Gestión de Mascotas</h1>
+        </div>
+
+        <!-- Mensajes -->
+        <% if (typeof mensaje !== 'undefined' && mensaje) { %>
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <%= mensaje %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error) { %>
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+
+        <!-- Estadísticas rápidas -->
+        <div class="row mb-4">
+          <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+              <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                  <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Mascotas</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800"><%= mascotas.length %></div>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-paw fa-2x text-gray-300"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+              <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                  <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Perros</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800"><%= mascotas.filter(m => m.tipo === 'Perro').length %></div>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-dog fa-2x text-gray-300"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+              <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                  <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Gatos</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800"><%= mascotas.filter(m => m.tipo === 'Gato').length %></div>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-cat fa-2x text-gray-300"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+              <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                  <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Otras Especies</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800"><%= mascotas.filter(m => m.tipo !== 'Perro' && m.tipo !== 'Gato').length %></div>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-dove fa-2x text-gray-300"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de mascotas -->
+        <div class="card shadow mb-4">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Listado Completo de Mascotas</h6>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                  <tr>
+                    <th>Mascota</th>
+                    <th>Tipo/Raza</th>
+                    <th>Edad/Peso</th>
+                    <th>Propietario</th>
+                    <th>Citas</th>
+                    <th>Emergencias</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if (mascotas && mascotas.length > 0) { %>
+                    <% mascotas.forEach(mascota => { %>
+                      <tr>
+                        <td>
+                          <div class="d-flex align-items-center">
+                            <% if (mascota.imagen) { %>
+                              <img src="<%= mascota.imagen %>" alt="<%= mascota.nombre %>" class="pet-avatar me-2">
+                            <% } else { %>
+                              <div class="pet-avatar me-2 bg-light d-flex align-items-center justify-content-center">
+                                <i class="fas fa-paw text-muted"></i>
+                              </div>
+                            <% } %>
+                            <div>
+                              <div class="fw-bold"><%= mascota.nombre %></div>
+                              <% if (mascota.genero) { %>
+                                <small class="text-muted"><%= mascota.genero %></small>
+                              <% } %>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div><strong><%= mascota.tipo || 'No especificado' %></strong></div>
+                          <small class="text-muted"><%= mascota.raza || 'Sin raza' %></small>
+                        </td>
+                        <td>
+                          <% if (mascota.edad) { %>
+                            <div><i class="fas fa-birthday-cake text-primary me-1"></i> <%= mascota.edad %></div>
+                          <% } %>
+                          <% if (mascota.peso) { %>
+                            <div><i class="fas fa-weight text-secondary me-1"></i> <%= mascota.peso %> kg</div>
+                          <% } %>
+                          <% if (!mascota.edad && !mascota.peso) { %>
+                            <small class="text-muted">Sin datos</small>
+                          <% } %>
+                        </td>
+                        <td>
+                          <% if (mascota.propietario) { %>
+                            <div class="fw-bold">
+                              <%= mascota.propietario.username || mascota.propietario.nombre || 'Usuario' %>
+                            </div>
+                            <small class="text-muted"><%= mascota.propietario.email %></small>
+                          <% } else { %>
+                            <span class="text-muted">Sin propietario</span>
+                          <% } %>
+                        </td>
+                        <td>
+                          <span class="badge bg-primary"><%= mascota.totalCitas || 0 %> total</span>
+                          <% if (mascota.citasPendientes > 0) { %>
+                            <br><small class="text-warning"><%= mascota.citasPendientes %> pendientes</small>
+                          <% } %>
+                        </td>
+                        <td>
+                          <span class="badge bg-danger"><%= mascota.totalEmergencias || 0 %> total</span>
+                          <% if (mascota.emergenciasActivas > 0) { %>
+                            <br><small class="text-danger"><%= mascota.emergenciasActivas %> activas</small>
+                          <% } %>
+                        </td>
+                        <td>
+                          <a href="/admin/mascotas/<%= mascota._id %>" class="btn btn-info btn-sm" title="Ver detalle">
+                            <i class="fas fa-eye"></i>
+                          </a>
+                        </td>
+                      </tr>
+                    <% }); %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="7" class="text-center text-muted py-4">
+                        <i class="fas fa-paw fa-3x mb-3 d-block"></i>
+                        No hay mascotas registradas
+                      </td>
+                    </tr>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- jQuery y DataTables -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+      if ($.fn.DataTable) {
+        $('#dataTable').DataTable({
+          "language": {
+            "sProcessing": "Procesando...",
+            "sLengthMenu": "Mostrar _MENU_ registros",
+            "sZeroRecords": "No se encontraron resultados",
+            "sEmptyTable": "Ningún dato disponible en esta tabla",
+            "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+            "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+            "sInfoPostFix": "",
+            "sSearch": "Buscar:",
+            "sUrl": "",
+            "sInfoThousands": ",",
+            "sLoadingRecords": "Cargando...",
+            "oPaginate": {
+              "sFirst": "Primero",
+              "sLast": "Último",
+              "sNext": "Siguiente",
+              "sPrevious": "Anterior"
+            },
+            "oAria": {
+              "sSortAscending": ": Activar para ordenar la columna de manera ascendente",
+              "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+            }
+          },
+          "order": [[ 0, "asc" ]],
+          "pageLength": 25,
+          "columnDefs": [
+            { "orderable": false, "targets": 6 }
+          ]
+        });
+      }
+    });
+  </script>
+</body>
+</html>

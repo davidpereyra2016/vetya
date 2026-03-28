@@ -1,0 +1,66 @@
+<!-- Sidebar -->
+<nav class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse">
+  <div class="position-sticky pt-3">
+    <div class="text-center mb-4">
+      <h4 class="text-white">Vetya Admin</h4>
+    </div>
+    
+    <ul class="nav flex-column">
+      <li class="nav-item">
+        <a class="nav-link text-white <%= typeof activeMenu !== 'undefined' && activeMenu === 'dashboard' ? 'bg-danger' : '' %>" href="/admin/dashboard">
+          <i class="fas fa-tachometer-alt me-2"></i>
+          Dashboard
+        </a>
+      </li>
+      
+      <li class="nav-item">
+        <a class="nav-link text-white <%= typeof activeMenu !== 'undefined' && activeMenu === 'usuarios' ? 'bg-danger' : '' %>" href="/admin/usuarios">
+          <i class="fas fa-users me-2"></i>
+          Usuarios
+        </a>
+      </li>
+      
+      <li class="nav-item">
+        <a class="nav-link text-white <%= typeof activeMenu !== 'undefined' && activeMenu === 'prestadores' ? 'bg-danger' : '' %>" href="/admin/prestadores">
+          <i class="fas fa-user-md me-2"></i>
+          Prestadores
+        </a>
+      </li>
+      
+      <li class="nav-item">
+        <a class="nav-link text-white <%= typeof activeMenu !== 'undefined' && activeMenu === 'validaciones' ? 'bg-danger' : '' %>" href="/admin/validaciones">
+          <i class="fas fa-shield-alt me-2"></i>
+          Validaciones
+        </a>
+      </li>
+      
+      <li class="nav-item">
+        <a class="nav-link text-white <%= typeof activeMenu !== 'undefined' && activeMenu === 'mascotas' ? 'bg-danger' : '' %>" href="/admin/mascotas">
+          <i class="fas fa-paw me-2"></i>
+          Mascotas
+        </a>
+      </li>
+      
+      <li class="nav-item">
+        <a class="nav-link text-white <%= typeof activeMenu !== 'undefined' && activeMenu === 'servicios' ? 'bg-danger' : '' %>" href="/admin/servicios">
+          <i class="fas fa-concierge-bell me-2"></i>
+          Servicios
+        </a>
+      </li>
+      
+      <li class="nav-item">
+        <a class="nav-link text-white <%= typeof activeMenu !== 'undefined' && activeMenu === 'emergencias' ? 'bg-danger' : '' %>" href="/admin/emergencias">
+          <i class="fas fa-ambulance me-2"></i>
+          Emergencias
+        </a>
+      </li>
+      
+      <li class="nav-item mt-5">
+        <a class="nav-link text-white" href="/admin/logout">
+          <i class="fas fa-sign-out-alt me-2"></i>
+          Cerrar Sesión
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>

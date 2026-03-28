@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle de Validación - Panel Administrativo Vetya</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8f9fc;
+    }
+    .sidebar {
+      min-height: 100vh;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    .sidebar .nav-item {
+      margin-bottom: 0.5rem;
+    }
+    .sidebar .nav-link {
+      border-radius: 0.35rem;
+      margin: 0 0.5rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s;
+    }
+    .sidebar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .card {
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      border: none;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      border-left: 4px solid;
+    }
+    .stat-card.primary { border-left-color: #4e73df; }
+    .stat-card.success { border-left-color: #1cc88a; }
+    .stat-card.warning { border-left-color: #f6c23e; }
+    .stat-card.danger { border-left-color: #e74a3b; }
+    .stat-card.info { border-left-color: #36b9cc; }
+    .table th {
+      border-top: none;
+      font-weight: 600;
+      color: #5a5c69;
+    }
+    .badge-estado {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.75rem;
+    }
+    .validacion-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 10px 10px 0 0;
+    }
+    .avatar-lg {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 4px solid white;
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #5a5c69;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e3e6f0;
+    }
+    .document-card {
+      border: 2px solid #e3e6f0;
+      border-radius: 10px;
+      transition: all 0.3s;
+      margin-bottom: 1rem;
+    }
+    .document-card:hover {
+      box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+    }
+    .document-card.aprobado {
+      border-color: #1cc88a;
+      background-color: #f0fdf4;
+    }
+    .document-card.rechazado {
+      border-color: #e74a3b;
+      background-color: #fef2f2;
+    }
+    .document-card.pendiente {
+      border-color: #f6c23e;
+      background-color: #fefce8;
+    }
+    .info-row {
+      margin-bottom: 0.75rem;
+      padding: 0.75rem;
+      background-color: #f8f9fc;
+      border-radius: 0.5rem;
+    }
+    .info-row strong {
+      display: block;
+      color: #5a5c69;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'validaciones'; %>
+      <%- include('../partials/sidebar') %>
+      
+      <!-- Main Content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <!-- Breadcrumb -->
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="/admin/dashboard">Dashboard</a></li>
+              <li class="breadcrumb-item"><a href="/admin/validaciones">Validaciones</a></li>
+              <li class="breadcrumb-item active" aria-current="page"><%= validacion.prestador.nombre %></li>
+            </ol>
+          </nav>
+          <div>
+            <a href="/admin/prestadores/<%= validacion.prestador._id %>" class="btn btn-info btn-sm me-2">
+              <i class="fas fa-user-md me-1"></i> Ver Prestador
+            </a>
+            <a href="/admin/validaciones" class="btn btn-secondary btn-sm">
+              <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+          </div>
+        </div>
+
+        <!-- Mensajes de estado -->
+        <% if (typeof error !== 'undefined' && error) { %>
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+
+        <!-- Prestador Header Card -->
+        <div class="card">
+          <div class="validacion-header">
+            <div class="row align-items-center">
+              <div class="col-auto">
+                <% if (validacion.prestador.imagen) { %>
+                  <img src="<%= validacion.prestador.imagen %>" alt="<%= validacion.prestador.nombre %>" class="avatar-lg">
+                <% } else { %>
+                  <div class="avatar-lg bg-white text-primary d-flex align-items-center justify-content-center" style="font-size: 2.5rem; font-weight: bold;">
+                    <%= validacion.prestador.nombre.charAt(0).toUpperCase() %>
+                  </div>
+                <% } %>
+              </div>
+              <div class="col">
+                <h2 class="mb-1"><%= validacion.prestador.nombre %></h2>
+                <p class="mb-0"><i class="fas fa-envelope me-2"></i><%= validacion.prestador.email %></p>
+                <% if (validacion.prestador.telefono) { %>
+                  <p class="mb-0"><i class="fas fa-phone me-2"></i><%= validacion.prestador.telefono %></p>
+                <% } %>
+                <p class="mb-0 mt-2">
+                  <span class="badge <%= validacion.prestador.tipo === 'Veterinario' ? 'bg-info' : 'bg-warning' %> me-2">
+                    <%= validacion.prestador.tipo %>
+                  </span>
+                  <% 
+                    let estadoClass = 'secondary';
+                    let estadoText = validacion.estadoValidacion;
+                    
+                    switch(validacion.estadoValidacion) {
+                      case 'pendiente_documentos':
+                        estadoClass = 'warning';
+                        estadoText = 'Pendiente Documentos';
+                        break;
+                      case 'en_revision':
+                        estadoClass = 'info';
+                        estadoText = 'En Revisión';
+                        break;
+                      case 'requiere_correccion':
+                        estadoClass = 'danger';
+                        estadoText = 'Requiere Corrección';
+                        break;
+                      case 'aprobado':
+                        estadoClass = 'success';
+                        estadoText = 'Aprobado';
+                        break;
+                      case 'rechazado':
+                        estadoClass = 'dark';
+                        estadoText = 'Rechazado';
+                        break;
+                    }
+                  %>
+                  <span class="badge bg-<%= estadoClass %>">
+                    <%= estadoText %>
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <p class="mb-2"><strong>Progreso de Documentos:</strong> 
+                  <% let progresoSubida = progreso ? progreso.porcentajeSubida : 0; %>
+                  <span class="text-primary fw-bold"><%= progresoSubida %>%</span>
+                </p>
+                <p class="mb-2"><strong>Fecha de Solicitud:</strong> <%= new Date(validacion.createdAt).toLocaleDateString('es-ES') %></p>
+              </div>
+              <div class="col-md-6">
+                <p class="mb-2"><strong>Última Actualización:</strong> <%= new Date(validacion.updatedAt).toLocaleDateString('es-ES') %></p>
+                <% if (validacion.fechaAprobacion) { %>
+                  <p class="mb-2"><strong>Fecha de Aprobación:</strong> <span class="text-success"><%= new Date(validacion.fechaAprobacion).toLocaleDateString('es-ES') %></span></p>
+                <% } %>
+                <% if (validacion.fechaRechazo) { %>
+                  <p class="mb-2"><strong>Fecha de Rechazo:</strong> <span class="text-danger"><%= new Date(validacion.fechaRechazo).toLocaleDateString('es-ES') %></span></p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row">
+          <div class="col-md-4">
+            <div class="card stat-card <%= validacion.estadoValidacion === 'aprobado' ? 'success' : (validacion.estadoValidacion === 'rechazado' ? 'danger' : 'warning') %>">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                    <p class="text-xs text-uppercase text-muted mb-1">Estado</p>
+                    <h5 class="mb-0"><%= estadoText %></h5>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-shield-alt fa-2x <%= validacion.estadoValidacion === 'aprobado' ? 'text-success' : (validacion.estadoValidacion === 'rechazado' ? 'text-danger' : 'text-warning') %> opacity-50"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card stat-card info">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                    <p class="text-xs text-uppercase text-muted mb-1">Documentos</p>
+                    <h5 class="mb-0"><%= progresoSubida %>%</h5>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-file-upload fa-2x text-info opacity-50"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card stat-card primary">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                    <p class="text-xs text-uppercase text-muted mb-1">Revisiones</p>
+                    <h5 class="mb-0"><%= validacion.historialRevisiones ? validacion.historialRevisiones.length : 0 %></h5>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-history fa-2x text-primary opacity-50"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+  <div class="row">
+    <!-- Sección principal con tabs o contenido -->
+
+      <!-- Datos Adicionales -->
+      <% if (validacion.datosAdicionales && Object.keys(validacion.datosAdicionales).length > 0) { %>
+        <div class="card">
+          <div class="card-header">
+            <h5 class="section-title mb-0"><i class="fas fa-info-circle me-2"></i>Datos Adicionales del Prestador</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <!-- Columna izquierda - Información de Contacto -->
+              <div class="col-md-6">
+                <h6 class="text-secondary mb-3"><i class="fas fa-address-card me-2"></i>Información de Contacto</h6>
+                
+                <% if (validacion.datosAdicionales.telefono) { %>
+                  <div class="info-row">
+                    <strong><i class="fas fa-phone text-primary me-1"></i> Teléfono:</strong>
+                    <span><%= validacion.datosAdicionales.telefono %></span>
+                  </div>
+                <% } %>
+                
+                <% if (validacion.datosAdicionales.direccion) { %>
+                  <div class="info-row">
+                    <strong><i class="fas fa-map-marker-alt text-danger me-1"></i> Dirección:</strong>
+                    <span><%= validacion.datosAdicionales.direccion %></span>
+                  </div>
+                <% } %>
+                
+                <% if (validacion.datosAdicionales.ciudad) { %>
+                  <div class="info-row">
+                    <strong><i class="fas fa-city text-info me-1"></i> Ciudad:</strong>
+                    <span><%= validacion.datosAdicionales.ciudad %><% if (validacion.datosAdicionales.provincia) { %>, <%= validacion.datosAdicionales.provincia %><% } %></span>
+                  </div>
+                <% } %>
+                
+                <% if (validacion.datosAdicionales.codigoPostal) { %>
+                  <div class="info-row">
+                    <strong><i class="fas fa-mail-bulk text-secondary me-1"></i> Código Postal:</strong>
+                    <span><%= validacion.datosAdicionales.codigoPostal %></span>
+                  </div>
+                <% } %>
+              </div>
+              
+              <!-- Columna derecha - Datos Profesionales -->
+              <div class="col-md-6">
+                <% if (validacion.prestador && validacion.prestador.tipo === 'Veterinario') { %>
+                  <h6 class="text-info mb-3"><i class="fas fa-user-md me-2"></i>Información Profesional</h6>
+                  
+                  <% if (validacion.datosAdicionales.numeroMatricula) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-id-card text-primary me-1"></i> Matrícula:</strong>
+                      <span><%= validacion.datosAdicionales.numeroMatricula %></span>
+                    </div>
+                  <% } %>
+                  
+                  <% if (validacion.datosAdicionales.universidad) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-university text-success me-1"></i> Universidad:</strong>
+                      <span><%= validacion.datosAdicionales.universidad %></span>
+                    </div>
+                  <% } %>
+                  
+                  <% if (validacion.datosAdicionales.fechaGraduacion) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-graduation-cap text-warning me-1"></i> Fecha de Graduación:</strong>
+                      <span><%= new Date(validacion.datosAdicionales.fechaGraduacion).toLocaleDateString('es-ES') %></span>
+                    </div>
+                  <% } %>
+                  
+                  <% if (validacion.datosAdicionales.especialidades) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-stethoscope text-info me-1"></i> Especialidades:</strong>
+                      <span><%= validacion.datosAdicionales.especialidades %></span>
+                    </div>
+                  <% } %>
+                  
+                  <% if (validacion.datosAdicionales.experienciaAnios) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-calendar-check text-primary me-1"></i> Experiencia:</strong>
+                      <span><%= validacion.datosAdicionales.experienciaAnios %> años</span>
+                    </div>
+                  <% } %>
+                <% } %>
+
+                <% if (validacion.prestador && (validacion.prestador.tipo === 'Centro Veterinario' || validacion.prestador.tipo === 'Veterinaria')) { %>
+                  <h6 class="text-warning mb-3"><i class="fas fa-building me-2"></i>Información del Establecimiento</h6>
+                  
+                  <% if (validacion.datosAdicionales.cuit_cuil) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-file-invoice text-primary me-1"></i> CUIT/CUIL:</strong>
+                      <span><%= validacion.datosAdicionales.cuit_cuil %></span>
+                    </div>
+                  <% } %>
+                  
+                  <% if (validacion.datosAdicionales.razonSocial) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-building text-success me-1"></i> Razón Social:</strong>
+                      <span><%= validacion.datosAdicionales.razonSocial %></span>
+                    </div>
+                  <% } %>
+                  
+                  <% if (validacion.datosAdicionales.numeroHabilitacion) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-certificate text-info me-1"></i> Número de Habilitación:</strong>
+                      <span><%= validacion.datosAdicionales.numeroHabilitacion %></span>
+                    </div>
+                  <% } %>
+                  
+                  <% if (validacion.datosAdicionales.fechaHabilitacion) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-calendar text-warning me-1"></i> Fecha de Habilitación:</strong>
+                      <span><%= new Date(validacion.datosAdicionales.fechaHabilitacion).toLocaleDateString('es-ES') %></span>
+                    </div>
+                  <% } %>
+                  
+                  <% if (validacion.datosAdicionales.telefonoAlternativo) { %>
+                    <div class="info-row">
+                      <strong><i class="fas fa-phone-alt text-secondary me-1"></i> Teléfono Alternativo:</strong>
+                      <span><%= validacion.datosAdicionales.telefonoAlternativo %></span>
+                    </div>
+                  <% } %>
+                <% } %>
+            
+            <% if (validacion.datosAdicionales.horarioAtencion) { %>
+              <hr>
+              <h6 class="text-secondary">Horario de Atención</h6>
+              <div class="mb-2">
+                <%= validacion.datosAdicionales.horarioAtencion %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Documentos y Acciones -->
+    <div class="col-lg-8">
+      <!-- Documentos -->
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">Documentos</h6>
+        </div>
+        <div class="card-body">
+          <% if (!validacion.documentos || validacion.documentos.length === 0) { %>
+            <div class="text-center py-4">
+              <i class="fas fa-file-upload fa-3x text-gray-300 mb-3"></i>
+              <h6 class="text-gray-600">No hay documentos subidos</h6>
+              <p class="text-gray-500">El prestador aún no ha subido documentos para validación.</p>
+            </div>
+          <% } else { %>
+            <div class="row">
+              <% 
+                // Debug: verificar qué tipo de dato es documentosRequeridos
+                console.log('documentosRequeridos:', documentosRequeridos);
+                console.log('tipo:', typeof documentosRequeridos);
+                console.log('es array:', Array.isArray(documentosRequeridos));
+                
+                // Obtener los tipos de documentos requeridos (array de strings)
+                let tiposDocumentos = [];
+                if (Array.isArray(documentosRequeridos)) {
+                  tiposDocumentos = documentosRequeridos;
+                } else {
+                  // Si no es array, intentar obtenerlo del objeto validacion
+                  if (validacion && validacion.prestador && validacion.prestador.tipo) {
+                    // Simular el método getDocumentosRequeridos
+                    const documentosBase = ['cedulaIdentidad'];
+                    switch (validacion.prestador.tipo) {
+                      case 'Veterinario':
+                        tiposDocumentos = [...documentosBase, 'diploma', 'constanciaConsejo'];
+                        break;
+                      case 'Centro Veterinario':
+                      case 'Veterinaria':
+                        tiposDocumentos = [...documentosBase, 'habilitacionMunicipal', 'constanciaAfip', 'contratoAlquiler', 'seguroResponsabilidadCivil'];
+                        break;
+                      default:
+                        tiposDocumentos = documentosBase;
+                    }
+                  }
+                }
+                
+                // Mapeo de nombres técnicos a nombres legibles
+                const nombresDocumentos = {
+                  'cedulaIdentidad': 'Cédula de Identidad',
+                  'diploma': 'Diploma Universitario',
+                  'constanciaConsejo': 'Constancia del Consejo Profesional',
+                  'habilitacionMunicipal': 'Habilitación Municipal',
+                  'constanciaAfip': 'Constancia AFIP',
+                  'contratoAlquiler': 'Contrato de Alquiler/Propiedad',
+                  'seguroResponsabilidadCivil': 'Seguro de Responsabilidad Civil'
+                };
+                
+                // Iterar sobre los tipos de documentos requeridos
+                if (tiposDocumentos.length > 0) {
+                  tiposDocumentos.forEach(function(tipoDoc) {
+                  const documento = validacion.documentos[tipoDoc];
+                  const nombreLegible = nombresDocumentos[tipoDoc] || tipoDoc;
+              %>
+                <div class="col-md-6 mb-4">
+                  <div class="card border-<%= documento && documento.estado === 'aprobado' ? 'success' : documento && documento.estado === 'rechazado' ? 'danger' : 'warning' %>">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                      <h6 class="mb-0"><%= nombreLegible %></h6>
+                      <span class="badge bg-<%= documento && documento.estado === 'aprobado' ? 'success' : documento && documento.estado === 'rechazado' ? 'danger' : 'warning' %>">
+                        <%= documento && documento.estado === 'aprobado' ? 'Aprobado' : 
+                            documento && documento.estado === 'rechazado' ? 'Rechazado' : 'Pendiente' %>
+                      </span>
+                    </div>
+                    <div class="card-body">
+                      <% if (documento && documento.url) { %>
+                        <div class="mb-3">
+                          <a href="<%= documento.url %>" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye"></i> Ver Documento
+                          </a>
+                        </div>
+                      <% } else { %>
+                        <div class="text-center py-3">
+                          <i class="fas fa-upload text-muted mb-2"></i>
+                          <p class="text-muted small mb-0">Documento no subido</p>
+                        </div>
+                      <% } %>
+                      
+                      <% if (documento && documento.descripcion) { %>
+                        <p class="text-muted small mb-2"><%= documento.descripcion %></p>
+                      <% } %>
+                      
+                      <% if (documento && documento.observaciones) { %>
+                        <div class="alert alert-warning py-2 mb-2">
+                          <small><strong>Observaciones:</strong> <%= documento.observaciones %></small>
+                        </div>
+                      <% } %>
+                      
+                      <% if (documento && documento.fechaSubida) { %>
+                        <small class="text-muted">
+                          Subido: <%= new Date(documento.fechaSubida).toLocaleDateString('es-ES') %>
+                        </small>
+                      <% } %>
+
+                      <!-- Formulario de revisión -->
+                      <% if (documento && (validacion.estadoValidacion === 'en_revision' || validacion.estadoValidacion === 'requiere_correccion')) { %>
+                        <hr>
+                        <form method="POST" action="/admin/validaciones/<%= validacion._id %>/revisar-documento">
+                          <input type="hidden" name="tipoDocumento" value="<%= tipoDoc %>">
+                          
+                          <div class="mb-2">
+                            <label class="form-label small">Estado:</label>
+                            <select name="estado" class="form-select form-select-sm" required>
+                              <option value="">Seleccionar...</option>
+                              <option value="aprobado" <%= documento && documento.estado === 'aprobado' ? 'selected' : '' %>>✅ Aprobar</option>
+                              <option value="rechazado" <%= documento && documento.estado === 'rechazado' ? 'selected' : '' %>>❌ Rechazar</option>
+                              <option value="pendiente" <%= documento && documento.estado === 'pendiente' ? 'selected' : '' %>>⏳ Pendiente</option>
+                            </select>
+                          </div>
+                          
+                          <div class="mb-2">
+                            <label class="form-label small">Observaciones:</label>
+                            <textarea name="observaciones" class="form-control form-control-sm" rows="2" 
+                                      placeholder="Comentarios sobre el documento..."><%= documento && documento.observaciones ? documento.observaciones : '' %></textarea>
+                          </div>
+                          
+                          <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-save"></i> Guardar Revisión
+                          </button>
+                        </form>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+              <% });
+                } else { %>
+                <div class="col-12">
+                  <div class="text-center py-4">
+                    <i class="fas fa-exclamation-triangle text-warning fa-3x mb-3"></i>
+                    <h6 class="text-gray-600">No se pudieron cargar los documentos requeridos</h6>
+                    <p class="text-gray-500">Error en la configuración de documentos para este tipo de prestador.</p>
+                  </div>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Historial de Revisiones -->
+      <% if (validacion.historialRevisiones && validacion.historialRevisiones.length > 0) { %>
+        <div class="card shadow mb-4">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Historial de Revisiones</h6>
+          </div>
+          <div class="card-body">
+            <div class="timeline">
+              <% validacion.historialRevisiones.forEach(function(revision, index) { %>
+                <div class="timeline-item">
+                  <div class="timeline-marker bg-<%= revision.accion === 'aprobado' ? 'success' : revision.accion === 'rechazado' ? 'danger' : 'info' %>"></div>
+                  <div class="timeline-content">
+                    <h6 class="mb-1">
+                      <%= revision.accion === 'aprobado' ? 'Aprobado' : 
+                          revision.accion === 'rechazado' ? 'Rechazado' : 
+                          revision.accion === 'revision_documento' ? 'Documento Revisado' : 
+                          revision.accion %>
+                    </h6>
+                    <% if (revision.observaciones) { %>
+                      <p class="mb-1"><%= revision.observaciones %></p>
+                    <% } %>
+                    <small class="text-muted">
+                      <%= new Date(revision.fecha).toLocaleString('es-ES') %>
+                      <% if (revision.administrador) { %>
+                        - por <%= revision.administrador %>
+                      <% } %>
+                    </small>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Observaciones del Administrador -->
+      <% if (validacion.observacionesAdmin) { %>
+        <div class="card shadow mb-4">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Observaciones del Administrador</h6>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-info">
+              <%= validacion.observacionesAdmin %>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Acciones de Decisión Final -->
+      <% if (validacion.estadoValidacion === 'en_revision' || validacion.estadoValidacion === 'requiere_correccion') { %>
+        <div class="card shadow mb-4">
+          <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Decisión Final</h6>
+          </div>
+          <div class="card-body">
+            <form method="POST" action="/admin/validaciones/<%= validacion._id %>/decision">
+              <div class="row">
+                <div class="col-md-6">
+                  <label for="decision" class="form-label">Decisión *</label>
+                  <select name="decision" id="decision" class="form-select" required>
+                    <option value="">Seleccionar decisión...</option>
+                    <option value="aprobado">✅ Aprobar Prestador</option>
+                    <option value="rechazado">❌ Rechazar Prestador</option>
+                    <option value="requiere_correccion">⚠️ Solicitar Correcciones</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="observaciones" class="form-label">Observaciones</label>
+                  <textarea name="observaciones" id="observaciones" class="form-control" rows="3"
+                            placeholder="Comentarios sobre la decisión..."></textarea>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                  <i class="fas fa-gavel"></i> Tomar Decisión
+                </button>
+                <a href="/admin/validaciones" class="btn btn-secondary">
+                  <i class="fas fa-arrow-left"></i> Volver a la Lista
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="text-center">
+          <a href="/admin/validaciones" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a la Lista
+          </a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+      </main>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle de Usuario - Panel Administrativo Vetya</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+  <style>
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8f9fc;
+    }
+    .sidebar {
+      min-height: 100vh;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    .sidebar .nav-item {
+      margin-bottom: 0.5rem;
+    }
+    .sidebar .nav-link {
+      border-radius: 0.35rem;
+      margin: 0 0.5rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s;
+    }
+    .sidebar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .card {
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      border: none;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      border-left: 4px solid;
+    }
+    .stat-card.primary { border-left-color: #4e73df; }
+    .stat-card.success { border-left-color: #1cc88a; }
+    .stat-card.info { border-left-color: #36b9cc; }
+    .stat-card.warning { border-left-color: #f6c23e; }
+    .stat-card.danger { border-left-color: #e74a3b; }
+    .table th {
+      border-top: none;
+      font-weight: 600;
+      color: #5a5c69;
+    }
+    .badge-estado {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.75rem;
+    }
+    .user-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 10px 10px 0 0;
+    }
+    .avatar-lg {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 4px solid white;
+    }
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #5a5c69;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e3e6f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'usuarios'; %>
+      <%- include('../partials/sidebar') %>
+      
+      <!-- Main Content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <!-- Breadcrumb -->
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="/admin/dashboard">Dashboard</a></li>
+              <li class="breadcrumb-item"><a href="/admin/usuarios">Usuarios</a></li>
+              <li class="breadcrumb-item active" aria-current="page"><%= usuario.username %></li>
+            </ol>
+          </nav>
+          <a href="/admin/usuarios" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+          </a>
+        </div>
+
+        <!-- User Header Card -->
+        <div class="card">
+          <div class="user-header">
+            <div class="row align-items-center">
+              <div class="col-auto">
+                <% if (usuario.profilePicture) { %>
+                  <img src="<%= usuario.profilePicture %>" alt="<%= usuario.username %>" class="avatar-lg">
+                <% } else { %>
+                  <div class="avatar-lg bg-white text-primary d-flex align-items-center justify-content-center" style="font-size: 2.5rem; font-weight: bold;">
+                    <%= usuario.username.charAt(0).toUpperCase() %>
+                  </div>
+                <% } %>
+              </div>
+              <div class="col">
+                <h2 class="mb-1"><%= usuario.username %></h2>
+                <p class="mb-0"><i class="fas fa-envelope me-2"></i><%= usuario.email %></p>
+                <p class="mb-0 mt-2">
+                  <span class="badge <%= usuario.role === 'client' ? 'bg-primary' : (usuario.role === 'admin' ? 'bg-danger' : 'bg-success') %> me-2">
+                    <%= usuario.role === 'client' ? 'Cliente' : (usuario.role === 'admin' ? 'Admin' : 'Prestador') %>
+                  </span>
+                  <small>Registrado: <%= new Date(usuario.createdAt).toLocaleDateString('es-ES') %></small>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <p class="mb-2"><strong>ID:</strong> <%= usuario._id %></p>
+                <p class="mb-2"><strong>Email:</strong> <%= usuario.email %></p>
+                <p class="mb-2"><strong>Username:</strong> <%= usuario.username %></p>
+              </div>
+              <div class="col-md-6">
+                <p class="mb-2"><strong>Rol:</strong> <%= usuario.role %></p>
+                <p class="mb-2"><strong>Fecha de registro:</strong> <%= new Date(usuario.createdAt).toLocaleDateString('es-ES', {year: 'numeric', month: 'long', day: 'numeric'}) %></p>
+                <p class="mb-2"><strong>Última actualización:</strong> <%= new Date(usuario.updatedAt).toLocaleDateString('es-ES', {year: 'numeric', month: 'long', day: 'numeric'}) %></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row">
+          <div class="col-xl-3 col-md-6">
+            <div class="card stat-card primary">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                    <p class="text-xs text-uppercase text-muted mb-1">Mascotas</p>
+                    <h4 class="mb-0"><%= estadisticas.totalMascotas %></h4>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-paw fa-2x text-primary opacity-50"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="card stat-card success">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                    <p class="text-xs text-uppercase text-muted mb-1">Citas</p>
+                    <h4 class="mb-0"><%= estadisticas.totalCitas %></h4>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-calendar-check fa-2x text-success opacity-50"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="card stat-card warning">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                    <p class="text-xs text-uppercase text-muted mb-1">Emergencias</p>
+                    <h4 class="mb-0"><%= estadisticas.totalEmergencias %></h4>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-ambulance fa-2x text-warning opacity-50"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="card stat-card info">
+              <div class="card-body">
+                <div class="row">
+                  <div class="col">
+                    <p class="text-xs text-uppercase text-muted mb-1">Total Gastado</p>
+                    <h4 class="mb-0">$<%= estadisticas.totalGastado.toFixed(2) %></h4>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-dollar-sign fa-2x text-info opacity-50"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs" id="userTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="mascotas-tab" data-bs-toggle="tab" data-bs-target="#mascotas" type="button" role="tab">
+              <i class="fas fa-paw me-1"></i>Mascotas (<%= mascotas.length %>)
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="citas-tab" data-bs-toggle="tab" data-bs-target="#citas" type="button" role="tab">
+              <i class="fas fa-calendar-check me-1"></i>Citas (<%= citas.length %>)
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="emergencias-tab" data-bs-toggle="tab" data-bs-target="#emergencias" type="button" role="tab">
+              <i class="fas fa-ambulance me-1"></i>Emergencias (<%= emergencias.length %>)
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pagos-tab" data-bs-toggle="tab" data-bs-target="#pagos" type="button" role="tab">
+              <i class="fas fa-dollar-sign me-1"></i>Pagos (<%= pagos.length %>)
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="valoraciones-tab" data-bs-toggle="tab" data-bs-target="#valoraciones" type="button" role="tab">
+              <i class="fas fa-star me-1"></i>Valoraciones (<%= valoraciones.length %>)
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="notificaciones-tab" data-bs-toggle="tab" data-bs-target="#notificaciones" type="button" role="tab">
+              <i class="fas fa-bell me-1"></i>Notificaciones (<%= notificaciones.length %>)
+            </button>
+          </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content mt-3" id="userTabsContent">
+          
+          <!-- Mascotas Tab -->
+          <div class="tab-pane fade show active" id="mascotas" role="tabpanel">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="section-title mb-0"><i class="fas fa-paw me-2"></i>Mascotas del Usuario</h5>
+              </div>
+              <div class="card-body">
+                <% if (mascotas.length > 0) { %>
+                  <div class="table-responsive">
+                    <table class="table table-hover" id="tablaMascotas">
+                      <thead>
+                        <tr>
+                          <th>Foto</th>
+                          <th>Nombre</th>
+                          <th>Tipo</th>
+                          <th>Raza</th>
+                          <th>Edad</th>
+                          <th>Peso</th>
+                          <th>Registrada</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% mascotas.forEach(mascota => { %>
+                          <tr>
+                            <td>
+                              <% if (mascota.foto) { %>
+                                <img src="<%= mascota.foto %>" alt="<%= mascota.nombre %>" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                              <% } else { %>
+                                <div style="width: 50px; height: 50px; border-radius: 50%; background: #e3e6f0; display: flex; align-items: center; justify-content: center;">
+                                  <i class="fas fa-paw text-muted"></i>
+                                </div>
+                              <% } %>
+                            </td>
+                            <td><strong><%= mascota.nombre %></strong></td>
+                            <td><%= mascota.tipo || 'N/A' %></td>
+                            <td><%= mascota.raza || 'N/A' %></td>
+                            <td><%= mascota.edad || 'N/A' %></td>
+                            <td><%= mascota.peso ? mascota.peso + ' kg' : 'N/A' %></td>
+                            <td><%= new Date(mascota.createdAt).toLocaleDateString('es-ES') %></td>
+                          </tr>
+                        <% }); %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% } else { %>
+                  <p class="text-muted text-center py-4">Este usuario no tiene mascotas registradas</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Citas Tab -->
+          <div class="tab-pane fade" id="citas" role="tabpanel">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="section-title mb-0"><i class="fas fa-calendar-check me-2"></i>Historial de Citas</h5>
+                <div>
+                  <span class="badge bg-warning me-2">Pendientes: <%= estadisticas.citasPendientes %></span>
+                  <span class="badge bg-primary me-2">Confirmadas: <%= estadisticas.citasConfirmadas %></span>
+                  <span class="badge bg-success me-2">Completadas: <%= estadisticas.citasCompletadas %></span>
+                  <span class="badge bg-danger">Canceladas: <%= estadisticas.citasCanceladas %></span>
+                </div>
+              </div>
+              <div class="card-body">
+                <% if (citas.length > 0) { %>
+                  <div class="table-responsive">
+                    <table class="table table-hover" id="tablaCitas">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Hora</th>
+                          <th>Prestador</th>
+                          <th>Servicio</th>
+                          <th>Mascota</th>
+                          <th>Estado</th>
+                          <th>Creada</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% citas.forEach(cita => { %>
+                          <tr>
+                            <td><%= new Date(cita.fecha).toLocaleDateString('es-ES') %></td>
+                            <td><%= cita.hora || 'N/A' %></td>
+                            <td><%= cita.prestador ? cita.prestador.nombre : 'N/A' %></td>
+                            <td><%= cita.servicio ? cita.servicio.nombre : 'N/A' %></td>
+                            <td><%= cita.mascota ? cita.mascota.nombre : 'N/A' %></td>
+                            <td>
+                              <span class="badge badge-estado <%= 
+                                cita.estado === 'Confirmada' ? 'bg-primary' : 
+                                cita.estado === 'Pendiente' ? 'bg-warning' : 
+                                cita.estado === 'Completada' ? 'bg-success' : 'bg-danger' %>">
+                                <%= cita.estado %>
+                              </span>
+                            </td>
+                            <td><%= new Date(cita.createdAt).toLocaleDateString('es-ES') %></td>
+                          </tr>
+                        <% }); %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% } else { %>
+                  <p class="text-muted text-center py-4">Este usuario no tiene citas registradas</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Emergencias Tab -->
+          <div class="tab-pane fade" id="emergencias" role="tabpanel">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="section-title mb-0"><i class="fas fa-ambulance me-2"></i>Historial de Emergencias</h5>
+                <div>
+                  <span class="badge bg-danger me-2">Activas: <%= estadisticas.emergenciasActivas %></span>
+                  <span class="badge bg-success">Completadas: <%= estadisticas.emergenciasCompletadas %></span>
+                </div>
+              </div>
+              <div class="card-body">
+                <% if (emergencias.length > 0) { %>
+                  <div class="table-responsive">
+                    <table class="table table-hover" id="tablaEmergencias">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Tipo</th>
+                          <th>Mascota</th>
+                          <th>Prestador</th>
+                          <th>Estado</th>
+                          <th>Ubicación</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% emergencias.forEach(emergencia => { %>
+                          <tr>
+                            <td><%= new Date(emergencia.createdAt).toLocaleDateString('es-ES') %> <%= new Date(emergencia.createdAt).toLocaleTimeString('es-ES') %></td>
+                            <td><%= emergencia.tipoEmergencia || 'General' %></td>
+                            <td><%= emergencia.mascota ? emergencia.mascota.nombre : 'N/A' %></td>
+                            <td><%= emergencia.veterinario ? emergencia.veterinario.nombre : 'Sin asignar' %></td>
+                            <td>
+                              <span class="badge <%= 
+                                ['Solicitada', 'Asignada', 'En camino', 'En atención'].includes(emergencia.estado) ? 'bg-danger' : 
+                                emergencia.estado === 'Atendida' ? 'bg-success' : 'bg-secondary' %>">
+                                <%= emergencia.estado %>
+                              </span>
+                            </td>
+                            <td>
+                              <% if (emergencia.ubicacion && emergencia.ubicacion.coordinates) { %>
+                                Lat: <%= emergencia.ubicacion.coordinates.lat.toFixed(4) %>, Lng: <%= emergencia.ubicacion.coordinates.lng.toFixed(4) %>
+                              <% } else { %>
+                                N/A
+                              <% } %>
+                            </td>
+                          </tr>
+                        <% }); %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% } else { %>
+                  <p class="text-muted text-center py-4">Este usuario no tiene emergencias registradas</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pagos Tab -->
+          <div class="tab-pane fade" id="pagos" role="tabpanel">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="section-title mb-0"><i class="fas fa-dollar-sign me-2"></i>Historial de Pagos</h5>
+                <div>
+                  <span class="badge bg-success me-2">Total: $<%= estadisticas.totalGastado.toFixed(2) %></span>
+                  <span class="badge bg-primary me-2">Completados: <%= estadisticas.pagosCompletados %></span>
+                  <span class="badge bg-warning">Pendientes: <%= estadisticas.pagosPendientes %></span>
+                </div>
+              </div>
+              <div class="card-body">
+                <% if (pagos.length > 0) { %>
+                  <div class="table-responsive">
+                    <table class="table table-hover" id="tablaPagos">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Monto</th>
+                          <th>Método</th>
+                          <th>Estado</th>
+                          <th>Servicio</th>
+                          <th>Relacionado con</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% pagos.forEach(pago => { %>
+                          <tr>
+                            <td><%= new Date(pago.createdAt).toLocaleDateString('es-ES') %></td>
+                            <td><strong>$<%= pago.monto ? pago.monto.toFixed(2) : '0.00' %></strong></td>
+                            <td><%= pago.metodoPago || 'N/A' %></td>
+                            <td>
+                              <span class="badge <%= pago.estado === 'Completado' ? 'bg-success' : (pago.estado === 'Pendiente' ? 'bg-warning' : 'bg-danger') %>">
+                                <%= pago.estado || 'N/A' %>
+                              </span>
+                            </td>
+                            <td><%= pago.concepto || 'N/A' %></td>
+                            <td>
+                              <% if (pago.referencia && pago.referencia.tipo) { %>
+                                <span class="badge <%= 
+                                  pago.referencia.tipo === 'Cita' ? 'bg-info' : 
+                                  pago.referencia.tipo === 'Emergencia' ? 'bg-danger' : 'bg-secondary' %>">
+                                  <%= pago.referencia.tipo %>
+                                </span>
+                              <% } else { %>
+                                N/A
+                              <% } %>
+                            </td>
+                          </tr>
+                        <% }); %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% } else { %>
+                  <p class="text-muted text-center py-4">Este usuario no tiene pagos registrados</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Valoraciones Tab -->
+          <div class="tab-pane fade" id="valoraciones" role="tabpanel">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="section-title mb-0"><i class="fas fa-star me-2"></i>Valoraciones Realizadas</h5>
+                <span class="badge bg-warning"><i class="fas fa-star me-1"></i>Promedio: <%= estadisticas.promedioCalificaciones %></span>
+              </div>
+              <div class="card-body">
+                <% if (valoraciones.length > 0) { %>
+                  <% valoraciones.forEach(valoracion => { %>
+                    <div class="card mb-3">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                          <div>
+                            <h6 class="mb-1"><%= valoracion.prestador ? valoracion.prestador.nombre : 'Prestador desconocido' %></h6>
+                            <small class="text-muted"><%= new Date(valoracion.createdAt).toLocaleDateString('es-ES', {year: 'numeric', month: 'long', day: 'numeric'}) %></small>
+                          </div>
+                          <div class="text-warning">
+                            <% for (let i = 1; i <= 5; i++) { %>
+                              <i class="fas fa-star<%= i <= valoracion.calificacion ? '' : '-o' %>"></i>
+                            <% } %>
+                            <span class="ms-2 text-dark"><%= valoracion.calificacion %>/5</span>
+                          </div>
+                        </div>
+                        <% if (valoracion.comentario) { %>
+                          <p class="mb-1"><%= valoracion.comentario %></p>
+                        <% } %>
+                        <% if (valoracion.mascota) { %>
+                          <small class="text-muted"><i class="fas fa-paw me-1"></i>Mascota: <%= valoracion.mascota.nombre %></small>
+                        <% } %>
+                      </div>
+                    </div>
+                  <% }); %>
+                <% } else { %>
+                  <p class="text-muted text-center py-4">Este usuario no ha realizado valoraciones</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notificaciones Tab -->
+          <div class="tab-pane fade" id="notificaciones" role="tabpanel">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="section-title mb-0"><i class="fas fa-bell me-2"></i>Últimas Notificaciones</h5>
+              </div>
+              <div class="card-body">
+                <% if (notificaciones.length > 0) { %>
+                  <div class="list-group">
+                    <% notificaciones.forEach(notif => { %>
+                      <div class="list-group-item <%= notif.leida ? '' : 'bg-light' %>">
+                        <div class="d-flex w-100 justify-content-between">
+                          <h6 class="mb-1"><%= notif.titulo %></h6>
+                          <small><%= new Date(notif.createdAt).toLocaleDateString('es-ES') %></small>
+                        </div>
+                        <p class="mb-1"><%= notif.mensaje %></p>
+                        <small class="text-muted">
+                          <span class="badge <%= notif.leida ? 'bg-secondary' : 'bg-primary' %> me-2">
+                            <%= notif.leida ? 'Leída' : 'No leída' %>
+                          </span>
+                          <% if (notif.tipo) { %>
+                            Tipo: <%= notif.tipo %>
+                          <% } %>
+                        </small>
+                      </div>
+                    <% }); %>
+                  </div>
+                <% } else { %>
+                  <p class="text-muted text-center py-4">Este usuario no tiene notificaciones</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- jQuery y DataTables -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+  <script>
+    $(document).ready(function() {
+      const dtConfig = {
+        "language": {
+          "sProcessing": "Procesando...",
+          "sLengthMenu": "Mostrar _MENU_ registros",
+          "sZeroRecords": "No se encontraron resultados",
+          "sEmptyTable": "Ningún dato disponible en esta tabla",
+          "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+          "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+          "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+          "sInfoPostFix": "",
+          "sSearch": "Buscar:",
+          "sUrl": "",
+          "sInfoThousands": ",",
+          "sLoadingRecords": "Cargando...",
+          "oPaginate": {
+            "sFirst": "Primero",
+            "sLast": "Último",
+            "sNext": "Siguiente",
+            "sPrevious": "Anterior"
+          },
+          "oAria": {
+            "sSortAscending": ": Activar para ordenar la columna de manera ascendente",
+            "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+          }
+        },
+        "pageLength": 10,
+        "order": [[ 0, "desc" ]]
+      };
+
+      if ($.fn.DataTable) {
+        // Tabla de Mascotas
+        if ($('#tablaMascotas').length) {
+          $('#tablaMascotas').DataTable(dtConfig);
+        }
+        
+        // Tabla de Citas
+        if ($('#tablaCitas').length) {
+          $('#tablaCitas').DataTable(dtConfig);
+        }
+        
+        // Tabla de Emergencias
+        if ($('#tablaEmergencias').length) {
+          $('#tablaEmergencias').DataTable(dtConfig);
+        }
+        
+        // Tabla de Pagos
+        if ($('#tablaPagos').length) {
+          $('#tablaPagos').DataTable(dtConfig);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

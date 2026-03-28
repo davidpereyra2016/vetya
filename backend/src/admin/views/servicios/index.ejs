@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Servicios - Panel Administrativo Vetya</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+  <style>
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8f9fc;
+    }
+    .sidebar {
+      min-height: 100vh;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    .sidebar .nav-item {
+      margin-bottom: 0.5rem;
+    }
+    .sidebar .nav-link {
+      border-radius: 0.35rem;
+      margin: 0 0.5rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s;
+    }
+    .sidebar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .card {
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      border: none;
+    }
+    .table th {
+      border-top: none;
+      font-weight: 600;
+      color: #5a5c69;
+    }
+    .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
+    .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
+    .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
+    .border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'servicios'; %>
+      <%- include('../partials/sidebar') %>
+      
+      <!-- Main Content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Gestión de Servicios</h1>
+        </div>
+
+        <!-- Mensajes -->
+        <% if (typeof mensaje !== 'undefined' && mensaje) { %>
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <%= mensaje %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error) { %>
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+
+        <!-- Estadísticas rápidas -->
+        <div class="row mb-4">
+          <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+              <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                  <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Servicios</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800"><%= servicios.length %></div>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-concierge-bell fa-2x text-gray-300"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+              <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                  <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Activos</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800"><%= servicios.filter(s => s.activo !== false).length %></div>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+              <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                  <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Predefinidos</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800"><%= servicios.filter(s => s.esServicioPredefinido).length %></div>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-star fa-2x text-gray-300"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+              <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                  <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Inactivos</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800"><%= servicios.filter(s => s.activo === false).length %></div>
+                  </div>
+                  <div class="col-auto">
+                    <i class="fas fa-ban fa-2x text-gray-300"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabla de servicios -->
+        <div class="card shadow mb-4">
+          <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Listado Completo de Servicios</h6>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#nuevoServicioModal">
+              <i class="fas fa-plus me-1"></i> Nuevo Servicio
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                  <tr>
+                    <th>Servicio</th>
+                    <th>Categoría</th>
+                    <th>Tipo Prestador</th>
+                    <th>Precio/Duración</th>
+                    <th>Estado</th>
+                    <th>Tipo</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if (servicios && servicios.length > 0) { %>
+                    <% servicios.forEach(servicio => { %>
+                      <tr>
+                        <td>
+                          <div class="d-flex align-items-center">
+                            <div class="me-2" style="width: 40px; height: 40px; border-radius: 8px; background-color: <%= servicio.color || '#1E88E5' %>15; display: flex; align-items: center; justify-content: center;">
+                              <i class="fas fa-<%= servicio.icono?.replace('Outline', '') || 'concierge-bell' %>" style="color: <%= servicio.color || '#1E88E5' %>; font-size: 20px;"></i>
+                            </div>
+                            <div>
+                              <div class="fw-bold"><%= servicio.nombre %></div>
+                              <small class="text-muted d-inline-block text-truncate" style="max-width: 250px;">
+                                <%= servicio.descripcion || 'Sin descripción' %>
+                              </small>
+                            </div>
+                          </div>
+                        </td>
+                        <td><%= servicio.categoria || 'General' %></td>
+                        <td><span class="badge bg-secondary"><%= servicio.tipoPrestador || 'N/A' %></span></td>
+                        <td>
+                          <% if (servicio.precio) { %>
+                            <div><strong>$<%= servicio.precio %></strong></div>
+                          <% } %>
+                          <% if (servicio.duracion) { %>
+                            <small class="text-muted"><i class="fas fa-clock me-1"></i><%= servicio.duracion %> min</small>
+                          <% } %>
+                          <% if (!servicio.precio && !servicio.duracion) { %>
+                            <small class="text-muted">No especificado</small>
+                          <% } %>
+                        </td>
+                        <td>
+                          <span class="badge <%= servicio.activo !== false ? 'bg-success' : 'bg-danger' %>">
+                            <%= servicio.activo !== false ? 'Activo' : 'Inactivo' %>
+                          </span>
+                        </td>
+                        <td>
+                          <% if (servicio.esServicioPredefinido && !servicio.prestadorId) { %>
+                            <span class="badge bg-warning text-dark"><i class="fas fa-star me-1"></i>Catálogo</span>
+                          <% } else if (servicio.prestadorId) { %>
+                            <span class="badge bg-info"><i class="fas fa-user me-1"></i>Prestador</span>
+                          <% } else { %>
+                            <span class="badge bg-secondary">Otro</span>
+                          <% } %>
+                        </td>
+                        <td>
+                          <button class="btn btn-warning btn-sm" onclick="editarServicio('<%= servicio._id %>')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button class="btn btn-danger btn-sm" onclick="confirmarEliminar('<%= servicio._id %>', '<%= servicio.nombre %>')" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    <% }); %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="7" class="text-center text-muted py-4">
+                        <i class="fas fa-concierge-bell fa-3x mb-3 d-block"></i>
+                        No hay servicios registrados
+                      </td>
+                    </tr>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<!-- Modal para crear/editar servicio -->
+<div class="modal fade" id="nuevoServicioModal" tabindex="-1" aria-labelledby="nuevoServicioModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="nuevoServicioModalLabel">Nuevo Servicio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="servicioForm">
+          <input type="hidden" id="servicioId">
+          
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label for="nombre" class="form-label">Nombre del servicio *</label>
+              <input type="text" class="form-control" id="nombre" name="nombre" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="activo" class="form-label">Estado</label>
+              <select class="form-control" id="activo" name="activo">
+                <option value="true">Activo</option>
+                <option value="false">Inactivo</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="descripcion" class="form-label">Descripción *</label>
+            <textarea class="form-control" id="descripcion" name="descripcion" rows="2" required></textarea>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="categoria" class="form-label">Categoría</label>
+              <select class="form-control" id="categoria" name="categoria">
+                <optgroup label="Veterinarias">
+                  <option value="Consulta general">Consulta general</option>
+                  <option value="Consulta especializada">Consulta especializada</option>
+                  <option value="Cirugía">Cirugía</option>
+                  <option value="Vacunación">Vacunación</option>
+                  <option value="Desparasitación">Desparasitación</option>
+                  <option value="Radiografía">Radiografía</option>
+                  <option value="Ecografía">Ecografía</option>
+                  <option value="Análisis clínicos">Análisis clínicos</option>
+                  <option value="Hospitalización">Hospitalización</option>
+                  <option value="Urgencias">Urgencias</option>
+                  <option value="Dental">Dental</option>
+                  <option value="Oftalmología">Oftalmología</option>
+                  <option value="Dermatología">Dermatología</option>
+                  <option value="Cardiología">Cardiología</option>
+                  <option value="Ortopedia">Ortopedia</option>
+                </optgroup>
+                <optgroup label="Peluquerías">
+                  <option value="Baño y corte">Baño y corte</option>
+                  <option value="Baño sanitario">Baño sanitario</option>
+                  <option value="Corte de pelo">Corte de pelo</option>
+                  <option value="Corte de uñas">Corte de uñas</option>
+                  <option value="Limpieza de oídos">Limpieza de oídos</option>
+                  <option value="Spa canino">Spa canino</option>
+                </optgroup>
+                <optgroup label="Pet Shops">
+                  <option value="Alimentos premium">Alimentos premium</option>
+                  <option value="Accesorios">Accesorios</option>
+                  <option value="Juguetes">Juguetes</option>
+                  <option value="Suplementos alimenticios">Suplementos alimenticios</option>
+                  <option value="Farmacia veterinaria">Farmacia veterinaria</option>
+                </optgroup>
+                <optgroup label="Otros">
+                  <option value="Adiestramiento">Adiestramiento</option>
+                  <option value="Guardería">Guardería</option>
+                  <option value="Otros">Otros</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="tipoPrestador" class="form-label">Tipo de Prestador *</label>
+              <select class="form-control" id="tipoPrestador" name="tipoPrestador" required>
+                <option value="Veterinario">Veterinario</option>
+                <option value="Centro Veterinario">Centro Veterinario</option>
+                <option value="Veterinaria">Veterinaria</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="precio" class="form-label">Precio</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" step="0.01" class="form-control" id="precio" name="precio">
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="duracion" class="form-label">Duración (minutos)</label>
+              <input type="number" class="form-control" id="duracion" name="duracion" value="30">
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="icono" class="form-label">
+                Icono (Ionicons) 
+                <span class="badge bg-info ms-2" id="iconPreview">
+                  <i class="fas fa-eye me-1"></i>Preview
+                </span>
+              </label>
+              <select class="form-control" id="icono" name="icono">
+                <optgroup label="🏥 Médico y Salud">
+                  <option value="medical">medical - Médico general</option>
+                  <option value="medical-outline">medical-outline - Médico (contorno)</option>
+                  <option value="medkit">medkit - Botiquín</option>
+                  <option value="medkit-outline">medkit-outline - Botiquín (contorno)</option>
+                  <option value="heart">heart - Corazón</option>
+                  <option value="heart-outline">heart-outline - Corazón (contorno)</option>
+                  <option value="pulse">pulse - Pulso/ECG</option>
+                  <option value="pulse-outline">pulse-outline - Pulso (contorno)</option>
+                  <option value="bandage">bandage - Vendaje</option>
+                  <option value="bandage-outline">bandage-outline - Vendaje (contorno)</option>
+                  <option value="fitness">fitness - Actividad física</option>
+                  <option value="fitness-outline">fitness-outline - Actividad (contorno)</option>
+                </optgroup>
+                
+                <optgroup label="🐾 Mascotas">
+                  <option value="paw">paw - Huella de pata</option>
+                  <option value="paw-outline">paw-outline - Huella (contorno)</option>
+                </optgroup>
+                
+                <optgroup label="📋 Administrativo">
+                  <option value="clipboard">clipboard - Portapapeles</option>
+                  <option value="clipboard-outline">clipboard-outline - Portapapeles (contorno)</option>
+                  <option value="calendar">calendar - Calendario</option>
+                  <option value="calendar-outline">calendar-outline - Calendario (contorno)</option>
+                  <option value="time">time - Reloj</option>
+                  <option value="time-outline">time-outline - Reloj (contorno)</option>
+                </optgroup>
+                
+                <optgroup label="✂️ Estética y Peluquería">
+                  <option value="cut">cut - Cortar/Tijeras</option>
+                  <option value="cut-outline">cut-outline - Tijeras (contorno)</option>
+                  <option value="brush">brush - Cepillo</option>
+                  <option value="brush-outline">brush-outline - Cepillo (contorno)</option>
+                  <option value="water">water - Agua/Baño</option>
+                  <option value="water-outline">water-outline - Agua (contorno)</option>
+                  <option value="sparkles">sparkles - Brillos/Limpieza</option>
+                  <option value="sparkles-outline">sparkles-outline - Brillos (contorno)</option>
+                  <option value="color-palette">color-palette - Paleta de colores</option>
+                  <option value="color-palette-outline">color-palette-outline - Paleta (contorno)</option>
+                </optgroup>
+                
+                <optgroup label="🧪 Laboratorio">
+                  <option value="flask">flask - Matraz/Laboratorio</option>
+                  <option value="flask-outline">flask-outline - Laboratorio (contorno)</option>
+                </optgroup>
+                
+                <optgroup label="🎁 Otros">
+                  <option value="leaf">leaf - Hoja/Natural</option>
+                  <option value="leaf-outline">leaf-outline - Hoja (contorno)</option>
+                  <option value="moon">moon - Luna/Noche</option>
+                  <option value="moon-outline">moon-outline - Luna (contorno)</option>
+                  <option value="gift">gift - Regalo</option>
+                  <option value="gift-outline">gift-outline - Regalo (contorno)</option>
+                </optgroup>
+                
+                <optgroup label="⚠️ Alertas y Estados">
+                  <option value="alert-circle">alert-circle - Alerta</option>
+                  <option value="alert-circle-outline">alert-circle-outline - Alerta (contorno)</option>
+                  <option value="information-circle">information-circle - Información</option>
+                  <option value="information-circle-outline">information-circle-outline - Info (contorno)</option>
+                  <option value="checkmark-circle">checkmark-circle - Confirmado</option>
+                  <option value="checkmark-circle-outline">checkmark-circle-outline - Confirmado (contorno)</option>
+                  <option value="close-circle">close-circle - Cancelado</option>
+                  <option value="close-circle-outline">close-circle-outline - Cancelado (contorno)</option>
+                  <option value="shield-checkmark">shield-checkmark - Protección</option>
+                  <option value="shield-checkmark-outline">shield-checkmark-outline - Protección (contorno)</option>
+                </optgroup>
+              </select>
+              <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                Selecciona un ícono válido de Ionicons compatible con React Native
+              </small>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="color" class="form-label">Color del servicio</label>
+              <input type="color" class="form-control" id="color" name="color" value="#1E88E5">
+              <small class="text-muted">
+                <i class="fas fa-palette me-1"></i>
+                Este color se usará en la app móvil
+              </small>
+            </div>
+          </div>
+          
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="esServicioPredefinido" name="esServicioPredefinido">
+            <label class="form-check-label" for="esServicioPredefinido">
+              Es servicio predefinido (catálogo global)
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="guardarServicio">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmación para eliminar -->
+<div class="modal fade" id="eliminarServicioModal" tabindex="-1" aria-labelledby="eliminarServicioModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="eliminarServicioModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>Confirmar eliminación
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3"><strong id="nombreServicioEliminar"></strong></p>
+        <div class="alert alert-warning">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Nota:</strong> Solo se pueden eliminar servicios que no tengan citas asociadas ni estén siendo usados por prestadores.
+        </div>
+        <p>¿Estás seguro de que deseas eliminar este servicio?</p>
+        <input type="hidden" id="eliminarServicioId">
+        <input type="hidden" id="eliminarServicioNombre">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="confirmarEliminar">
+          <i class="fas fa-trash me-1"></i>Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Funciones para CRUD de servicios
+  function verServicio(id) {
+    window.location.href = `/admin/servicios/${id}`;
+  }
+  
+  function editarServicio(id) {
+    console.log('=== EDITANDO SERVICIO ===');
+    console.log('ID:', id);
+    
+    // Marcar que estamos editando para evitar que el evento del modal limpie el formulario
+    window.isEditingServicio = true;
+    
+    fetch(`/api/servicios/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${obtenerToken()}`
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Servicio no encontrado');
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Datos recibidos del servicio:', data);
+      
+      // Llenar formulario con datos del servicio
+      document.getElementById('servicioId').value = data._id || '';
+      document.getElementById('nombre').value = data.nombre || '';
+      document.getElementById('descripcion').value = data.descripcion || '';
+      document.getElementById('categoria').value = data.categoria || 'Consulta general';
+      document.getElementById('tipoPrestador').value = data.tipoPrestador || 'Veterinario';
+      document.getElementById('precio').value = data.precio || '';
+      document.getElementById('duracion').value = data.duracion || 30;
+      document.getElementById('icono').value = data.icono || 'medical';
+      document.getElementById('color').value = data.color || '#1E88E5';
+      document.getElementById('activo').value = data.activo !== false ? 'true' : 'false';
+      document.getElementById('esServicioPredefinido').checked = data.esServicioPredefinido || false;
+      
+      // Cambiar título del modal
+      document.getElementById('nuevoServicioModalLabel').textContent = 'Editar Servicio: ' + data.nombre;
+      
+      // Mostrar el modal
+      const modalElement = document.getElementById('nuevoServicioModal');
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+      
+      // Actualizar preview con los valores cargados
+      setTimeout(() => updateIconPreview(), 100);
+      
+      console.log('✅ Formulario cargado con datos del servicio');
+    })
+    .catch(error => {
+      console.error('Error al cargar servicio:', error);
+      alert('Error al cargar el servicio: ' + error.message);
+      window.isEditingServicio = false;
+    });
+  }
+
+  function confirmarEliminar(id, nombre) {
+    document.getElementById('eliminarServicioId').value = id;
+    document.getElementById('eliminarServicioNombre').value = nombre;
+    document.getElementById('nombreServicioEliminar').textContent = nombre;
+    new bootstrap.Modal(document.getElementById('eliminarServicioModal')).show();
+  }
+
+  function obtenerToken() {
+    return document.cookie.replace(/(?:(?:^|.*;\s*)adminToken\s*\=\s*([^;]*).*$)|^.*$/, "$1");
+  }
+
+  // Configurar eventos cuando el DOM esté cargado
+  document.addEventListener('DOMContentLoaded', function() {
+    // Guardar servicio (crear o actualizar)
+    document.getElementById('guardarServicio').addEventListener('click', function() {
+      const servicioId = document.getElementById('servicioId').value;
+      const method = servicioId ? 'PUT' : 'POST';
+      const url = servicioId ? `/api/servicios/${servicioId}` : '/api/servicios';
+      
+      const servicioData = {
+        nombre: document.getElementById('nombre').value,
+        descripcion: document.getElementById('descripcion').value,
+        categoria: document.getElementById('categoria').value,
+        tipoPrestador: document.getElementById('tipoPrestador').value,
+        precio: parseFloat(document.getElementById('precio').value) || 0,
+        duracion: parseInt(document.getElementById('duracion').value) || 30,
+        icono: document.getElementById('icono').value || 'medical',
+        color: document.getElementById('color').value || '#1E88E5',
+        activo: document.getElementById('activo').value === 'true',
+        esServicioPredefinido: document.getElementById('esServicioPredefinido').checked
+      };
+      
+      fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${obtenerToken()}`
+        },
+        body: JSON.stringify(servicioData)
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => {
+            throw new Error(err.message || 'Error en la solicitud');
+          });
+        }
+        return response.json();
+      })
+      .then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('nuevoServicioModal')).hide();
+        window.location.reload();
+      })
+      .catch(error => {
+        alert('Error al guardar servicio: ' + error.message);
+      });
+    });
+    
+    // Confirmar eliminación CON VALIDACIONES
+    document.getElementById('confirmarEliminar').addEventListener('click', function() {
+      const servicioId = document.getElementById('eliminarServicioId').value;
+      const servicioNombre = document.getElementById('eliminarServicioNombre').value;
+      
+      fetch(`/api/servicios/${servicioId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${obtenerToken()}`
+        }
+      })
+      .then(response => {
+        return response.json().then(data => {
+          if (!response.ok) {
+            throw new Error(data.message || 'Error al eliminar servicio');
+          }
+          return data;
+        });
+      })
+      .then((data) => {
+        bootstrap.Modal.getInstance(document.getElementById('eliminarServicioModal')).hide();
+        alert(data.message || 'Servicio eliminado correctamente');
+        window.location.reload();
+      })
+      .catch(error => {
+        bootstrap.Modal.getInstance(document.getElementById('eliminarServicioModal')).hide();
+        alert('⚠️ ' + error.message);
+      });
+    });
+    
+    // Limpiar formulario al abrir modal de nuevo servicio
+    document.getElementById('nuevoServicioModal').addEventListener('show.bs.modal', function(event) {
+      // NO limpiar si estamos editando
+      if (window.isEditingServicio) {
+        console.log('⚠️ Modo edición activo - NO se limpia el formulario');
+        return;
+      }
+      
+      // Limpiar formulario para nuevo servicio
+      console.log('✨ Preparando formulario para nuevo servicio');
+      document.getElementById('servicioForm').reset();
+      document.getElementById('servicioId').value = '';
+      document.getElementById('activo').value = 'true';
+      document.getElementById('duracion').value = 30;
+      document.getElementById('icono').value = 'medical'; // Primer ícono de la lista
+      document.getElementById('color').value = '#1E88E5';
+      document.getElementById('nuevoServicioModalLabel').textContent = 'Nuevo Servicio';
+      updateIconPreview(); // Actualizar preview al limpiar formulario
+    });
+    
+    // Resetear bandera cuando se cierra el modal
+    document.getElementById('nuevoServicioModal').addEventListener('hidden.bs.modal', function() {
+      window.isEditingServicio = false;
+      console.log('🔄 Bandera de edición reseteada');
+    });
+    
+    // === PREVIEW DE ÍCONO Y COLOR ===
+    // Actualizar preview del ícono cuando cambia la selección
+    document.getElementById('icono').addEventListener('change', function() {
+      updateIconPreview();
+    });
+    
+    // Actualizar preview del color cuando cambia
+    document.getElementById('color').addEventListener('input', function() {
+      updateIconPreview();
+    });
+    
+    // Función para actualizar el preview visual del ícono
+    function updateIconPreview() {
+      const iconName = document.getElementById('icono').value;
+      const color = document.getElementById('color').value;
+      const preview = document.getElementById('iconPreview');
+      
+      // Mapeo de íconos de Ionicons a FontAwesome para preview (aproximado)
+      const iconMapping = {
+        'medical': 'fa-briefcase-medical',
+        'medical-outline': 'fa-briefcase-medical',
+        'medkit': 'fa-medkit',
+        'medkit-outline': 'fa-medkit',
+        'heart': 'fa-heart',
+        'heart-outline': 'fa-heart',
+        'pulse': 'fa-heartbeat',
+        'pulse-outline': 'fa-heartbeat',
+        'bandage': 'fa-band-aid',
+        'bandage-outline': 'fa-band-aid',
+        'fitness': 'fa-dumbbell',
+        'fitness-outline': 'fa-dumbbell',
+        'paw': 'fa-paw',
+        'paw-outline': 'fa-paw',
+        'clipboard': 'fa-clipboard',
+        'clipboard-outline': 'fa-clipboard',
+        'calendar': 'fa-calendar',
+        'calendar-outline': 'fa-calendar',
+        'time': 'fa-clock',
+        'time-outline': 'fa-clock',
+        'cut': 'fa-cut',
+        'cut-outline': 'fa-cut',
+        'brush': 'fa-paint-brush',
+        'brush-outline': 'fa-paint-brush',
+        'water': 'fa-tint',
+        'water-outline': 'fa-tint',
+        'sparkles': 'fa-sparkles',
+        'sparkles-outline': 'fa-sparkles',
+        'color-palette': 'fa-palette',
+        'color-palette-outline': 'fa-palette',
+        'flask': 'fa-flask',
+        'flask-outline': 'fa-flask',
+        'leaf': 'fa-leaf',
+        'leaf-outline': 'fa-leaf',
+        'moon': 'fa-moon',
+        'moon-outline': 'fa-moon',
+        'gift': 'fa-gift',
+        'gift-outline': 'fa-gift',
+        'alert-circle': 'fa-exclamation-circle',
+        'alert-circle-outline': 'fa-exclamation-circle',
+        'information-circle': 'fa-info-circle',
+        'information-circle-outline': 'fa-info-circle',
+        'checkmark-circle': 'fa-check-circle',
+        'checkmark-circle-outline': 'fa-check-circle',
+        'close-circle': 'fa-times-circle',
+        'close-circle-outline': 'fa-times-circle',
+        'shield-checkmark': 'fa-shield-alt',
+        'shield-checkmark-outline': 'fa-shield-alt'
+      };
+      
+      const faIcon = iconMapping[iconName] || 'fa-concierge-bell';
+      
+      // Actualizar el contenido del badge de preview
+      preview.innerHTML = `<i class="fas ${faIcon} me-1"></i>${iconName}`;
+      preview.style.backgroundColor = color;
+      preview.style.color = '#fff';
+      preview.style.padding = '5px 10px';
+      preview.style.borderRadius = '5px';
+      preview.style.fontSize = '12px';
+      preview.style.fontWeight = 'bold';
+    }
+    
+    // Actualizar preview al cargar el modal (para edición)
+    document.getElementById('nuevoServicioModal').addEventListener('shown.bs.modal', function() {
+      updateIconPreview();
+    });
+
+    // === INICIALIZAR DATATABLES ===
+    if ($.fn.DataTable) {
+      $('#dataTable').DataTable({
+        "language": {
+          "sProcessing": "Procesando...",
+          "sLengthMenu": "Mostrar _MENU_ registros",
+          "sZeroRecords": "No se encontraron resultados",
+          "sEmptyTable": "Ningún dato disponible en esta tabla",
+          "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+          "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+          "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+          "sInfoPostFix": "",
+          "sSearch": "Buscar:",
+          "sUrl": "",
+          "sInfoThousands": ",",
+          "sLoadingRecords": "Cargando...",
+          "oPaginate": {
+            "sFirst": "Primero",
+            "sLast": "Último",
+            "sNext": "Siguiente",
+            "sPrevious": "Anterior"
+          },
+          "oAria": {
+            "sSortAscending": ": Activar para ordenar la columna de manera ascendente",
+            "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+          }
+        },
+        "order": [[ 0, "asc" ]], // Ordenar por nombre del servicio
+        "pageLength": 25,
+        "columnDefs": [
+          { "orderable": false, "targets": 6 } // Desactivar ordenamiento en columna de acciones
+        ]
+      });
+    }
+  });
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- jQuery y DataTables -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+</body>
+</html>

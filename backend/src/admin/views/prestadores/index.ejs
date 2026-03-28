@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Prestadores - Vetya Admin</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome para iconos -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8f9fc;
+    }
+    .sidebar {
+      min-height: 100vh;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    .sidebar .nav-item {
+      margin-bottom: 0.25rem;
+    }
+    .sidebar .nav-link {
+      padding: 0.75rem 1rem;
+      color: rgba(255, 255, 255, 0.8) !important;
+      transition: all 0.2s ease-in-out;
+    }
+    .sidebar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: #fff !important;
+    }
+    .card {
+      margin-bottom: 1.5rem;
+      border: none;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1);
+    }
+    .progress-thin {
+      height: 4px;
+    }
+    .validation-progress {
+      min-width: 120px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'prestadores'; %>
+      <%- include('../partials/sidebar') %>
+      
+      <!-- Contenido principal -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Gestión de Prestadores</h1>
+        </div>
+        
+        <% if (locals.error) { %>
+          <div class="alert alert-danger" role="alert">
+            <%= error %>
+          </div>
+        <% } %>
+        
+        <div class="card shadow mb-4">
+          <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Listado de Prestadores de Servicio</h6>
+            <button class="btn btn-primary btn-sm" onclick="nuevoPrestador()">
+              <i class="fas fa-plus fa-sm"></i> Nuevo Prestador
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Ubicación</th>
+                    <th>Estado</th>
+                    <th>Validación</th>
+                    <th>Valoración</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if (prestadores && prestadores.length > 0) { %>
+                    <% prestadores.forEach(prestador => { %>
+                      <tr>
+                        <td><%= prestador._id %></td>
+                        <td>
+                          <%= prestador.nombre %> <%= prestador.apellido %>
+                          <% if (prestador.disponibleEmergencias) { %>
+                            <span class="badge bg-success ms-1">Emergencias</span>
+                          <% } %>
+                        </td>
+                        <td>
+                          <span class="badge <%= prestador.tipo === 'Veterinario' ? 'bg-primary' : 'bg-info' %>">
+                            <%= prestador.tipo || 'No especificado' %>
+                          </span>
+                        </td>
+                        <td>
+                          <% if (prestador.direccion && prestador.direccion.direccion) { %>
+                            <%= prestador.direccion.direccion %>
+                          <% } else if (prestador.ubicacion && prestador.ubicacion.direccion) { %>
+                            <%= prestador.ubicacion.direccion %>
+                          <% } else { %>
+                            <small class="text-muted">No especificada</small>
+                          <% } %>
+                        </td>
+                        <td>
+                          <span class="badge <%= prestador.activo ? 'bg-success' : 'bg-danger' %>">
+                            <%= prestador.activo ? 'Activo' : 'Inactivo' %>
+                          </span>
+                        </td>
+                        <td class="validation-progress">
+                          <% 
+                            // Determinar el estado de validación desde múltiples fuentes
+                            let estadoValidacion = 'sin_validacion';
+                            let progreso = null;
+                            
+                            // Priorizar el estado de la validación si existe
+                            if (prestador.validacion && prestador.validacion.estado) {
+                              estadoValidacion = prestador.validacion.estado;
+                              progreso = prestador.validacion.progreso;
+                            } 
+                            // Usar el estado directo del prestador si existe
+                            else if (prestador.estadoValidacion) {
+                              estadoValidacion = prestador.estadoValidacion;
+                            }
+                            
+                            let badgeClass = 'bg-secondary';
+                            let estadoTexto = 'Sin Validación';
+                            
+                            switch(estadoValidacion) {
+                              case 'pendiente_documentos':
+                                badgeClass = 'bg-warning';
+                                estadoTexto = 'Pendiente Docs';
+                                break;
+                              case 'en_revision':
+                                badgeClass = 'bg-info';
+                                estadoTexto = 'En Revisión';
+                                break;
+                              case 'aprobado':
+                                badgeClass = 'bg-success';
+                                estadoTexto = 'Aprobado';
+                                break;
+                              case 'rechazado':
+                                badgeClass = 'bg-danger';
+                                estadoTexto = 'Rechazado';
+                                break;
+                              case 'requiere_correccion':
+                                badgeClass = 'bg-warning';
+                                estadoTexto = 'Requiere Corrección';
+                                break;
+                            }
+                          %>
+                          
+                          <div class="d-flex flex-column">
+                            <span class="badge <%= badgeClass %> mb-1">
+                              <%= estadoTexto %>
+                            </span>
+                            <% if (progreso && progreso.porcentaje !== undefined) { %>
+                              <div class="progress progress-thin">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: <%= progreso.porcentaje || 0 %>%"></div>
+                              </div>
+                              <small class="text-muted mt-1"><%= progreso.porcentaje || 0 %>%</small>
+                            <% } else if (estadoValidacion === 'aprobado') { %>
+                              <small class="text-muted mt-1">100%</small>
+                            <% } %>
+                          </div>
+                        </td>
+                        <td>
+                          <% if (prestador.valoracion) { %>
+                            <div class="d-flex align-items-center">
+                              <%= prestador.valoracion.promedio.toFixed(1) %>
+                              <div class="ms-2">
+                                <% for(let i = 0; i < Math.floor(prestador.valoracion.promedio); i++) { %>
+                                  <i class="fas fa-star text-warning"></i>
+                                <% } %>
+                                <% if (prestador.valoracion.promedio % 1 > 0) { %>
+                                  <i class="fas fa-star-half-alt text-warning"></i>
+                                <% } %>
+                              </div>
+                              <small class="text-muted ms-2">(<%= prestador.valoracion.total %>)</small>
+                            </div>
+                          <% } else { %>
+                            Sin valoraciones
+                          <% } %>
+                        </td>
+                        <td>
+                          <div class="btn-group" role="group">
+                            <a href="/admin/prestadores/<%= prestador._id %>" class="btn btn-primary btn-sm" title="Ver Detalle">
+                              <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-info btn-sm" onclick="editarPrestador('<%= prestador._id %>')" title="Editar">
+                              <i class="fas fa-edit"></i>
+                            </button>
+                            <% if (prestador.validacion) { %>
+                              <a href="/admin/validaciones/<%= prestador._id %>" class="btn btn-warning btn-sm" title="Ver Validación">
+                                <i class="fas fa-user-check"></i>
+                              </a>
+                            <% } %>
+                            <% if (prestador.documentacion && prestador.documentacion.length > 0) { %>
+                              <button class="btn btn-secondary btn-sm" onclick="verDocumentacion('<%= prestador._id %>')" title="Ver Documentos">
+                                <i class="fas fa-file-alt"></i>
+                              </button>
+                            <% } %>
+                            <button class="btn btn-danger btn-sm" onclick="confirmarEliminar('<%= prestador._id %>')" title="Eliminar">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="8" class="text-center">No hay prestadores registrados</td>
+                    </tr>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal para nuevo prestador -->
+  <div class="modal fade" id="nuevoPrestadorModal" tabindex="-1" aria-labelledby="nuevoPrestadorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="nuevoPrestadorModalLabel">Nuevo Prestador</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="prestadorForm">
+            <input type="hidden" id="prestadorId">
+            
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">Información Básica</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ubicacion-tab" data-bs-toggle="tab" data-bs-target="#ubicacion" type="button" role="tab" aria-controls="ubicacion" aria-selected="false">Ubicación</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="servicios-tab" data-bs-toggle="tab" data-bs-target="#servicios" type="button" role="tab" aria-controls="servicios" aria-selected="false">Servicios</button>
+              </li>
+            </ul>
+            
+            <div class="tab-content pt-3" id="myTabContent">
+              <!-- Información básica -->
+              <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="info-tab">
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="nombre" class="form-label">Nombre Completo</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="tipo" class="form-label">Tipo de Prestador</label>
+                    <select class="form-select" id="tipo" name="tipo" required>
+                      <option value="Veterinario">Veterinario</option>
+                      <option value="Centro Veterinario">Centro Veterinario</option>
+                      <option value="Veterinaria">Veterinaria</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="telefono" class="form-label">Teléfono</label>
+                    <input type="tel" class="form-control" id="telefono" name="telefono" required>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label">Especialidades</label>
+                    <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_medicina_general" name="especialidades" value="Medicina general">
+                        <label class="form-check-label" for="esp_medicina_general">Medicina General</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_nutricion" name="especialidades" value="Nutrición">
+                        <label class="form-check-label" for="esp_nutricion">Nutrición</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_odontologia" name="especialidades" value="Odontología">
+                        <label class="form-check-label" for="esp_odontologia">Odontología</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_cirugia" name="especialidades" value="Cirugía">
+                        <label class="form-check-label" for="esp_cirugia">Cirugía</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_dermatologia" name="especialidades" value="Dermatología">
+                        <label class="form-check-label" for="esp_dermatologia">Dermatología</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_oftalmologia" name="especialidades" value="Oftalmología">
+                        <label class="form-check-label" for="esp_oftalmologia">Oftalmología</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_medicina_felina" name="especialidades" value="Medicina Felina">
+                        <label class="form-check-label" for="esp_medicina_felina">Medicina Felina</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_medicina_canina" name="especialidades" value="Medicina Canina">
+                        <label class="form-check-label" for="esp_medicina_canina">Medicina Canina</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_exoticos" name="especialidades" value="Animales Exóticos">
+                        <label class="form-check-label" for="esp_exoticos">Animales Exóticos</label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="esp_emergencias" name="especialidades" value="Emergencias">
+                        <label class="form-check-label" for="esp_emergencias">Emergencias</label>
+                      </div>
+                    </div>
+                    <small class="text-muted">Selecciona todas las especialidades que apliquen.</small>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="disponibleEmergencias" class="form-label">Disponibilidad</label>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="disponibleEmergencias" name="disponibleEmergencias">
+                      <label class="form-check-label" for="disponibleEmergencias">Disponible para emergencias</label>
+                    </div>
+                    <div class="form-check form-switch mt-2">
+                      <input class="form-check-input" type="checkbox" id="activo" name="activo" checked>
+                      <label class="form-check-label" for="activo">Prestador activo</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Ubicación -->
+              <div class="tab-pane fade" id="ubicacion" role="tabpanel" aria-labelledby="ubicacion-tab">
+                <div class="mb-3">
+                  <label for="direccion" class="form-label">Dirección</label>
+                  <input type="text" class="form-control" id="direccion" name="direccion">
+                </div>
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="lat" class="form-label">Latitud</label>
+                    <input type="number" step="any" class="form-control" id="lat" name="lat">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="lng" class="form-label">Longitud</label>
+                    <input type="number" step="any" class="form-control" id="lng" name="lng">
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="radioAtencion" class="form-label">Radio de atención (km)</label>
+                  <input type="number" step="0.5" class="form-control" id="radioAtencion" name="radioAtencion" value="5">
+                  <small class="text-muted">Radio en kilómetros dentro del cual el prestador está dispuesto a atender.</small>
+                </div>
+              </div>
+              
+              <!-- Servicios -->
+              <div class="tab-pane fade" id="servicios" role="tabpanel" aria-labelledby="servicios-tab">
+                <div class="mb-3">
+                  <label class="form-label">Servicios ofrecidos</label>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="consulta" name="servicios" value="consulta">
+                    <label class="form-check-label" for="consulta">Consulta general</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="vacunacion" name="servicios" value="vacunacion">
+                    <label class="form-check-label" for="vacunacion">Vacunación</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="cirugia" name="servicios" value="cirugia">
+                    <label class="form-check-label" for="cirugia">Cirugía</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="estetica" name="servicios" value="estetica">
+                    <label class="form-check-label" for="estetica">Estética y peluquería</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="laboratorio" name="servicios" value="laboratorio">
+                    <label class="form-check-label" for="laboratorio">Análisis de laboratorio</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="ecografia" name="servicios" value="ecografia">
+                    <label class="form-check-label" for="ecografia">Ecografía y diagnóstico por imágenes</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="domicilio" name="servicios" value="domicilio">
+                    <label class="form-check-label" for="domicilio">Consultas a domicilio</label>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="horariosAtencion" class="form-label">Horarios de atención</label>
+                  <textarea class="form-control" id="horariosAtencion" name="horariosAtencion" rows="2" placeholder="Ej: Lunes a Viernes de 9 a 18hs, Sábados de 9 a 13hs"></textarea>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="guardarPrestador">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación para eliminar -->
+  <div class="modal fade" id="eliminarPrestadorModal" tabindex="-1" aria-labelledby="eliminarPrestadorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="eliminarPrestadorModalLabel">Confirmar eliminación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          ¿Estás seguro de que deseas eliminar este prestador? Esta acción no se puede deshacer.
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="confirmarEliminar">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS y dependencias -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Variables globales
+    let prestadorIdEliminar = null;
+    
+    // Funciones para CRUD de prestadores
+    function nuevoPrestador() {
+      // Limpiar formulario para nuevo prestador
+      document.getElementById('prestadorId').value = '';
+      document.getElementById('nombre').value = '';
+      document.getElementById('tipo').value = 'Veterinario';
+      document.getElementById('email').value = '';
+      document.getElementById('telefono').value = '';
+      document.getElementById('disponibleEmergencias').checked = false;
+      document.getElementById('activo').checked = true;
+      document.getElementById('direccion').value = '';
+      document.getElementById('lat').value = '';
+      document.getElementById('lng').value = '';
+      document.getElementById('radioAtencion').value = '5';
+      document.getElementById('horariosAtencion').value = '';
+      
+      // Limpiar todas las especialidades
+      document.querySelectorAll('input[name="especialidades"]').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      
+      // Limpiar todos los servicios
+      document.querySelectorAll('input[name="servicios"]').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      
+      // Mostrar modal
+      new bootstrap.Modal(document.getElementById('nuevoPrestadorModal')).show();
+    }
+    
+    function editarPrestador(id) {
+      // Obtener datos del prestador y llenar el formulario
+      fetch('/api/prestadores/' + id, {
+        headers: {
+          'Authorization': 'Bearer ' + document.cookie.replace(/(?:(?:^|.*;\s*)adminToken\s*\=\s*([^;]*).*$)|^.*$/, "$1")
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Datos del prestador recibidos:', data);
+        console.log('Tipo del prestador:', data.tipo);
+        
+        document.getElementById('prestadorId').value = data._id;
+        document.getElementById('nombre').value = data.nombre || '';
+        
+        // Debug del campo tipo
+        const tipoSelect = document.getElementById('tipo');
+        console.log('Opciones disponibles en select tipo:', Array.from(tipoSelect.options).map(o => o.value));
+        console.log('Valor del tipo del prestador:', data.tipo);
+        
+        // Asignar tipo con fallback
+        const tipoValue = data.tipo || 'Veterinario';
+        tipoSelect.value = tipoValue;
+        console.log('Tipo asignado al select:', tipoSelect.value);
+        
+        document.getElementById('email').value = data.email || '';
+        document.getElementById('telefono').value = data.telefono || '';
+        
+        // Configuración de especialidades con checkboxes
+        console.log('Especialidades del prestador:', data.especialidades);
+        
+        // Primero, desmarcar todos los checkboxes
+        const especialidadCheckboxes = document.querySelectorAll('input[name="especialidades"]');
+        especialidadCheckboxes.forEach(checkbox => {
+          checkbox.checked = false;
+        });
+        
+        // Marcar los checkboxes correspondientes a las especialidades del prestador
+        if (data.especialidades && data.especialidades.length > 0) {
+          console.log('Marcando especialidades:', data.especialidades);
+          
+          data.especialidades.forEach(especialidad => {
+            const checkbox = Array.from(especialidadCheckboxes).find(cb => cb.value === especialidad);
+            if (checkbox) {
+              checkbox.checked = true;
+              console.log('Especialidad marcada:', especialidad);
+            } else {
+              console.log('Especialidad no encontrada en checkboxes:', especialidad);
+            }
+          });
+        } else {
+          console.log('No hay especialidades para este prestador');
+        }
+        document.getElementById('disponibleEmergencias').checked = data.disponibleEmergencias || false;
+        document.getElementById('activo').checked = data.activo !== false;
+        document.getElementById('direccion').value = data.direccion ? data.direccion.calle : '';
+        document.getElementById('lat').value = data.direccion && data.direccion.coordenadas ? data.direccion.coordenadas.lat : '';
+        document.getElementById('lng').value = data.direccion && data.direccion.coordenadas ? data.direccion.coordenadas.lng : '';
+        document.getElementById('radioAtencion').value = data.radio || 1;
+        document.getElementById('horariosAtencion').value = data.horarios ? 'Horarios configurados' : '';
+        
+        // Limpiar servicios (resetear por ahora ya que no manejamos servicios complejos)
+        document.querySelectorAll('input[name="servicios"]').forEach(input => {
+          input.checked = false;
+        });
+        
+        // Mostrar modal
+        new bootstrap.Modal(document.getElementById('nuevoPrestadorModal')).show();
+      })
+      .catch(error => console.error('Error:', error));
+    }
+    
+    function confirmarEliminar(id) {
+      prestadorIdEliminar = id;
+      new bootstrap.Modal(document.getElementById('eliminarPrestadorModal')).show();
+    }
+    
+    // Obtener token desde cookies
+    function obtenerToken() {
+      console.log('Cookies disponibles:', document.cookie);
+      const tokenMatch = document.cookie.match(/adminToken=([^;]+)/);
+      const token = tokenMatch ? tokenMatch[1] : '';
+      console.log('Token obtenido:', token ? 'Token encontrado' : 'Token NO encontrado');
+      console.log('Token length:', token.length);
+      if (token.length > 0) {
+        console.log('Primeros 20 caracteres del token:', token.substring(0, 20));
+      }
+      return token;
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      // Guardar prestador (crear o actualizar)
+      document.getElementById('guardarPrestador').addEventListener('click', function() {
+        const prestadorId = document.getElementById('prestadorId').value;
+        const method = prestadorId ? 'PUT' : 'POST';
+        const url = prestadorId ? `/api/prestadores/${prestadorId}` : '/api/prestadores';
+        
+        // Recopilar datos del formulario
+        const serviciosSeleccionados = [];
+        document.querySelectorAll('input[name="servicios"]:checked').forEach(input => {
+          serviciosSeleccionados.push(input.value);
+        });
+        
+        // Recopilar especialidades seleccionadas
+        const especialidadesSeleccionadas = [];
+        document.querySelectorAll('input[name="especialidades"]:checked').forEach(input => {
+          especialidadesSeleccionadas.push(input.value);
+        });
+        console.log('Especialidades seleccionadas:', especialidadesSeleccionadas);
+        
+        // Debug del campo tipo antes de crear formData
+        const tipoElement = document.getElementById('tipo');
+        console.log('Elemento tipo encontrado:', !!tipoElement);
+        console.log('Valor del tipo antes de enviar:', tipoElement?.value);
+        console.log('Opciones del select tipo:', tipoElement ? Array.from(tipoElement.options).map(o => `${o.value}: ${o.text}`) : 'No encontrado');
+        
+        const formData = {
+          nombre: document.getElementById('nombre').value,
+          tipo: document.getElementById('tipo').value,
+          email: document.getElementById('email').value,
+          telefono: document.getElementById('telefono').value,
+          // Usar especialidades seleccionadas de checkboxes
+          especialidades: especialidadesSeleccionadas,
+          disponibleEmergencias: document.getElementById('disponibleEmergencias').checked,
+          activo: document.getElementById('activo').checked,
+          // Corregir estructura de dirección según el modelo
+          direccion: {
+            calle: document.getElementById('direccion').value,
+            coordenadas: {
+              lat: parseFloat(document.getElementById('lat').value) || 0,
+              lng: parseFloat(document.getElementById('lng').value) || 0
+            }
+          },
+          // Usar 'radio' en lugar de 'radioAtencion'
+          radio: parseFloat(document.getElementById('radioAtencion').value) || 1
+        };
+        
+        console.log('Enviando datos del prestador:', formData);
+        console.log('URL:', url);
+        console.log('Método:', method);
+        
+        fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + obtenerToken()
+          },
+          body: JSON.stringify(formData)
+        })
+        .then(response => {
+          console.log('Respuesta del servidor:', response.status, response.statusText);
+          if (!response.ok) {
+            return response.text().then(text => {
+              console.error('Error del servidor:', text);
+              throw new Error(`Error ${response.status}: ${text}`);
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('Prestador guardado exitosamente:', data);
+          // Cerrar modal y recargar página
+          const modal = bootstrap.Modal.getInstance(document.getElementById('nuevoPrestadorModal'));
+          modal.hide();
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error completo:', error);
+          alert('Error al guardar el prestador: ' + error.message);
+        });
+      });
+      
+      // Eliminar prestador
+      document.getElementById('confirmarEliminar').addEventListener('click', function() {
+        if (!prestadorIdEliminar) return;
+        
+        fetch(`/api/prestadores/${prestadorIdEliminar}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': 'Bearer ' + obtenerToken()
+          }
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Error al eliminar prestador');
+          }
+          return response.json();
+        })
+        .then(() => {
+          // Cerrar modal y recargar página
+          const modal = bootstrap.Modal.getInstance(document.getElementById('eliminarPrestadorModal'));
+          modal.hide();
+          window.location.reload();
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error al eliminar el prestador: ' + error.message);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

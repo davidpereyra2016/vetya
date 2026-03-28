@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validaciones - Panel Administrativo Vetya</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+  
+  <style>
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8f9fc;
+    }
+    
+    .sidebar {
+      min-height: 100vh;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    
+    .sidebar .nav-item {
+      margin-bottom: 0.5rem;
+    }
+    
+    .sidebar .nav-link {
+      border-radius: 0.35rem;
+      margin: 0 0.5rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s;
+    }
+    
+    .sidebar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .card {
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      border: none;
+    }
+    
+    .badge-status {
+      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+    }
+    
+    .table th {
+      border-top: none;
+      font-weight: 600;
+      color: #5a5c69;
+    }
+    
+    .avatar-sm {
+      width: 40px;
+      height: 40px;
+    }
+    
+    .avatar-title {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .progress {
+      background-color: #e9ecef;
+    }
+    
+    .badge {
+      font-size: 0.75em;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'validaciones'; %>
+      <%- include('../partials/sidebar') %>
+      
+      <!-- Contenido principal -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        
+        <div class="container-fluid">
+          <!-- Header -->
+          <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+            <h1 class="h3 mb-0 text-gray-800">Gestión de Validaciones de Prestadores</h1>
+            <nav aria-label="breadcrumb">
+              <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/admin/dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item active">Validaciones</li>
+              </ol>
+            </nav>
+          </div>
+
+          <!-- Mensajes de estado -->
+          <% if (typeof mensaje !== 'undefined' && mensaje) { %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+              <%= mensaje %>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          <% } %>
+
+          <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <%= error %>
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          <% } %>
+
+          <!-- Debug temporal para verificar datos -->
+          <% 
+            console.log('=== DEBUG VALIDACIONES ===');
+            console.log('Total validaciones:', validaciones.length);
+            console.log('Aprobadas:', validaciones.filter(v => v.estadoValidacion === 'aprobado').length);
+            validaciones.filter(v => v.estadoValidacion === 'aprobado').forEach(v => {
+              console.log('Aprobada:', v.prestador.nombre, 'Fecha:', v.fechaAprobacion);
+            });
+            console.log('========================');
+          %>
+
+          <!-- Estadísticas rápidas -->
+          <div class="row mb-4">
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                        Pendientes de Documentos
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <%= validaciones.filter(v => v.estadoValidacion === 'pendiente_documentos').length %>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <i class="fas fa-file-upload fa-2x text-gray-300"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                        En Revisión
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <%= validaciones.filter(v => v.estadoValidacion === 'en_revision').length %>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <i class="fas fa-search fa-2x text-gray-300"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                        Requieren Corrección
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <%= validaciones.filter(v => v.estadoValidacion === 'requiere_correccion').length %>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-4">
+              <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                      <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                        Aprobados Hoy
+                      </div>
+                      <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        <% 
+                          const hoy = new Date().toDateString();
+                          const aprobadosHoy = validaciones.filter(v => {
+                            return v.estadoValidacion === 'aprobado' && 
+                                  v.fechaAprobacion && 
+                                  new Date(v.fechaAprobacion).toDateString() === hoy;
+                          }).length;
+                        %>
+                        <%= aprobadosHoy %>
+                      </div>
+                    </div>
+                    <div class="col-auto">
+                      <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtros -->
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+            </div>
+            <div class="card-body">
+              <form method="GET" action="/admin/validaciones">
+                <div class="row">
+                  <div class="col-md-3">
+                    <label for="estado" class="form-label">Estado</label>
+                    <select class="form-select" id="estado" name="estado">
+                      <option value="">Todos los estados</option>
+                      <option value="pendiente_documentos">Pendiente Documentos</option>
+                      <option value="en_revision">En Revisión</option>
+                      <option value="requiere_correccion">Requiere Corrección</option>
+                      <option value="aprobado">Aprobado</option>
+                      <option value="rechazado">Rechazado</option>
+                    </select>
+                  </div>
+                  
+                  <div class="col-md-3">
+                    <label for="tipo" class="form-label">Tipo de Prestador</label>
+                    <select class="form-select" id="tipo" name="tipo">
+                      <option value="">Todos los tipos</option>
+                      <option value="veterinario">Veterinario</option>
+                      <option value="centro">Centro Veterinario</option>
+                    </select>
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="buscar" class="form-label">Buscar</label>
+                    <input type="text" class="form-control" id="buscar" name="buscar" placeholder="Nombre, email, matrícula...">
+                  </div>
+                  
+                  <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                      <i class="fas fa-search"></i> Filtrar
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Tabla de validaciones -->
+          <div class="card shadow mb-4">
+            <div class="card-header py-3">
+              <h6 class="m-0 font-weight-bold text-primary">
+                Validaciones de Prestadores 
+                <span class="badge bg-secondary ms-2"><%= validaciones.length %></span>
+              </h6>
+            </div>
+            
+            <div class="card-body">
+              <% if (validaciones.length === 0) { %>
+                <div class="text-center py-5">
+                  <i class="fas fa-clipboard-list fa-3x text-gray-300 mb-3"></i>
+                  <h5 class="text-gray-600">No hay validaciones pendientes</h5>
+                  <p class="text-gray-500">Todas las validaciones han sido procesadas o no hay solicitudes nuevas.</p>
+                </div>
+              <% } else { %>
+                <div class="table-responsive">
+                  <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                      <tr>
+                        <th>Prestador</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Progreso</th>
+                        <th>Fecha Solicitud</th>
+                        <th>Última Actualización</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    
+                    <tbody>
+                      <% validaciones.forEach(function(validacion) { %>
+                        <tr>
+                          <td>
+                            <div class="d-flex align-items-center">
+                              <div class="avatar-sm me-3">
+                                <div class="avatar-title bg-primary rounded-circle">
+                                  <%= validacion.prestador.nombre.charAt(0).toUpperCase() %>
+                                </div>
+                              </div>
+                              <div>
+                                <h6 class="mb-0"><%= validacion.prestador.nombre %></h6>
+                                <small class="text-muted"><%= validacion.prestador.email %></small>
+                                <% if (validacion.datosAdicionales && validacion.datosAdicionales.numeroMatricula) { %>
+                                  <br><small class="text-info">MP: <%= validacion.datosAdicionales.numeroMatricula %></small>
+                                <% } %>
+                              </div>
+                            </div>
+                          </td>
+                          
+                          <td>
+                            <span class="badge bg-<%= validacion.prestador.tipo === 'Veterinario' ? 'info' : 'warning' %>">
+                              <%= validacion.prestador.tipo %>
+                            </span>
+                          </td>
+                          
+                          <td>
+                            <% 
+                              let estadoClass = 'secondary';
+                              let estadoText = validacion.estadoValidacion;
+                              
+                              switch(validacion.estadoValidacion) {
+                                case 'pendiente_documentos':
+                                  estadoClass = 'warning';
+                                  estadoText = 'Pendiente Docs';
+                                  break;
+                                case 'en_revision':
+                                  estadoClass = 'info';
+                                  estadoText = 'En Revisión';
+                                  break;
+                                case 'requiere_correccion':
+                                  estadoClass = 'danger';
+                                  estadoText = 'Requiere Corrección';
+                                  break;
+                                case 'aprobado':
+                                  estadoClass = 'success';
+                                  estadoText = 'Aprobado';
+                                  break;
+                                case 'rechazado':
+                                  estadoClass = 'dark';
+                                  estadoText = 'Rechazado';
+                                  break;
+                              }
+                            %>
+                            <span class="badge bg-<%= estadoClass %>"><%= estadoText %></span>
+                          </td>
+                          
+                          <td>
+                            <% 
+                              let progreso = validacion.progreso ? validacion.progreso.porcentajeSubida : 0;
+                              let documentosSubidos = validacion.progreso ? validacion.progreso.subidos : 0;
+                              let documentosRequeridos = validacion.progreso ? validacion.progreso.total : 0;
+                            %>
+                            <div class="progress" style="height: 20px;">
+                              <div class="progress-bar bg-<%= progreso === 100 ? 'success' : 'primary' %>" 
+                                  role="progressbar" 
+                                  style="width: <%= progreso %>%">
+                                <%= progreso %>%
+                              </div>
+                            </div>
+                            <small class="text-muted"><%= documentosSubidos %>/<%= documentosRequeridos %> documentos</small>
+                          </td>
+                          
+                          <td>
+                            <%= new Date(validacion.createdAt).toLocaleDateString('es-ES') %>
+                            <br><small class="text-muted"><%= new Date(validacion.createdAt).toLocaleTimeString('es-ES') %></small>
+                          </td>
+                          
+                          <td>
+                            <%= new Date(validacion.createdAt).toLocaleDateString('es-ES') %>
+                            <br><small class="text-muted"><%= new Date(validacion.createdAt).toLocaleTimeString('es-ES') %></small>
+                          </td>
+                          
+                          <td>
+                            <div class="btn-group" role="group">
+                              <a href="/admin/validaciones/<%= validacion.prestador._id %>" 
+                                class="btn btn-sm btn-outline-primary" 
+                                title="Ver detalles">
+                                <i class="fas fa-eye"></i>
+                              </a>
+                              
+                              <% if (validacion.estadoValidacion === 'en_revision') { %>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-success" 
+                                        onclick="aprobarRapido('<%= validacion.prestador._id %>')"
+                                        title="Aprobar rápidamente">
+                                  <i class="fas fa-check"></i>
+                                </button>
+                                
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger" 
+                                        onclick="rechazarRapido('<%= validacion.prestador._id %>')"
+                                        title="Rechazar">
+                                  <i class="fas fa-times"></i>
+                                </button>
+                              <% } %>
+                            </div>
+                          </td>
+                        </tr>
+                      <% }); %>
+                    </tbody>
+                  </table>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal para aprobación rápida -->
+        <div class="modal fade" id="modalAprobacion" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Aprobar Prestador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              
+              <form id="formAprobacion" method="POST">
+                <div class="modal-body">
+                  <p>¿Estás seguro de que quieres aprobar este prestador?</p>
+                  
+                  <div class="mb-3">
+                    <label for="observacionesAprobacion" class="form-label">Observaciones (opcional)</label>
+                    <textarea class="form-control" id="observacionesAprobacion" name="observaciones" rows="3"
+                              placeholder="Comentarios sobre la aprobación..."></textarea>
+                  </div>
+                  
+                  <input type="hidden" name="decision" value="aprobado">
+                </div>
+                
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <button type="submit" class="btn btn-success">
+                    <i class="fas fa-check"></i> Aprobar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal para rechazo rápido -->
+        <div class="modal fade" id="modalRechazo" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Rechazar Prestador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              
+              <form id="formRechazo" method="POST">
+                <div class="modal-body">
+                  <p>¿Estás seguro de que quieres rechazar este prestador?</p>
+                  
+                  <div class="mb-3">
+                    <label for="observacionesRechazo" class="form-label">Motivo del rechazo *</label>
+                    <textarea class="form-control" id="observacionesRechazo" name="observaciones" rows="3" required
+                              placeholder="Explica el motivo del rechazo..."></textarea>
+                  </div>
+                  
+                  <input type="hidden" name="decision" value="rechazado">
+                </div>
+                
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-times"></i> Rechazar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- jQuery y DataTables -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+  <script>
+    // Función para aprobar rápidamente
+    function aprobarRapido(prestadorId) {
+      document.getElementById('formAprobacion').action = `/admin/validaciones/${prestadorId}/decision`;
+      new bootstrap.Modal(document.getElementById('modalAprobacion')).show();
+    }
+
+    // Función para rechazar rápidamente
+    function rechazarRapido(prestadorId) {
+      document.getElementById('formRechazo').action = `/admin/validaciones/${prestadorId}/decision`;
+      new bootstrap.Modal(document.getElementById('modalRechazo')).show();
+    }
+
+    // Inicializar DataTable si existe
+    $(document).ready(function() {
+      if ($.fn.DataTable) {
+        $('#dataTable').DataTable({
+          "language": {
+            "sProcessing": "Procesando...",
+            "sLengthMenu": "Mostrar _MENU_ registros",
+            "sZeroRecords": "No se encontraron resultados",
+            "sEmptyTable": "Ningún dato disponible en esta tabla",
+            "sInfo": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+            "sInfoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+            "sInfoFiltered": "(filtrado de un total de _MAX_ registros)",
+            "sInfoPostFix": "",
+            "sSearch": "Buscar:",
+            "sUrl": "",
+            "sInfoThousands": ",",
+            "sLoadingRecords": "Cargando...",
+            "oPaginate": {
+              "sFirst": "Primero",
+              "sLast": "Último",
+              "sNext": "Siguiente",
+              "sPrevious": "Anterior"
+            },
+            "oAria": {
+              "sSortAscending": ": Activar para ordenar la columna de manera ascendente",
+              "sSortDescending": ": Activar para ordenar la columna de manera descendente"
+            }
+          },
+          "order": [[ 4, "desc" ]], // Ordenar por fecha de solicitud descendente
+          "pageLength": 25
+        });
+      }
+    });
+  </script>
+</body>
+</html>

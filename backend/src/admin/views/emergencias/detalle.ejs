@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle de Emergencia - Panel Administrativo Vetya</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: #f8f9fc;
+    }
+    
+    .sidebar {
+      min-height: 100vh;
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    
+    .sidebar .nav-item {
+      margin-bottom: 0.5rem;
+    }
+    
+    .sidebar .nav-link {
+      border-radius: 0.35rem;
+      margin: 0 0.5rem;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s;
+    }
+    
+    .sidebar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .card {
+      box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+      border: none;
+      margin-bottom: 1.5rem;
+    }
+    
+    .stat-card {
+      border-left: 4px solid;
+    }
+    
+    .stat-card.primary { border-left-color: #4e73df; }
+    .stat-card.success { border-left-color: #1cc88a; }
+    .stat-card.warning { border-left-color: #f6c23e; }
+    .stat-card.danger { border-left-color: #e74a3b; }
+    .stat-card.info { border-left-color: #36b9cc; }
+    
+    .table th {
+      border-top: none;
+      font-weight: 600;
+      color: #5a5c69;
+    }
+    
+    .emergency-header {
+      background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 10px 10px 0 0;
+    }
+    
+    .avatar-lg {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 4px solid white;
+      object-fit: cover;
+    }
+    
+    .info-row {
+      margin-bottom: 0.75rem;
+      padding: 0.75rem;
+      background-color: #f8f9fc;
+      border-radius: 0.5rem;
+    }
+    
+    .info-row strong {
+      display: block;
+      color: #5a5c69;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .urgency-badge-alta {
+      background-color: #dc3545;
+      color: white;
+    }
+    
+    .urgency-badge-media {
+      background-color: #ffc107;
+      color: #000;
+    }
+    
+    .urgency-badge-baja {
+      background-color: #17a2b8;
+      color: white;
+    }
+    
+    .timeline {
+      position: relative;
+      padding-left: 30px;
+    }
+    
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background-color: #e3e6f0;
+    }
+    
+    .timeline-item {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -24px;
+      top: 5px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #4e73df;
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px #e3e6f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'emergencias'; %>
+      <%- include('../partials/sidebar') %>
+      
+      <!-- Main Content -->
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <!-- Breadcrumb -->
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+              <li class="breadcrumb-item"><a href="/admin/dashboard">Dashboard</a></li>
+              <li class="breadcrumb-item"><a href="/admin/emergencias">Emergencias</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Detalle</li>
+            </ol>
+          </nav>
+          <a href="/admin/emergencias" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+          </a>
+        </div>
+
+        <!-- Emergency Header Card -->
+        <div class="card">
+          <div class="emergency-header">
+            <div class="row align-items-center">
+              <div class="col-auto">
+                <div class="avatar-lg bg-white text-danger d-flex align-items-center justify-content-center" style="font-size: 2.5rem; font-weight: bold;">
+                  <i class="fas fa-ambulance"></i>
+                </div>
+              </div>
+              <div class="col">
+                <h2 class="mb-1">Emergencia #<%= emergencia._id.toString().substr(-8).toUpperCase() %></h2>
+                <p class="mb-0">
+                  <span class="badge bg-light text-dark me-2"><%= emergencia.tipoEmergencia %></span>
+                  <span class="badge urgency-badge-<%= emergencia.nivelUrgencia.toLowerCase() %> me-2">
+                    Urgencia: <%= emergencia.nivelUrgencia %>
+                  </span>
+                  <%
+                    let estadoClass = 'secondary';
+                    switch(emergencia.estado) {
+                      case 'Solicitada': estadoClass = 'warning'; break;
+                      case 'Asignada': estadoClass = 'info'; break;
+                      case 'Confirmada': estadoClass = 'primary'; break;
+                      case 'En camino': estadoClass = 'warning'; break;
+                      case 'En atención': estadoClass = 'info'; break;
+                      case 'Atendida': estadoClass = 'success'; break;
+                      case 'Cancelada': estadoClass = 'dark'; break;
+                    }
+                  %>
+                  <span class="badge bg-<%= estadoClass %>"><%= emergencia.estado %></span>
+                </p>
+                <p class="mb-0 mt-2">
+                  <i class="fas fa-calendar me-2"></i>
+                  <strong>Solicitada:</strong> <%= new Date(emergencia.fechaSolicitud).toLocaleString('es-ES') %>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-body">
+            <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Descripción</h5>
+            <p class="text-muted"><%= emergencia.descripcion %></p>
+            
+            <% if (emergencia.notas) { %>
+              <div class="alert alert-info mt-3">
+                <strong><i class="fas fa-sticky-note me-2"></i>Notas:</strong> <%= emergencia.notas %>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Main Information Row -->
+        <div class="row">
+          <!-- Cliente Card -->
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Cliente</h5>
+              </div>
+              <div class="card-body">
+                <% if (emergencia.usuario) { %>
+                  <div class="d-flex align-items-center mb-3">
+                    <% if (emergencia.usuario.profilePicture) { %>
+                      <img src="<%= emergencia.usuario.profilePicture %>" alt="Cliente" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                    <% } else { %>
+                      <div class="rounded-circle bg-primary text-white me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                        <%= emergencia.usuario.username.charAt(0).toUpperCase() %>
+                      </div>
+                    <% } %>
+                    <div>
+                      <h5 class="mb-0"><%= emergencia.usuario.username %></h5>
+                      <p class="text-muted mb-0"><%= emergencia.usuario.email %></p>
+                    </div>
+                  </div>
+                  
+                  <% if (emergencia.usuario.telefono) { %>
+                    <div class="info-row">
+                      <strong>Teléfono</strong>
+                      <a href="tel:<%= emergencia.usuario.telefono %>"><%= emergencia.usuario.telefono %></a>
+                    </div>
+                  <% } %>
+                <% } else { %>
+                  <p class="text-muted">Usuario no disponible</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mascota/Animal Card -->
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-paw me-2"></i>Animal</h5>
+              </div>
+              <div class="card-body">
+                <% if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) { %>
+                  <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Animal no registrado</strong>
+                  </div>
+                  
+                  <div class="info-row">
+                    <strong>Tipo</strong>
+                    <%= emergencia.otroAnimal.tipo || 'No especificado' %>
+                  </div>
+                  
+                  <div class="info-row">
+                    <strong>Descripción</strong>
+                    <%= emergencia.otroAnimal.descripcionAnimal || 'No especificada' %>
+                  </div>
+                  
+                  <% if (emergencia.otroAnimal.condicion) { %>
+                    <div class="info-row">
+                      <strong>Condición</strong>
+                      <%= emergencia.otroAnimal.condicion %>
+                    </div>
+                  <% } %>
+                  
+                  <% if (emergencia.otroAnimal.ubicacionExacta) { %>
+                    <div class="info-row">
+                      <strong>Ubicación Exacta</strong>
+                      <%= emergencia.otroAnimal.ubicacionExacta %>
+                    </div>
+                  <% } %>
+                <% } else if (emergencia.mascota) { %>
+                  <div class="d-flex align-items-center mb-3">
+                    <% if (emergencia.mascota.imagen) { %>
+                      <img src="<%= emergencia.mascota.imagen %>" alt="Mascota" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                    <% } else { %>
+                      <div class="rounded-circle bg-info text-white me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                        <i class="fas fa-paw"></i>
+                      </div>
+                    <% } %>
+                    <div>
+                      <h5 class="mb-0"><%= emergencia.mascota.nombre %></h5>
+                      <p class="text-muted mb-0"><%= emergencia.mascota.tipo %></p>
+                    </div>
+                  </div>
+                  
+                  <% if (emergencia.mascota.raza) { %>
+                    <div class="info-row">
+                      <strong>Raza</strong>
+                      <%= emergencia.mascota.raza %>
+                    </div>
+                  <% } %>
+                  
+                  <% if (emergencia.mascota.edad) { %>
+                    <div class="info-row">
+                      <strong>Edad</strong>
+                      <%= emergencia.mascota.edad %>
+                    </div>
+                  <% } %>
+                  
+                  <% if (emergencia.mascota.genero) { %>
+                    <div class="info-row">
+                      <strong>Género</strong>
+                      <%= emergencia.mascota.genero %>
+                    </div>
+                  <% } %>
+                <% } else { %>
+                  <p class="text-muted">Sin mascota registrada</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Second Row -->
+        <div class="row">
+          <!-- Ubicación Card -->
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Ubicación</h5>
+              </div>
+              <div class="card-body">
+                <div class="info-row">
+                  <strong>Dirección</strong>
+                  <%= emergencia.ubicacion.direccion %>
+                </div>
+                
+                <div class="info-row">
+                  <strong>Ciudad</strong>
+                  <%= emergencia.ubicacion.ciudad %>
+                </div>
+                
+                <% if (emergencia.ubicacion.coordenadas) { %>
+                  <div class="info-row">
+                    <strong>Coordenadas</strong>
+                    Lat: <%= emergencia.ubicacion.coordenadas.lat %>, Lng: <%= emergencia.ubicacion.coordenadas.lng %>
+                  </div>
+                  
+                  <a href="https://www.google.com/maps?q=<%= emergencia.ubicacion.coordenadas.lat %>,<%= emergencia.ubicacion.coordenadas.lng %>" 
+                     target="_blank" 
+                     class="btn btn-success btn-sm mt-2">
+                    <i class="fas fa-map me-1"></i> Ver en Google Maps
+                  </a>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Veterinario Card -->
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-user-md me-2"></i>Veterinario Asignado</h5>
+              </div>
+              <div class="card-body">
+                <% if (emergencia.veterinario) { %>
+                  <div class="d-flex align-items-center mb-3">
+                    <% if (emergencia.veterinario.imagen) { %>
+                      <img src="<%= emergencia.veterinario.imagen %>" alt="Veterinario" class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                    <% } else { %>
+                      <div class="rounded-circle bg-warning text-dark me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; font-size: 1.5rem;">
+                        <%= emergencia.veterinario.nombre.charAt(0).toUpperCase() %>
+                      </div>
+                    <% } %>
+                    <div>
+                      <h5 class="mb-0"><%= emergencia.veterinario.nombre %></h5>
+                      <% if (emergencia.veterinario.especialidad) { %>
+                        <p class="text-muted mb-0"><%= emergencia.veterinario.especialidad %></p>
+                      <% } %>
+                    </div>
+                  </div>
+                  
+                  <% if (emergencia.veterinario.rating) { %>
+                    <div class="info-row">
+                      <strong>Calificación</strong>
+                      <% for(let i = 0; i < 5; i++) { %>
+                        <i class="fas fa-star <%= i < emergencia.veterinario.rating ? 'text-warning' : 'text-muted' %>"></i>
+                      <% } %>
+                      (<%= emergencia.veterinario.rating %>)
+                    </div>
+                  <% } %>
+                  
+                  <% if (emergencia.veterinario.telefono) { %>
+                    <div class="info-row">
+                      <strong>Teléfono</strong>
+                      <a href="tel:<%= emergencia.veterinario.telefono %>"><%= emergencia.veterinario.telefono %></a>
+                    </div>
+                  <% } %>
+                  
+                  <% if (emergencia.veterinario.email) { %>
+                    <div class="info-row">
+                      <strong>Email</strong>
+                      <a href="mailto:<%= emergencia.veterinario.email %>"><%= emergencia.veterinario.email %></a>
+                    </div>
+                  <% } %>
+                <% } else { %>
+                  <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    No hay veterinario asignado a esta emergencia
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline & Payment Row -->
+        <div class="row">
+          <!-- Timeline Card -->
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Línea de Tiempo</h5>
+              </div>
+              <div class="card-body">
+                <div class="timeline">
+                  <div class="timeline-item">
+                    <strong>Solicitud Creada</strong>
+                    <p class="text-muted mb-0">
+                      <%= new Date(emergencia.fechaSolicitud).toLocaleString('es-ES') %>
+                    </p>
+                  </div>
+                  
+                  <% if (emergencia.fechaAsignacion) { %>
+                    <div class="timeline-item">
+                      <strong>Veterinario Asignado</strong>
+                      <p class="text-muted mb-0">
+                        <%= new Date(emergencia.fechaAsignacion).toLocaleString('es-ES') %>
+                      </p>
+                    </div>
+                  <% } %>
+                  
+                  <% if (emergencia.fechaAtencion) { %>
+                    <div class="timeline-item">
+                      <strong>Emergencia Atendida</strong>
+                      <p class="text-muted mb-0">
+                        <%= new Date(emergencia.fechaAtencion).toLocaleString('es-ES') %>
+                      </p>
+                    </div>
+                  <% } %>
+                  
+                  <% if (emergencia.llegadaConfirmadaPorCliente) { %>
+                    <div class="timeline-item">
+                      <strong>Llegada Confirmada</strong>
+                      <p class="text-muted mb-0">
+                        <i class="fas fa-check-circle text-success"></i> Cliente confirmó llegada
+                      </p>
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Card -->
+          <div class="col-lg-6">
+            <div class="card">
+              <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Información de Pago</h5>
+              </div>
+              <div class="card-body">
+                <% if (emergencia.costoTotal) { %>
+                  <div class="info-row">
+                    <strong>Costo Total</strong>
+                    <h4 class="text-success mb-0">$<%= emergencia.costoTotal.toLocaleString('es-CL') %></h4>
+                  </div>
+                  
+                  <div class="info-row">
+                    <strong>Método de Pago</strong>
+                    <%= emergencia.metodoPago %>
+                  </div>
+                  
+                  <div class="info-row">
+                    <strong>Estado de Pago</strong>
+                    <% if (emergencia.pagado) { %>
+                      <span class="badge bg-success">
+                        <i class="fas fa-check-circle me-1"></i>Pagado
+                      </span>
+                    <% } else { %>
+                      <span class="badge bg-warning">
+                        <i class="fas fa-clock me-1"></i>Pendiente
+                      </span>
+                    <% } %>
+                  </div>
+                <% } else { %>
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    El costo aún no ha sido definido
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Images Card (if any) -->
+        <% if (emergencia.imagenes && emergencia.imagenes.length > 0) { %>
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-images me-2"></i>Imágenes de la Emergencia</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <% emergencia.imagenes.forEach(function(imagen) { %>
+                  <div class="col-md-4 mb-3">
+                    <a href="<%= imagen %>" target="_blank">
+                      <img src="<%= imagen %>" alt="Imagen de emergencia" class="img-fluid rounded" style="max-height: 200px; object-fit: cover; width: 100%;">
+                    </a>
+                  </div>
+                <% }); %>
+              </div>
+            </div>
+          </div>
+        <% } %>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
