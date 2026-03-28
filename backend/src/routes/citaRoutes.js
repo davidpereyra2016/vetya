@@ -491,13 +491,22 @@ router.get("/prestadores/consulta-general", protectRoute, async (req, res) => {
 router.get("/prestadores/:prestadorId/disponibilidad", protectRoute, async (req, res) => {
   try {
     const { prestadorId } = req.params;
-    const { servicioId } = req.query;
+    const { servicioId, fecha } = req.query;
 
     // 1. Agregar logs de depuración aquí
     console.log('=== INICIO DE SOLICITUD DE DISPONIBILIDAD ===');
     console.log('Prestador ID recibido:', prestadorId);
     console.log('Servicio ID recibido:', servicioId);
     console.log('Query params completos:', req.query);
+
+    let fechaSolicitada = null;
+    if (fecha) {
+      fechaSolicitada = new Date(`${fecha}T00:00:00`);
+      if (Number.isNaN(fechaSolicitada.getTime())) {
+        return res.status(400).json({ message: "Fecha inválida" });
+      }
+      console.log('Fecha puntual solicitada:', fecha);
+    }
 
     // Validaciones básicas
     if (!mongoose.Types.ObjectId.isValid(prestadorId)) {
@@ -533,22 +542,44 @@ router.get("/prestadores/:prestadorId/disponibilidad", protectRoute, async (req,
     // 4. Obtener citas existentes que bloquean horarios
     // IMPORTANTE: Solo las citas con estado "Pendiente" o "Confirmada" bloquean horarios.
     // Las citas "Canceladas" NO bloquean, por lo que esos horarios vuelven a estar disponibles.
-    const citasExistentes = await Cita.find({
+    const filtroCitas = {
       prestador: prestadorId,
-      estado: { $in: ["Pendiente", "Confirmada"] }, // Excluye "Cancelada" y "Completada"
-      fecha: { $gte: new Date() }
-    });
+      estado: { $in: ["Pendiente", "Confirmada"] } // Excluye "Cancelada" y "Completada"
+    };
+
+    if (fechaSolicitada) {
+      const finDiaSolicitado = new Date(fechaSolicitada);
+      finDiaSolicitado.setDate(finDiaSolicitado.getDate() + 1);
+      filtroCitas.fecha = {
+        $gte: fechaSolicitada,
+        $lt: finDiaSolicitado
+      };
+    } else {
+      filtroCitas.fecha = { $gte: new Date() };
+    }
+
+    const citasExistentes = await Cita.find(filtroCitas);
     console.log('Citas existentes encontradas:', citasExistentes.length);
 
     // 5. Generar disponibilidad
     const disponibilidad = [];
-    const hoy = new Date();
     const duracionServicio = servicio?.duracion || 30;
     console.log('Duración usada para slots:', duracionServicio, 'minutos');
 
-    for (let i = 0; i < 14; i++) {
-      const fecha = new Date(hoy);
-      fecha.setDate(hoy.getDate() + i);
+    const fechasAProcesar = [];
+    if (fechaSolicitada) {
+      fechasAProcesar.push(new Date(fechaSolicitada));
+    } else {
+      const hoy = new Date();
+      for (let i = 0; i < 14; i++) {
+        const fechaIterada = new Date(hoy);
+        fechaIterada.setDate(hoy.getDate() + i);
+        fechasAProcesar.push(fechaIterada);
+      }
+    }
+
+    for (const fechaActual of fechasAProcesar) {
+      const fecha = new Date(fechaActual);
 
       const year = fecha.getFullYear();
       const month = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -617,7 +648,6 @@ router.get("/prestadores/:prestadorId/disponibilidad", protectRoute, async (req,
 
 // Función auxiliar para generar slots disponibles
 function generarSlotsDisponibles(horaInicio, horaFin, duracionMinutos, fecha, citasExistentes) {
-  console.log(`Generando slots para ${fecha.toISOString()}: ${horaInicio}-${horaFin}, duración: ${duracionMinutos}min`);
   const slots = [];
   const [inicioHora, inicioMinuto] = horaInicio.split(':').map(Number);
   const [finHora, finMinuto] = horaFin.split(':').map(Number);
@@ -667,12 +697,6 @@ function generarSlotsDisponibles(horaInicio, horaFin, duracionMinutos, fecha, ci
       disponible: !estaOcupado // true si está libre, false si está ocupado
     });
     
-    if (!estaOcupado) {
-      console.log(`Slot disponible: ${slotStr}`);
-    } else {
-      console.log(`Slot ocupado: ${slotStr}`);
-    }
-    
     // Avanzar al siguiente slot
     minutoActual += duracionMinutos;
     if (minutoActual >= 60) {
@@ -680,7 +704,6 @@ function generarSlotsDisponibles(horaInicio, horaFin, duracionMinutos, fecha, ci
       minutoActual = minutoActual % 60;
     }
   }
-  console.log(`Total slots generados: ${slots.length}`);
   return slots;
 }
 
@@ -1173,8 +1196,8 @@ router.patch("/prestador/:prestadorId/cita/:citaId", protectRoute, async (req, r
 });
 
 /**
- * Confirmar cita con pago en EFECTIVO
- * Para Mercado Pago, la confirmación es automática vía webhook cuando el pago es exitoso
+ * Registrar método de pago de una cita sin alterar su estado de aprobación
+ * La cita debe permanecer en Pendiente hasta que el prestador la acepte o rechace
  * PATCH /api/citas/prestador/:prestadorId/cita/:citaId/confirmar-pago
  */
 router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute, async (req, res) => {
@@ -1182,7 +1205,7 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
     const { prestadorId, citaId } = req.params;
     const { metodoPago } = req.body; // 'MercadoPago' o 'Efectivo'
     
-    console.log('=== CONFIRMAR CITA CON PAGO EN EFECTIVO ===');
+    console.log('=== REGISTRAR PAGO EN CITA PENDIENTE ===');
     console.log('Prestador ID:', prestadorId);
     console.log('Cita ID:', citaId);
     console.log('Método de pago:', metodoPago);
@@ -1190,7 +1213,7 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
     // Validar que sea solo efectivo
     if (metodoPago !== 'Efectivo') {
       return res.status(400).json({ 
-        message: "Esta ruta es solo para pagos en efectivo. Para Mercado Pago, use el flujo de creación de preferencia (la cita se confirmará automáticamente cuando el pago sea exitoso)." 
+        message: "Esta ruta es solo para pagos en efectivo. Para Mercado Pago, use el flujo de creación de preferencia." 
       });
     }
     
@@ -1226,14 +1249,12 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
     // Verificar que la cita esté en estado pendiente
     if (cita.estado !== "Pendiente") {
       return res.status(400).json({ 
-        message: "Solo se pueden confirmar citas en estado 'Pendiente'" 
+        message: "Solo se puede registrar el pago de citas en estado 'Pendiente'" 
       });
     }
     
-    // Confirmar la cita (solo para efectivo)
-    cita.estado = "Confirmada";
+    // Registrar método de pago sin aprobar la cita
     cita.metodoPago = 'Efectivo';
-    cita.fechaConfirmacion = new Date();
     
     await cita.save();
     
@@ -1247,21 +1268,11 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
         model: "User"
       });
     
-    console.log('✅ Cita confirmada con pago en efectivo');
-    await notificarClienteCambioEstadoCita({
-      cita: citaActualizada,
-      usuario: citaActualizada.usuario,
-      prestador,
-      servicio: citaActualizada.servicio,
-      tipo: "cita_confirmada",
-      titulo: "Tu cita fue confirmada",
-      mensaje: `${prestador.nombre} confirmó tu cita para el ${formatearFechaCita(citaActualizada.fecha)} a las ${citaActualizada.horaInicio}.`,
-      prioridad: "Media"
-    });
+    console.log('✅ Método de pago en efectivo registrado para cita pendiente');
 
     res.status(200).json({
       cita: citaActualizada,
-      message: 'Cita confirmada - Pago en efectivo al momento de la consulta'
+      message: 'Método de pago registrado. La cita continúa pendiente hasta la aprobación del prestador.'
     });
     
   } catch (error) {
