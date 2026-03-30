@@ -45,7 +45,11 @@ const RegisterScreen = ({ navigation }) => {
     const result = await register(name, email, password, confirmPassword);
     
     if (result.success && result.requiresVerification) {
-      navigation.navigate('EmailVerification', { email: result.email || email });
+      navigation.navigate('EmailVerification', {
+        email: result.email || email.trim().toLowerCase(),
+        emailDeliveryFailed: result.emailSent === false,
+        initialMessage: result.message || '',
+      });
     } else if (!result.success) {
       Alert.alert('Error de registro', result.error || 'No se pudo completar el registro');
     }

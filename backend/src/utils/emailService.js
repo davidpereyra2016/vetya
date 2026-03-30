@@ -19,7 +19,14 @@ const getTransporter = async () => {
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         if (!gmailTransporter) {
             gmailTransporter = nodemailer.createTransport({
-                service: 'gmail',
+                host: 'smtp.gmail.com',
+                port: 587,
+                secure: false,
+                requireTLS: true,
+                name: 'vetya-backend.onrender.com',
+                connectionTimeout: 15000,
+                greetingTimeout: 15000,
+                dnsTimeout: 15000,
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS
@@ -100,7 +107,7 @@ export const sendVerificationEmail = async (to, code, username = '') => {
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Error al enviar email de verificación:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || 'No se pudo enviar el correo de verificación' };
     }
 };
 
@@ -150,6 +157,6 @@ export const sendPasswordResetEmail = async (to, code, username = '') => {
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Error al enviar email de recuperación:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || 'No se pudo enviar el correo de recuperación' };
     }
 };

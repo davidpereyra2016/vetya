@@ -33,7 +33,9 @@ const useAuthStore = create(
             return { 
               success: true, 
               requiresVerification: true, 
-              email: result.data.email 
+              email: result.data.email,
+              emailSent: result.data.emailSent,
+              message: result.data.message
             };
           }
           

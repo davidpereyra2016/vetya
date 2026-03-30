@@ -18,6 +18,8 @@ import useAuthStore from '../../store/useAuthStore';
 const EmailVerificationScreen = ({ navigation, route }) => {
   console.log('[EmailVerificationScreen] Pantalla montada, params:', JSON.stringify(route?.params));
   const email = route?.params?.email || '';
+  const emailDeliveryFailed = route?.params?.emailDeliveryFailed || false;
+  const initialMessage = route?.params?.initialMessage || '';
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -136,6 +138,17 @@ const EmailVerificationScreen = ({ navigation, route }) => {
           </Text>
           <Text style={styles.emailText}>{email}</Text>
 
+          {emailDeliveryFailed ? (
+            <View style={styles.warningBox}>
+              <Ionicons name="warning-outline" size={18} color="#B26A00" />
+              <Text style={styles.warningText}>
+                No pudimos enviar el código automáticamente. Usa "Reenviar código" para intentarlo de nuevo.
+              </Text>
+            </View>
+          ) : initialMessage ? (
+            <Text style={styles.helperText}>{initialMessage}</Text>
+          ) : null}
+
           <View style={styles.codeContainer}>
             {code.map((digit, index) => (
               <TextInput
@@ -248,7 +261,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 16,
+  },
+  helperText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF4E5',
+    borderColor: '#F2C078',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 18,
+  },
+  warningText: {
+    flex: 1,
+    color: '#8A5A00',
+    fontSize: 13,
   },
   codeContainer: {
     flexDirection: 'row',

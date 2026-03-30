@@ -15,13 +15,25 @@ const generateToken = (userId) => {
     return jwt.sign({userId}, process.env.JWT_SECRET, {expiresIn: "15d"});
 };
 
+const normalizeEmail = (email = "") => email.trim().toLowerCase();
+const normalizeUsername = (username = "") => username.trim().replace(/\s+/g, " ");
+const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const findUserByEmail = (email) => {
+    const normalizedEmail = normalizeEmail(email);
+    return User.findOne({
+        email: { $regex: `^${escapeRegex(normalizedEmail)}$`, $options: "i" }
+    });
+};
+
 /**
  * Ruta para registrar clientes
  * Solo crea usuarios con role="client"
  */
 router.post("/register/client", async (req, res) => {
     try {
-        const {email, username, password, confirmPassword} = req.body;
+        const {password, confirmPassword} = req.body;
+        const email = normalizeEmail(req.body.email);
+        const username = normalizeUsername(req.body.username);
         
         // Validaciones básicas
         if(!email || !username || !password || !confirmPassword){
@@ -38,7 +50,7 @@ router.post("/register/client", async (req, res) => {
         }
         
         // Verificar email y username únicos
-        const existingEmail = await User.findOne({email});
+        const existingEmail = await findUserByEmail(email);
         if(existingEmail){
             return res.status(400).json({message: "El correo ya está registrado"});
         }
@@ -73,11 +85,13 @@ router.post("/register/client", async (req, res) => {
             console.error('Error al enviar email de verificación:', emailResult.error);
         }
         
-        // No auto-login, requiere verificación primero
         res.status(201).json({
-            message: "Registro exitoso. Se ha enviado un código de verificación a tu correo.",
+            message: emailResult.success
+                ? "Registro exitoso. Se ha enviado un código de verificación a tu correo."
+                : "Registro exitoso, pero no pudimos enviar el código de verificación. Intenta reenviarlo desde la siguiente pantalla.",
             requiresVerification: true,
-            email: newUser.email
+            email: newUser.email,
+            emailSent: emailResult.success
         });
     } catch (error) {
         console.error("Error en registro de cliente:", error);
@@ -92,14 +106,15 @@ router.post("/register/client", async (req, res) => {
 router.post("/register/provider", async (req, res) => {
     try {
         const {
-            email, 
-            username, 
             password, 
             confirmPassword, 
             nombre,
             especialidad,
             telefono
         } = req.body;
+        const email = normalizeEmail(req.body.email);
+        const username = normalizeUsername(req.body.username);
+        const normalizedNombre = normalizeUsername(nombre);
         
         // Validaciones básicas
         if(!email || !username || !password || !confirmPassword || !nombre || !especialidad){
@@ -116,7 +131,7 @@ router.post("/register/provider", async (req, res) => {
         }
         
         // Verificar email y username únicos
-        const existingEmail = await User.findOne({email});
+        const existingEmail = await findUserByEmail(email);
         if(existingEmail){
             return res.status(400).json({message: "El correo ya está registrado"});
         }
@@ -142,7 +157,7 @@ router.post("/register/provider", async (req, res) => {
         // Crear prestador asociado
         const newPrestador = new Prestador({
             usuario: newUser._id,
-            nombre,
+            nombre: normalizedNombre,
             especialidad,
             telefono,
             email,
@@ -160,16 +175,18 @@ router.post("/register/provider", async (req, res) => {
         await newUser.save();
         
         // Enviar código por email
-        const emailResult = await sendVerificationEmail(email, verificationCode, nombre);
+        const emailResult = await sendVerificationEmail(email, verificationCode, normalizedNombre);
         if (!emailResult.success) {
             console.error('Error al enviar email de verificación:', emailResult.error);
         }
         
-        // No auto-login, requiere verificación primero
         res.status(201).json({
-            message: "Registro exitoso. Se ha enviado un código de verificación a tu correo.",
+            message: emailResult.success
+                ? "Registro exitoso. Se ha enviado un código de verificación a tu correo."
+                : "Registro exitoso, pero no pudimos enviar el código de verificación. Intenta reenviarlo desde la siguiente pantalla.",
             requiresVerification: true,
-            email: newUser.email
+            email: newUser.email,
+            emailSent: emailResult.success
         });
     } catch (error) {
         console.error("Error en registro de prestador:", error);
@@ -182,7 +199,9 @@ router.post("/register/provider", async (req, res) => {
  */
 router.post("/register", async (req, res) => {
     try {
-        const {email, username, password, confirmPassword} = req.body;
+        const {password, confirmPassword} = req.body;
+        const email = normalizeEmail(req.body.email);
+        const username = normalizeUsername(req.body.username);
         
         // Validaciones básicas
         if(!email || !username || !password || !confirmPassword){
@@ -199,7 +218,7 @@ router.post("/register", async (req, res) => {
         }
         
         // Verificar email y username únicos
-        const existingEmail = await User.findOne({email});
+        const existingEmail = await findUserByEmail(email);
         if(existingEmail){
             return res.status(400).json({message: "El correo ya está registrado"});
         }
@@ -234,11 +253,13 @@ router.post("/register", async (req, res) => {
             console.error('Error al enviar email de verificación:', emailResult.error);
         }
         
-        // No auto-login, requiere verificación primero
         res.status(201).json({
-            message: "Registro exitoso. Se ha enviado un código de verificación a tu correo.",
+            message: emailResult.success
+                ? "Registro exitoso. Se ha enviado un código de verificación a tu correo."
+                : "Registro exitoso, pero no pudimos enviar el código de verificación. Intenta reenviarlo desde la siguiente pantalla.",
             requiresVerification: true,
-            email: newUser.email
+            email: newUser.email,
+            emailSent: emailResult.success
         });
     } catch (error) {
         console.error("Error en registro:", error);
@@ -252,7 +273,8 @@ router.post("/register", async (req, res) => {
  */
 router.post("/login", async (req, res) => {
     try {
-        const {email, password, appType} = req.body;
+        const {password, appType} = req.body;
+        const email = normalizeEmail(req.body.email);
         
         // Validar campos obligatorios
         if(!email || !password){
@@ -266,7 +288,7 @@ router.post("/login", async (req, res) => {
         }
         
         // Buscar usuario por email
-        const user = await User.findOne({email});
+        const user = await findUserByEmail(email);
         if(!user){
             return res.status(400).json({message: "Credenciales inválidas"});
         }
@@ -342,13 +364,13 @@ router.post("/login", async (req, res) => {
  */
 router.post("/forgot-password", async (req, res) => {
     try {
-        const { email } = req.body;
+        const email = normalizeEmail(req.body.email);
         
         if (!email) {
             return res.status(400).json({ message: "El correo electrónico es obligatorio" });
         }
         
-        const user = await User.findOne({ email });
+        const user = await findUserByEmail(email);
         if (!user) {
             // Por seguridad, no revelar si el email existe o no
             return res.status(200).json({ 
@@ -383,7 +405,8 @@ router.post("/forgot-password", async (req, res) => {
  */
 router.post("/reset-password", async (req, res) => {
     try {
-        const { email, code, newPassword } = req.body;
+        const { code, newPassword } = req.body;
+        const email = normalizeEmail(req.body.email);
         
         if (!email || !code || !newPassword) {
             return res.status(400).json({ message: "Email, código y nueva contraseña son obligatorios" });
@@ -393,7 +416,7 @@ router.post("/reset-password", async (req, res) => {
             return res.status(400).json({ message: "La contraseña debe tener al menos 6 caracteres" });
         }
         
-        const user = await User.findOne({ email });
+        const user = await findUserByEmail(email);
         if (!user) {
             return res.status(400).json({ message: "Usuario no encontrado" });
         }
@@ -431,13 +454,14 @@ router.post("/reset-password", async (req, res) => {
  */
 router.post("/verify-email", async (req, res) => {
     try {
-        const { email, code } = req.body;
+        const { code } = req.body;
+        const email = normalizeEmail(req.body.email);
         
         if (!email || !code) {
             return res.status(400).json({ message: "Email y código son obligatorios" });
         }
         
-        const user = await User.findOne({ email });
+        const user = await findUserByEmail(email);
         if (!user) {
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
@@ -512,13 +536,13 @@ router.post("/verify-email", async (req, res) => {
  */
 router.post("/resend-verification", async (req, res) => {
     try {
-        const { email } = req.body;
+        const email = normalizeEmail(req.body.email);
         
         if (!email) {
             return res.status(400).json({ message: "El email es obligatorio" });
         }
         
-        const user = await User.findOne({ email });
+        const user = await findUserByEmail(email);
         if (!user) {
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
