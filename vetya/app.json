@@ -46,6 +46,12 @@
           "mode": "universal"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "cb540aaf-1e99-4772-8d7c-457df269ad59"
+      }
+    },
+    "owner": "davidpereyra"
   }
 }
