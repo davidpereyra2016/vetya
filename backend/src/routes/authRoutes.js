@@ -559,12 +559,12 @@ router.post("/resend-verification", async (req, res) => {
         
         // Enviar código
         const emailResult = await sendVerificationEmail(email, verificationCode, user.username);
-        if (!emailResult.success) {
-            return res.status(500).json({ message: "Error al enviar el correo de verificación" });
-        }
         
         res.status(200).json({ 
-            message: "Se ha reenviado el código de verificación a tu correo" 
+            message: emailResult.success
+                ? "Se ha reenviado el código de verificación a tu correo"
+                : "No pudimos reenviar el código de verificación en este momento. Inténtalo nuevamente en unos minutos.",
+            emailSent: emailResult.success
         });
         
     } catch (error) {

@@ -105,7 +105,11 @@ const EmailVerificationScreen = ({ navigation, route }) => {
     
     if (result.success) {
       setCountdown(60);
-      Alert.alert('Éxito', 'Se ha reenviado el código a tu correo');
+      const message = result.data?.message || 'Se ha procesado el reenvío del código';
+      Alert.alert(
+        result.data?.emailSent === false ? 'Aviso' : 'Éxito',
+        message
+      );
     } else {
       Alert.alert('Error', result.error || 'No se pudo reenviar el código');
     }
