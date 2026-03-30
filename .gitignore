@@ -58,6 +58,8 @@ build/
 # MongoDB data (if any local dumps)
 *.dump
 data/
+!backend/src/data/
+!backend/src/data/serviciosPredefinidos.js
 
 # Cloudinary uploads (local cache)
 uploads/
