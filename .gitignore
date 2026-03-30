@@ -73,3 +73,4 @@ agent-reviewer/node_modules/
 agent-reviewer/.env
 agent-reviewer/review-report.json
 agent-reviewer
+.playwright-cli/
