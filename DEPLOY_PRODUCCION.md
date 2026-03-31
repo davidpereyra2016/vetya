@@ -1,6 +1,6 @@
 # Deploy de Produccion
 
-Esta guia resume como desplegar backend y generar nuevos APK de `vetya` y `vetpresta` usando Render y Expo.
+Esta guia resume como desplegar backend y generar nuevos APK de `vetya` y `vetpresta` usando Render, Resend y Expo.
 
 ## 1. Backend en Render
 
@@ -26,6 +26,16 @@ Variables que deben existir en Render:
 - `EMAIL_USER`
 - `EMAIL_PASS`
 - `EMAIL_FROM`
+- `RESEND_API_KEY`
+- `RESEND_FROM`
+
+Notas importantes:
+
+1. El backend ya esta preparado para priorizar `Resend` si `RESEND_API_KEY` existe.
+2. `RESEND_FROM` debe usar un dominio verificado en Resend, por ejemplo `VetYa <no-reply@tu-dominio.com>`.
+3. En la configuracion actual de produccion se esta usando `VetYa <no-reply@vetya.nodosmart.io>`.
+4. `vetya-backend.onrender.com` no sirve como dominio de envio masivo porque no tienes control DNS sobre `onrender.com`.
+5. Si Resend no tiene un dominio real verificado, el registro puede crear usuarios pero `emailSent` va a volver como `false`.
 
 ## 2. URL del backend para Expo
 
@@ -41,6 +51,10 @@ Si cambia la URL del backend en produccion:
 1. Actualizar `EXPO_PUBLIC_API_URL` en Expo.
 2. Generar un nuevo build Android.
 
+En Expo ya debe existir:
+
+- `EXPO_PUBLIC_API_URL=https://vetya-backend.onrender.com/api`
+
 ## 3. Generar un nuevo APK de vetya
 
 Desde `vetya/`:
@@ -48,6 +62,10 @@ Desde `vetya/`:
 ```powershell
 npx eas-cli@latest build --platform android --profile android-production
 ```
+
+Observacion:
+
+- El build en `expo.dev` puede tardar cerca de 1 hora en completarse, dependiendo de la cola de EAS.
 
 Para ver el estado:
 
@@ -62,6 +80,10 @@ Desde `vetpresta/`:
 ```powershell
 npx eas-cli@latest build --platform android --profile android-production
 ```
+
+Observacion:
+
+- El build en `expo.dev` puede tardar cerca de 1 hora en completarse, dependiendo de la cola de EAS.
 
 Para ver el estado:
 
@@ -92,3 +114,4 @@ Si modificas `vetya/` o `vetpresta/`:
 - Backend: abrir `https://TU_BACKEND/api/health`
 - Expo: revisar el build en `expo.dev`
 - App: instalar el APK y validar login, llamadas API y flujos principales
+- Resend: validar que el dominio este en estado `verified` antes de esperar envio real a correos de terceros
