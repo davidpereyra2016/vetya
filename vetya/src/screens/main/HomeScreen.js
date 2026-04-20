@@ -45,6 +45,14 @@ const HomeScreen = ({ navigation }) => {
   
   // Referencia al temporizador para actualización de ubicación
   const locationUpdateTimerRef = useRef(null);
+
+  // Animaciones
+  const bannerAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const section1Anim = useRef(new Animated.Value(0)).current;
+  const section2Anim = useRef(new Animated.Value(0)).current;
+  const section3Anim = useRef(new Animated.Value(0)).current;
+  const statusBannerAnim = useRef(new Animated.Value(-50)).current;
   
   // Obtener veterinarios disponibles del store (solo para emergencias)
   const { availableVets, loadAvailableVets, activeEmergencies, loadActiveEmergencies, checkEmergencyExpiration, confirmVetArrival } = useEmergencyStore();
@@ -358,6 +366,60 @@ const HomeScreen = ({ navigation }) => {
       }
     };
   }, []);
+
+  // Animación de entrada del banner principal (fadeInUp)
+  useEffect(() => {
+    Animated.timing(bannerAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  // Animación escalonada de secciones (stagger fadeInUp)
+  useEffect(() => {
+    Animated.stagger(
+      150,
+      [section1Anim, section2Anim, section3Anim].map(anim =>
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        })
+      )
+    ).start();
+  }, []);
+
+  // Animación de pulso en el ícono de emergencia activa
+  useEffect(() => {
+    let loop;
+    if (isEmergencyInProgress) {
+      loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.4, duration: 400, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+    return () => {
+      if (loop) loop.stop();
+    };
+  }, [isEmergencyInProgress]);
+
+  // Animación slide-in del banner de estado de emergencia
+  useEffect(() => {
+    if (activeEmergencyVet) {
+      statusBannerAnim.setValue(-50);
+      Animated.spring(statusBannerAnim, {
+        toValue: 0,
+        friction: 7,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [activeEmergencyVet?.status]);
 
   // Función para cargar datos iniciales de forma optimizada (paralelización donde sea posible)
   const loadInitialData = useCallback(async () => {
@@ -753,7 +815,12 @@ const HomeScreen = ({ navigation }) => {
         }
       >
         {/* Banner principal */}
-        <View style={styles.banner}>
+        <Animated.View style={[styles.banner, {
+          opacity: bannerAnim,
+          transform: [{ translateY: bannerAnim.interpolate({
+            inputRange: [0, 1], outputRange: [24, 0]
+          })}]
+        }]}>
           <View style={styles.bannerContent}>
             <Text style={styles.bannerTitle}>¡Bienvenido a VetYa!</Text>
             <Text style={styles.bannerSubtitle}>
@@ -773,7 +840,7 @@ const HomeScreen = ({ navigation }) => {
               resizeMode="contain"
             />
           </View>
-        </View>
+        </Animated.View>
 
         {/* Servicios */}
         <View style={styles.sectionContainer}>
@@ -800,17 +867,17 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.emergencyContainer}>
             <View style={styles.emergencyHeader}>
               <Text style={styles.emergencyTitle}>Emergencia en curso</Text>
-              <View style={styles.pulseIndicator}>
+              <Animated.View style={[styles.pulseIndicator, { transform: [{ scale: pulseAnim }] }]}>
                 <Text>
                   <Ionicons name="alert-circle" size={24} color="#F44336" />
                 </Text>
-              </View>
+              </Animated.View>
             </View>
             
             {/* Mostrar el estado de la emergencia y el veterinario */}
             {/* Mensaje general si no hay veterinario asignado aún pero la emergencia está activa */}
             {activeEmergencyVet.vetAssigned === false && activeEmergencyVet.status !== 'Cancelada' && activeEmergencyVet.status !== 'Finalizada' && (
-              <View style={[styles.statusBanner, { backgroundColor: '#FF9800' }]}>
+              <Animated.View style={[styles.statusBanner, { backgroundColor: '#FF9800', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Text>
                   <Ionicons name="hourglass-outline" size={16} color="#fff" />
                 </Text>
@@ -819,46 +886,46 @@ const HomeScreen = ({ navigation }) => {
                    activeEmergencyVet.status === 'Asignada' ? 'Veterinario asignado. Esperando confirmación...' : 
                    'Procesando emergencia...'}
                 </Text>
-              </View>
+              </Animated.View>
             )}
 
             {/* Banners específicos cuando el veterinario está asignado */}
             {activeEmergencyVet.vetAssigned !== false && activeEmergencyVet.status === 'Asignada' && (
-              <View style={[styles.statusBanner, { backgroundColor: '#FFC107' }]}>
+              <Animated.View style={[styles.statusBanner, { backgroundColor: '#FFC107', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Text>
                   <Ionicons name="time-outline" size={16} color="#fff" />
                 </Text>
                 <Text style={styles.statusBannerText}>
                   Esperando confirmación del veterinario...
                 </Text>
-              </View>
+              </Animated.View>
             )}
             
             {activeEmergencyVet.status === 'En camino' && (
-              <View style={[styles.statusBanner, { backgroundColor: '#4CAF50' }]}>
+              <Animated.View style={[styles.statusBanner, { backgroundColor: '#4CAF50', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="checkmark-circle" size={16} color="#fff" />
                 <Text style={styles.statusBannerText}>
                   ¡Veterinario aceptó la solicitud y está en camino!
                 </Text>
-              </View>
+              </Animated.View>
             )}
             
             {activeEmergencyVet.status === 'En atención' && (
-              <View style={[styles.statusBanner, { backgroundColor: '#2196F3' }]}>
+              <Animated.View style={[styles.statusBanner, { backgroundColor: '#2196F3', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="medkit" size={16} color="#fff" />
                 <Text style={styles.statusBannerText}>
                   El veterinario está atendiendo a tu mascota
                 </Text>
-              </View>
+              </Animated.View>
             )}
             
             {activeEmergencyVet.status === 'Confirmada' && (
-              <View style={[styles.statusBanner, { backgroundColor: '#4CAF50' }]}>
+              <Animated.View style={[styles.statusBanner, { backgroundColor: '#4CAF50', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="checkmark-circle" size={16} color="#fff" />
                 <Text style={styles.statusBannerText}>
                   ¡Servicio confirmado! El veterinario confirmo la emergencia.
                 </Text>
-              </View>
+              </Animated.View>
             )}
             
             <View style={styles.emergencyContent}>
@@ -1013,7 +1080,12 @@ const HomeScreen = ({ navigation }) => {
         )}
 
         {/* Veterinarios disponibles ahora */}
-        <View style={styles.sectionContainer}>
+        <Animated.View style={[styles.sectionContainer, {
+          opacity: section1Anim,
+          transform: [{ translateY: section1Anim.interpolate({
+            inputRange: [0, 1], outputRange: [24, 0]
+          })}]
+        }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Veterinarios disponibles</Text>
             <TouchableOpacity onPress={() => navigation.navigate('AllVetsScreen', { filter: 'available' })}>
@@ -1045,10 +1117,15 @@ const HomeScreen = ({ navigation }) => {
               )}
             />
           )}
-        </View>
+        </Animated.View>
         
         {/* Prestadores destacados */}
-        <View style={styles.sectionContainer}>
+        <Animated.View style={[styles.sectionContainer, {
+          opacity: section2Anim,
+          transform: [{ translateY: section2Anim.interpolate({
+            inputRange: [0, 1], outputRange: [24, 0]
+          })}]
+        }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Prestadores destacados</Text>
             <TouchableOpacity onPress={() => navigation.navigate('PrestaDetailsScreen', { filter: 'featured' })}>
@@ -1076,10 +1153,15 @@ const HomeScreen = ({ navigation }) => {
               </View>
             )}
           />
-        </View>
+        </Animated.View>
 
         {/* Consejos de salud */}
-        <View style={[styles.sectionContainer, styles.lastSection]}>
+        <Animated.View style={[styles.sectionContainer, styles.lastSection, {
+          opacity: section3Anim,
+          transform: [{ translateY: section3Anim.interpolate({
+            inputRange: [0, 1], outputRange: [24, 0]
+          })}]
+        }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Consejos de salud</Text>
             <TouchableOpacity onPress={() => navigation.navigate('HealthTips')}>
@@ -1153,7 +1235,7 @@ const HomeScreen = ({ navigation }) => {
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );

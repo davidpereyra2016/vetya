@@ -23,38 +23,51 @@ import useCitaStore from '../../store/useCitaStore';
 // CAMBIO: Se actualizó el nombre del primer paso para mayor claridad.
 const Stepper = ({ currentStep }) => {
   const steps = ['Prestador', 'Mascota', 'Fecha', 'Confirmar'];
+  
+  // Calculamos el ancho de la línea de progreso
+  const progressPercentage = ((currentStep - 1) / (steps.length - 1)) * 100;
+
   return (
-    <View style={newStyles.stepperContainer}>
-      {steps.map((step, index) => {
-        const stepNumber = index + 1;
-        const isCompleted = currentStep > stepNumber;
-        const isActive = currentStep === stepNumber;
-        return (
-          <React.Fragment key={step}>
-            <View style={newStyles.step}>
-              <View style={[
-                newStyles.stepCircle,
-                isActive && newStyles.activeStepCircle,
-                isCompleted && newStyles.completedStepCircle,
-              ]}>
-                {isCompleted ? (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
-                ) : (
-                  <Text style={[
-                    newStyles.stepNumber,
-                    isActive && newStyles.activeStepText
-                  ]}>{stepNumber}</Text>
-                )}
+    <View style={newStyles.stepperCard}>
+      <View style={newStyles.stepperWrapper}>
+        {/* Línea de fondo (Gris) */}
+        <View style={newStyles.progressTrack} />
+        {/* Línea de progreso (Azul/Verde) */}
+        <View style={[newStyles.progressFill, { width: `${progressPercentage * 0.8}%` }]} />
+        
+        {/* Contenedor de los pasos */}
+        <View style={newStyles.stepsContainer}>
+          {steps.map((step, index) => {
+            const stepNumber = index + 1;
+            const isCompleted = currentStep > stepNumber;
+            const isActive = currentStep === stepNumber;
+            
+            return (
+              <View key={step} style={newStyles.stepNode}>
+                <View style={[
+                  newStyles.stepCircle,
+                  isActive && newStyles.activeStepCircle,
+                  isCompleted && newStyles.completedStepCircle,
+                ]}>
+                  {isCompleted ? (
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                  ) : (
+                    <Text style={[
+                      newStyles.stepNumber,
+                      isActive && newStyles.activeStepText
+                    ]}>{stepNumber}</Text>
+                  )}
+                </View>
+                <Text style={[
+                  newStyles.stepLabel,
+                  isActive && newStyles.activeStepLabel,
+                  isCompleted && newStyles.completedStepLabel
+                ]}>{step}</Text>
               </View>
-              <Text style={[
-                newStyles.stepLabel,
-                isActive && newStyles.activeStepLabel
-              ]}>{step}</Text>
-            </View>
-            {index < steps.length - 1 && <View style={[newStyles.stepperLine, isCompleted && newStyles.completedStepperLine]} />}
-          </React.Fragment>
-        );
-      })}
+            );
+          })}
+        </View>
+      </View>
     </View>
   );
 };
@@ -595,8 +608,8 @@ const newStyles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingBottom: 40,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -617,72 +630,97 @@ const newStyles = StyleSheet.create({
     color: '#fff',
     marginLeft: 15,
   },
-  stepperContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+  stepperCard: {
     backgroundColor: '#fff',
-    marginHorizontal: 15,
-    marginTop: 15,
-    marginBottom: 10,
-    borderRadius: 15,
+    marginHorizontal: 20,
+    marginTop: -20,
+    marginBottom: 15,
+    borderRadius: 20,
+    paddingVertical: 25,
+    paddingHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 10,
+  },
+  stepperWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  progressTrack: {
+    position: 'absolute',
+    top: 20,
+    left: '10%',
+    right: '10%',
+    height: 4,
+    backgroundColor: '#EEF2F6',
+    borderRadius: 2,
+  },
+  progressFill: {
+    position: 'absolute',
+    top: 20,
+    left: '10%',
+    height: 4,
+    backgroundColor: '#4CAF50',
+    borderRadius: 2,
+  },
+  stepsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  stepNode: {
+    alignItems: 'center',
+    width: 70,
+  },
+  stepCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#EEF2F6',
+    marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: 3,
     elevation: 2,
-  },
-  step: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  stepCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F5F7FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
   },
   activeStepCircle: {
     borderColor: '#1E88E5',
     backgroundColor: '#E3F2FD',
+    transform: [{ scale: 1.1 }],
   },
   completedStepCircle: {
     backgroundColor: '#4CAF50',
     borderColor: '#4CAF50',
   },
   stepNumber: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 'bold',
-    color: '#999',
+    color: '#9E9E9E',
   },
   activeStepText: {
     color: '#1E88E5',
   },
   stepLabel: {
     fontSize: 11,
-    color: '#999',
-    marginTop: 6,
-    fontWeight: '500',
+    color: '#9E9E9E',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   activeStepLabel: {
     color: '#1E88E5',
-    fontWeight: '600',
+    fontWeight: '800',
   },
-  stepperLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: -20,
-    top: -16
-  },
-  completedStepperLine: {
-    backgroundColor: '#4CAF50',
+  completedStepLabel: {
+    color: '#4CAF50',
+    fontWeight: '700',
   },
   content: {
     paddingHorizontal: 20,
