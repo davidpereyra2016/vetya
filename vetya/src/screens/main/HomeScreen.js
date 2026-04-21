@@ -16,6 +16,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import ServiceCard from '../../components/ServiceCard';
+import BannerPublicitario from '../../components/BannerPublicitario';
 import useEmergencyStore from '../../store/useEmergencyStore';
 import useCitaStore from '../../store/useCitaStore';
 import usePrestadoresStore from '../../store/usePrestadoresStore';
@@ -841,6 +842,9 @@ const HomeScreen = ({ navigation }) => {
             />
           </View>
         </Animated.View>
+
+        {/* ─── BANNER PUBLICITARIO ADAPTADO AQUÍ ─── */}
+        <BannerPublicitario />
 
         {/* Servicios */}
         <View style={styles.sectionContainer}>
