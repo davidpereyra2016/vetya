@@ -15,6 +15,7 @@ import disponibilidadRoutes from "./disponibilidadRoutes.js";
 import clientRoutes from "./clientRoutes.js"; // Importar las nuevas rutas de clientes
 import countPacientesRoutes from "./countPacientes.js"; // Importar rutas para conteo de pacientes
 import validacionRoutes from "./validacionRoutes.js"; // Importar rutas para validación de prestadores
+import publicidadRoutes from "./publicidadRoutes.js"; // Rutas para anunciantes, campañas y suscripciones
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.use("/catalogo", catalogoRoutes);
 router.use("/disponibilidad", disponibilidadRoutes);
 router.use("/pacientes", countPacientesRoutes); // Añadir ruta para conteo de pacientes
 router.use("/validacion", validacionRoutes); // Añadir rutas para validación de prestadores
+router.use("/publicidad", publicidadRoutes); // Anunciantes, campañas y suscripciones
 
 // Ruta para verificar si la API está funcionando
 router.get("/", (req, res) => {

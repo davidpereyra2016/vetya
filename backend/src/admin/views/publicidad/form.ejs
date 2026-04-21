@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= suscripcion ? 'Editar' : 'Nueva' %> Suscripción - Vetya Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Nunito', Arial, sans-serif; background-color: #f8f9fc; }
+    .sidebar { min-height: 100vh; }
+    .card { box-shadow: 0 0.15rem 1.75rem 0 rgba(58,59,69,.15); border: none; }
+    .section-title { font-size: .85rem; text-transform: uppercase; color: #4e73df; font-weight: 700; letter-spacing: .5px; border-bottom: 2px solid #e3e6f0; padding-bottom: .5rem; margin-bottom: 1rem; }
+    .preview-img { width: 100px; height: 70px; object-fit: cover; border-radius: 6px; border: 2px solid #e3e6f0; }
+    .drop-zone { border: 2px dashed #bac8f3; border-radius: 10px; padding: 30px; text-align: center; background: #f8f9fc; cursor: pointer; transition: all .2s; }
+    .drop-zone:hover { background: #eef2ff; border-color: #4e73df; }
+    .drop-zone.dragover { background: #e8eefc; border-color: #2e59d9; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'publicidad'; %>
+      <%- include('../partials/sidebar') %>
+
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">
+            <i class="fas fa-bullhorn me-2 text-primary"></i>
+            <%= suscripcion ? 'Editar Suscripción' : 'Nueva Suscripción Publicitaria' %>
+          </h1>
+          <a href="/admin/publicidad" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Volver</a>
+        </div>
+
+        <% if (error) { %>
+          <div class="alert alert-danger alert-dismissible fade show"><%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+
+        <form method="POST"
+              action="<%= suscripcion ? '/admin/publicidad/' + suscripcion._id + '/editar' : '/admin/publicidad/nueva' %>"
+              enctype="multipart/form-data">
+
+          <div class="row">
+            <!-- Columna 1: Anunciante -->
+            <div class="col-lg-6 mb-4">
+              <div class="card h-100">
+                <div class="card-body">
+                  <div class="section-title"><i class="fas fa-building me-2"></i>Anunciante</div>
+
+                  <% if (!suscripcion) { %>
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Seleccionar anunciante existente o crear nuevo</label>
+                      <select name="anuncianteId" id="anuncianteSelect" class="form-select" onchange="toggleNuevoAnunciante()">
+                        <option value="__nuevo__">➕ Crear nuevo anunciante</option>
+                        <% anunciantes.forEach(a => { %>
+                          <option value="<%= a._id %>"><%= a.nombreNegocio %> - <%= a.nombre %> <%= a.apellido %></option>
+                        <% }); %>
+                      </select>
+                    </div>
+
+                    <div id="nuevoAnuncianteFields">
+                      <div class="row">
+                        <div class="col-md-6 mb-3">
+                          <label class="form-label">Nombre *</label>
+                          <input type="text" name="nombre" class="form-control" placeholder="Juan">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <label class="form-label">Apellido *</label>
+                          <input type="text" name="apellido" class="form-control" placeholder="Pérez">
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Nombre del negocio *</label>
+                        <input type="text" name="nombreNegocio" class="form-control" placeholder="Pet Shop Feliz">
+                      </div>
+                      <div class="row">
+                        <div class="col-md-6 mb-3">
+                          <label class="form-label">Teléfono *</label>
+                          <input type="text" name="telefono" class="form-control" placeholder="+54 11 1234 5678">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <label class="form-label">Email</label>
+                          <input type="email" name="email" class="form-control" placeholder="contacto@negocio.com">
+                        </div>
+                      </div>
+                    </div>
+                  <% } else { %>
+                    <!-- Modo edición: mostrar datos del anunciante en solo lectura -->
+                    <div class="alert alert-info">
+                      <strong><%= suscripcion.anunciante.nombreNegocio %></strong><br>
+                      <%= suscripcion.anunciante.nombre %> <%= suscripcion.anunciante.apellido %><br>
+                      <i class="fas fa-phone me-1"></i><%= suscripcion.anunciante.telefono %>
+                      <% if (suscripcion.anunciante.email) { %><br><i class="fas fa-envelope me-1"></i><%= suscripcion.anunciante.email %><% } %>
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 2: Suscripción -->
+            <div class="col-lg-6 mb-4">
+              <div class="card h-100">
+                <div class="card-body">
+                  <div class="section-title"><i class="fas fa-file-invoice-dollar me-2"></i>Datos de la suscripción</div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold">Cuota mensual (ARS) *</label>
+                    <div class="input-group">
+                      <span class="input-group-text">$</span>
+                      <input type="number" step="0.01" min="0" name="cuotaMensual" class="form-control"
+                             value="<%= suscripcion ? suscripcion.cuotaMensual : '' %>" required>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label fw-semibold">Fecha de inicio *</label>
+                      <input type="date" name="fechaInicio" class="form-control" required
+                             value="<%= suscripcion ? new Date(suscripcion.fechaInicio).toISOString().slice(0,10) : '' %>">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label class="form-label fw-semibold">Fecha de fin *</label>
+                      <input type="date" name="fechaFin" class="form-control" required
+                             value="<%= suscripcion ? new Date(suscripcion.fechaFin).toISOString().slice(0,10) : '' %>">
+                    </div>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label fw-semibold">Estado</label>
+                    <select name="estado" class="form-select">
+                      <% ['activa','pausada','vencida','cancelada'].forEach(e => { %>
+                        <option value="<%= e %>" <%= (suscripcion && suscripcion.estado === e) || (!suscripcion && e === 'activa') ? 'selected' : '' %>><%= e.charAt(0).toUpperCase() + e.slice(1) %></option>
+                      <% }); %>
+                    </select>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Notas internas</label>
+                    <textarea name="notas" rows="2" class="form-control"><%= suscripcion ? suscripcion.notas || '' : '' %></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campaña y Banners -->
+          <div class="card mb-4">
+            <div class="card-body">
+              <div class="section-title"><i class="fas fa-images me-2"></i>Campaña publicitaria & Banners</div>
+
+              <div class="row">
+                <div class="col-md-5 mb-3">
+                  <label class="form-label fw-semibold">Título de la campaña</label>
+                  <input type="text" name="titulo" class="form-control" placeholder="Ej: Promoción navideña"
+                         value="<%= suscripcion && suscripcion.campana ? suscripcion.campana.titulo || '' : '' %>">
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label fw-semibold">URL de destino (enlace)</label>
+                  <input type="url" name="enlace" class="form-control" placeholder="https://negocio.com">
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label fw-semibold">Límite de banners *</label>
+                  <input type="number" min="1" max="20" name="limiteBanners" class="form-control"
+                         value="<%= suscripcion && suscripcion.campana ? suscripcion.campana.limiteBanners : 3 %>" required>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Descripción</label>
+                <textarea name="descripcion" rows="2" class="form-control" placeholder="Descripción de la campaña..."><%= suscripcion && suscripcion.campana ? suscripcion.campana.descripcion || '' : '' %></textarea>
+              </div>
+
+              <label class="form-label fw-semibold">
+                <i class="fas fa-cloud-upload-alt me-2"></i>
+                Subir imágenes (JPG, PNG, GIF, WEBP - máx 10MB cada una)
+              </label>
+              <div class="drop-zone" onclick="document.getElementById('imageInput').click()" id="dropZone">
+                <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2"></i>
+                <p class="mb-1 fw-semibold">Click aquí o arrastra las imágenes</p>
+                <p class="text-muted small mb-0">Puedes subir múltiples imágenes a la vez</p>
+                <input type="file" id="imageInput" name="imagenes" accept="image/*" multiple hidden onchange="previewImages(this)">
+              </div>
+
+              <div id="previewContainer" class="mt-3 d-flex gap-2 flex-wrap"></div>
+
+              <% if (suscripcion && suscripcion.campana && suscripcion.campana.banners && suscripcion.campana.banners.length > 0) { %>
+                <hr>
+                <label class="form-label fw-semibold">Banners existentes</label>
+                <div class="d-flex gap-3 flex-wrap">
+                  <% suscripcion.campana.banners.forEach(b => { %>
+                    <div class="position-relative">
+                      <img src="<%= b.urlImagen %>" class="preview-img" alt="banner">
+                    </div>
+                  <% }); %>
+                </div>
+                <small class="text-muted d-block mt-2"><i class="fas fa-info-circle"></i> Para eliminar banners existentes, usa la vista de detalle.</small>
+              <% } %>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end mb-5">
+            <a href="/admin/publicidad" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i><%= suscripcion ? 'Guardar cambios' : 'Crear suscripción' %>
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function toggleNuevoAnunciante() {
+      const sel = document.getElementById('anuncianteSelect');
+      const fields = document.getElementById('nuevoAnuncianteFields');
+      if (!fields) return;
+      const esNuevo = sel.value === '__nuevo__';
+      fields.style.display = esNuevo ? '' : 'none';
+      fields.querySelectorAll('input').forEach(i => {
+        if (['nombre','apellido','telefono','nombreNegocio'].includes(i.name)) {
+          i.required = esNuevo;
+        }
+      });
+    }
+    // init
+    if (document.getElementById('anuncianteSelect')) toggleNuevoAnunciante();
+
+    // Preview de imágenes
+    function previewImages(input) {
+      const container = document.getElementById('previewContainer');
+      container.innerHTML = '';
+      if (!input.files) return;
+      Array.from(input.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.className = 'preview-img';
+          container.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Drag & Drop
+    const dz = document.getElementById('dropZone');
+    const input = document.getElementById('imageInput');
+    ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+    ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
+    dz.addEventListener('drop', e => {
+      input.files = e.dataTransfer.files;
+      previewImages(input);
+    });
+  </script>
+</body>
+</html>

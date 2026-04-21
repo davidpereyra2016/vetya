@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle Suscripción - Vetya Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Nunito', Arial, sans-serif; background-color: #f8f9fc; }
+    .sidebar { min-height: 100vh; }
+    .card { box-shadow: 0 0.15rem 1.75rem 0 rgba(58,59,69,.15); border: none; }
+    .section-title { font-size: .85rem; text-transform: uppercase; color: #4e73df; font-weight: 700; letter-spacing: .5px; border-bottom: 2px solid #e3e6f0; padding-bottom: .5rem; margin-bottom: 1rem; }
+    .banner-card { border: 2px solid #e3e6f0; border-radius: 10px; overflow: hidden; transition: all .2s; }
+    .banner-card:hover { transform: translateY(-3px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.1); }
+    .banner-card img { width: 100%; height: 180px; object-fit: cover; display: block; }
+    .info-label { font-size: .8rem; color: #858796; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .info-value { font-size: 1rem; color: #5a5c69; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <% const activeMenu = 'publicidad'; %>
+      <%- include('../partials/sidebar') %>
+
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+        <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2"><i class="fas fa-bullhorn me-2 text-primary"></i>Detalle de Suscripción</h1>
+          <div>
+            <a href="/admin/publicidad" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Volver</a>
+            <a href="/admin/publicidad/<%= suscripcion._id %>/editar" class="btn btn-warning text-white"><i class="fas fa-edit me-2"></i>Editar</a>
+          </div>
+        </div>
+
+        <% if (mensaje) { %>
+          <div class="alert alert-success alert-dismissible fade show"><%= mensaje %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+        <% if (error) { %>
+          <div class="alert alert-danger alert-dismissible fade show"><%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        <% } %>
+
+        <div class="row">
+          <!-- Anunciante -->
+          <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="section-title"><i class="fas fa-building me-2"></i>Anunciante</div>
+                <% if (suscripcion.anunciante) { %>
+                  <h5 class="mb-3"><%= suscripcion.anunciante.nombreNegocio %></h5>
+                  <div class="row">
+                    <div class="col-6 mb-3"><div class="info-label">Nombre</div><div class="info-value"><%= suscripcion.anunciante.nombre %> <%= suscripcion.anunciante.apellido %></div></div>
+                    <div class="col-6 mb-3"><div class="info-label">Teléfono</div><div class="info-value"><%= suscripcion.anunciante.telefono %></div></div>
+                    <% if (suscripcion.anunciante.email) { %>
+                      <div class="col-12 mb-3"><div class="info-label">Email</div><div class="info-value"><%= suscripcion.anunciante.email %></div></div>
+                    <% } %>
+                  </div>
+                <% } else { %>
+                  <p class="text-muted">Anunciante no disponible</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+
+          <!-- Suscripción -->
+          <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="section-title"><i class="fas fa-file-invoice-dollar me-2"></i>Suscripción</div>
+                <div class="row">
+                  <div class="col-6 mb-3"><div class="info-label">Cuota mensual</div><div class="info-value text-success">$<%= (suscripcion.cuotaMensual || 0).toLocaleString('es-AR') %></div></div>
+                  <div class="col-6 mb-3">
+                    <div class="info-label">Estado</div>
+                    <%
+                      const estadoClase = {
+                        'activa': 'bg-success',
+                        'pausada': 'bg-warning text-dark',
+                        'vencida': 'bg-secondary',
+                        'cancelada': 'bg-danger'
+                      }[suscripcion.estado] || 'bg-secondary';
+                    %>
+                    <span class="badge <%= estadoClase %> fs-6"><%= suscripcion.estado %></span>
+                  </div>
+                  <div class="col-6 mb-3"><div class="info-label">Fecha inicio</div><div class="info-value"><%= new Date(suscripcion.fechaInicio).toLocaleDateString('es-AR') %></div></div>
+                  <div class="col-6 mb-3"><div class="info-label">Fecha fin</div><div class="info-value"><%= new Date(suscripcion.fechaFin).toLocaleDateString('es-AR') %></div></div>
+                  <% if (suscripcion.notas) { %>
+                    <div class="col-12 mb-2"><div class="info-label">Notas</div><div class="info-value fw-normal"><%= suscripcion.notas %></div></div>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campaña y Banners -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="section-title"><i class="fas fa-images me-2"></i>Campaña publicitaria</div>
+
+            <% if (suscripcion.campana) { %>
+              <div class="row mb-3">
+                <div class="col-md-4"><div class="info-label">Título</div><div class="info-value"><%= suscripcion.campana.titulo || '—' %></div></div>
+                <div class="col-md-4"><div class="info-label">Límite de banners</div><div class="info-value"><%= suscripcion.campana.limiteBanners %></div></div>
+                <div class="col-md-4"><div class="info-label">Banners subidos</div><div class="info-value"><%= (suscripcion.campana.banners || []).length %></div></div>
+                <% if (suscripcion.campana.descripcion) { %>
+                  <div class="col-12 mt-2"><div class="info-label">Descripción</div><div class="info-value fw-normal"><%= suscripcion.campana.descripcion %></div></div>
+                <% } %>
+              </div>
+
+              <hr>
+
+              <% const banners = suscripcion.campana.banners || []; %>
+              <% if (banners.length > 0) { %>
+                <h6 class="fw-bold mb-3">Banners (<%= banners.length %>)</h6>
+                <div class="row g-3">
+                  <% banners.forEach(b => { %>
+                    <div class="col-md-4 col-lg-3">
+                      <div class="banner-card">
+                        <img src="<%= b.urlImagen %>" alt="banner">
+                        <div class="p-2">
+                          <% if (b.enlace) { %>
+                            <small class="text-muted d-block text-truncate mb-2"><i class="fas fa-link me-1"></i><%= b.enlace %></small>
+                          <% } %>
+                          <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge <%= b.activo ? 'bg-success' : 'bg-secondary' %>"><%= b.activo ? 'Activo' : 'Inactivo' %></span>
+                            <form action="/admin/publicidad/<%= suscripcion._id %>/banner/<%= b._id %>/eliminar" method="POST" onsubmit="return confirm('¿Eliminar este banner?');">
+                              <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              <% } else { %>
+                <div class="text-center py-4 text-muted">
+                  <i class="fas fa-image fa-3x mb-2 text-gray-300"></i>
+                  <p>No hay banners subidos todavía.</p>
+                  <a href="/admin/publicidad/<%= suscripcion._id %>/editar" class="btn btn-primary btn-sm"><i class="fas fa-plus me-1"></i>Subir banners</a>
+                </div>
+              <% } %>
+            <% } else { %>
+              <p class="text-muted">Esta suscripción no tiene campaña asociada.</p>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="text-end mb-5">
+          <form action="/admin/publicidad/<%= suscripcion._id %>/eliminar" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar definitivamente esta suscripción y todos sus banners?');">
+            <button type="submit" class="btn btn-danger"><i class="fas fa-trash me-2"></i>Eliminar suscripción</button>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

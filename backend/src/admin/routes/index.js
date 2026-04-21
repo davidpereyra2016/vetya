@@ -1,6 +1,8 @@
 import express from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import cloudinary from '../../lib/cloudinary.js';
 import User from '../../models/User.js';
 import Mascota from '../../models/Mascota.js';
 import Cita from '../../models/Cita.js';
@@ -12,6 +14,31 @@ import Prestador from '../../models/Prestador.js';
 import Servicio from '../../models/Servicio.js';
 import Disponibilidad from '../../models/Disponibilidad.js';
 import PrestadorValidacion from '../../models/PrestadorValidacion.js';
+import Anunciante from '../../models/Anunciante.js';
+import CampanaBanner from '../../models/CampanaBanner.js';
+import Suscripcion from '../../models/Suscripcion.js';
+
+// Multer en memoria para uploads del admin (publicidad)
+const uploadMem = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const okExt = allowed.test(file.originalname.toLowerCase());
+    const okMime = allowed.test(file.mimetype);
+    if (okExt && okMime) return cb(null, true);
+    cb(new Error('Solo se permiten imágenes (jpg, jpeg, png, gif, webp)'));
+  },
+});
+
+const uploadBufferToCloudinary = (buffer, folder = 'vetya/publicidad') =>
+  new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'image' },
+      (err, result) => (err ? reject(err) : resolve(result))
+    );
+    stream.end(buffer);
+  });
 
 const router = express.Router();
 
@@ -934,6 +961,324 @@ router.post('/validaciones/:id/decision', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('Error al tomar decisión:', error);
     res.redirect(`/admin/validaciones/${req.params.id}?error=Error al procesar decisión`);
+  }
+});
+
+// =====================================================================
+// MÓDULO PUBLICIDAD - Anunciantes, Campañas de Banners y Suscripciones
+// =====================================================================
+
+// Dashboard del módulo: listado de suscripciones con datos cruzados
+router.get('/publicidad', isAuthenticated, async (req, res) => {
+  try {
+    const [suscripciones, anunciantes, campanas] = await Promise.all([
+      Suscripcion.find()
+        .populate('anunciante', 'nombre apellido nombreNegocio telefono email')
+        .populate('campana', 'titulo limiteBanners banners')
+        .sort({ createdAt: -1 })
+        .lean(),
+      Anunciante.find().lean(),
+      CampanaBanner.find().lean(),
+    ]);
+
+    const hoy = new Date();
+    const estadisticas = {
+      totalAnunciantes: anunciantes.length,
+      totalCampanas: campanas.length,
+      totalSuscripciones: suscripciones.length,
+      suscripcionesActivas: suscripciones.filter(
+        (s) =>
+          s.estado === 'activa' &&
+          new Date(s.fechaInicio) <= hoy &&
+          new Date(s.fechaFin) >= hoy
+      ).length,
+      ingresoMensual: suscripciones
+        .filter(
+          (s) =>
+            s.estado === 'activa' &&
+            new Date(s.fechaInicio) <= hoy &&
+            new Date(s.fechaFin) >= hoy
+        )
+        .reduce((sum, s) => sum + (s.cuotaMensual || 0), 0),
+    };
+
+    res.render('publicidad/index', {
+      suscripciones,
+      estadisticas,
+      adminToken: res.locals.adminToken,
+      mensaje: req.query.mensaje || null,
+      error: req.query.error || null,
+    });
+  } catch (error) {
+    console.error('Error al cargar módulo publicidad:', error);
+    res.render('publicidad/index', {
+      suscripciones: [],
+      estadisticas: { totalAnunciantes: 0, totalCampanas: 0, totalSuscripciones: 0, suscripcionesActivas: 0, ingresoMensual: 0 },
+      mensaje: null,
+      error: 'Error al cargar datos de publicidad: ' + error.message,
+    });
+  }
+});
+
+// Formulario para crear nueva suscripción + campaña con banners
+router.get('/publicidad/nueva', isAuthenticated, async (req, res) => {
+  try {
+    const anunciantes = await Anunciante.find({ activo: true }).sort({ nombreNegocio: 1 }).lean();
+    res.render('publicidad/form', {
+      anunciantes,
+      suscripcion: null,
+      error: req.query.error || null,
+    });
+  } catch (error) {
+    res.redirect('/admin/publicidad?error=' + encodeURIComponent(error.message));
+  }
+});
+
+// Crear suscripción (con posibilidad de crear anunciante y campaña en el mismo flujo)
+router.post(
+  '/publicidad/nueva',
+  isAuthenticated,
+  uploadMem.array('imagenes', 10),
+  async (req, res) => {
+    try {
+      const {
+        anuncianteId,
+        nombre,
+        apellido,
+        telefono,
+        nombreNegocio,
+        email,
+        titulo,
+        descripcion,
+        limiteBanners,
+        enlace,
+        cuotaMensual,
+        fechaInicio,
+        fechaFin,
+        estado,
+        notas,
+      } = req.body;
+
+      // 1. Resolver anunciante (existente o nuevo)
+      let anunciante;
+      if (anuncianteId && anuncianteId !== '__nuevo__') {
+        anunciante = await Anunciante.findById(anuncianteId);
+        if (!anunciante) throw new Error('Anunciante no encontrado');
+      } else {
+        if (!nombre || !apellido || !telefono || !nombreNegocio) {
+          throw new Error('Faltan datos del anunciante');
+        }
+        anunciante = await Anunciante.create({
+          nombre,
+          apellido,
+          telefono,
+          nombreNegocio,
+          email: email || '',
+        });
+      }
+
+      // 2. Crear la campaña con banners (si hay imágenes)
+      const banners = [];
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          const up = await uploadBufferToCloudinary(file.buffer);
+          banners.push({
+            urlImagen: up.secure_url,
+            publicId: up.public_id,
+            enlace: enlace || '',
+            activo: true,
+          });
+        }
+      }
+
+      const campana = await CampanaBanner.create({
+        anunciante: anunciante._id,
+        titulo: titulo || '',
+        descripcion: descripcion || '',
+        limiteBanners: Number(limiteBanners) || Math.max(banners.length, 1),
+        banners,
+      });
+
+      // 3. Crear la suscripción
+      if (!cuotaMensual || !fechaInicio || !fechaFin) {
+        throw new Error('Faltan datos de la suscripción');
+      }
+
+      await Suscripcion.create({
+        anunciante: anunciante._id,
+        campana: campana._id,
+        cuotaMensual: Number(cuotaMensual),
+        fechaInicio: new Date(fechaInicio),
+        fechaFin: new Date(fechaFin),
+        estado: estado || 'activa',
+        notas: notas || '',
+      });
+
+      res.redirect('/admin/publicidad?mensaje=' + encodeURIComponent('Suscripción creada correctamente'));
+    } catch (error) {
+      console.error('Error al crear publicidad:', error);
+      res.redirect('/admin/publicidad/nueva?error=' + encodeURIComponent(error.message));
+    }
+  }
+);
+
+// Ver detalle de una suscripción + su campaña
+router.get('/publicidad/:id', isAuthenticated, async (req, res) => {
+  try {
+    const suscripcion = await Suscripcion.findById(req.params.id)
+      .populate('anunciante')
+      .populate('campana')
+      .lean();
+
+    if (!suscripcion) return res.redirect('/admin/publicidad?error=Suscripci%C3%B3n no encontrada');
+
+    res.render('publicidad/detalle', {
+      suscripcion,
+      mensaje: req.query.mensaje || null,
+      error: req.query.error || null,
+    });
+  } catch (error) {
+    console.error(error);
+    res.redirect('/admin/publicidad?error=' + encodeURIComponent(error.message));
+  }
+});
+
+// Formulario de edición
+router.get('/publicidad/:id/editar', isAuthenticated, async (req, res) => {
+  try {
+    const suscripcion = await Suscripcion.findById(req.params.id)
+      .populate('anunciante')
+      .populate('campana')
+      .lean();
+    if (!suscripcion) return res.redirect('/admin/publicidad');
+
+    const anunciantes = await Anunciante.find().sort({ nombreNegocio: 1 }).lean();
+    res.render('publicidad/form', {
+      suscripcion,
+      anunciantes,
+      error: req.query.error || null,
+    });
+  } catch (error) {
+    res.redirect('/admin/publicidad?error=' + encodeURIComponent(error.message));
+  }
+});
+
+// Actualizar suscripción + campaña (y subir nuevos banners opcionales)
+router.post(
+  '/publicidad/:id/editar',
+  isAuthenticated,
+  uploadMem.array('imagenes', 10),
+  async (req, res) => {
+    try {
+      const suscripcion = await Suscripcion.findById(req.params.id);
+      if (!suscripcion) throw new Error('Suscripción no encontrada');
+
+      const {
+        titulo,
+        descripcion,
+        limiteBanners,
+        enlace,
+        cuotaMensual,
+        fechaInicio,
+        fechaFin,
+        estado,
+        notas,
+      } = req.body;
+
+      // Actualizar suscripción
+      if (cuotaMensual !== undefined) suscripcion.cuotaMensual = Number(cuotaMensual);
+      if (fechaInicio) suscripcion.fechaInicio = new Date(fechaInicio);
+      if (fechaFin) suscripcion.fechaFin = new Date(fechaFin);
+      if (estado) suscripcion.estado = estado;
+      if (notas !== undefined) suscripcion.notas = notas;
+      await suscripcion.save();
+
+      // Actualizar campaña asociada
+      if (suscripcion.campana) {
+        const campana = await CampanaBanner.findById(suscripcion.campana);
+        if (campana) {
+          if (titulo !== undefined) campana.titulo = titulo;
+          if (descripcion !== undefined) campana.descripcion = descripcion;
+          if (limiteBanners !== undefined) campana.limiteBanners = Number(limiteBanners);
+
+          if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+              const up = await uploadBufferToCloudinary(file.buffer);
+              campana.banners.push({
+                urlImagen: up.secure_url,
+                publicId: up.public_id,
+                enlace: enlace || '',
+                activo: true,
+              });
+            }
+          }
+          await campana.save();
+        }
+      }
+
+      res.redirect('/admin/publicidad/' + req.params.id + '?mensaje=' + encodeURIComponent('Actualizado correctamente'));
+    } catch (error) {
+      console.error(error);
+      res.redirect('/admin/publicidad/' + req.params.id + '/editar?error=' + encodeURIComponent(error.message));
+    }
+  }
+);
+
+// Eliminar banner individual
+router.post('/publicidad/:id/banner/:bannerId/eliminar', isAuthenticated, async (req, res) => {
+  try {
+    const suscripcion = await Suscripcion.findById(req.params.id);
+    if (!suscripcion || !suscripcion.campana) throw new Error('No encontrada');
+
+    const campana = await CampanaBanner.findById(suscripcion.campana);
+    if (!campana) throw new Error('Campaña no encontrada');
+
+    const banner = campana.banners.id(req.params.bannerId);
+    if (banner) {
+      if (banner.publicId) {
+        try {
+          await cloudinary.uploader.destroy(banner.publicId);
+        } catch (err) {
+          console.warn('Cloudinary delete error:', err.message);
+        }
+      }
+      banner.deleteOne();
+      await campana.save();
+    }
+
+    res.redirect('/admin/publicidad/' + req.params.id + '?mensaje=' + encodeURIComponent('Banner eliminado'));
+  } catch (error) {
+    res.redirect('/admin/publicidad/' + req.params.id + '?error=' + encodeURIComponent(error.message));
+  }
+});
+
+// Eliminar suscripción completa (incluye campaña y sus imágenes)
+router.post('/publicidad/:id/eliminar', isAuthenticated, async (req, res) => {
+  try {
+    const suscripcion = await Suscripcion.findById(req.params.id);
+    if (!suscripcion) throw new Error('No encontrada');
+
+    if (suscripcion.campana) {
+      const campana = await CampanaBanner.findById(suscripcion.campana);
+      if (campana) {
+        for (const b of campana.banners || []) {
+          if (b.publicId) {
+            try {
+              await cloudinary.uploader.destroy(b.publicId);
+            } catch (err) {
+              console.warn('Cloudinary delete error:', err.message);
+            }
+          }
+        }
+        await campana.deleteOne();
+      }
+    }
+
+    await suscripcion.deleteOne();
+    res.redirect('/admin/publicidad?mensaje=' + encodeURIComponent('Suscripción eliminada'));
+  } catch (error) {
+    console.error(error);
+    res.redirect('/admin/publicidad?error=' + encodeURIComponent(error.message));
   }
 });
 
