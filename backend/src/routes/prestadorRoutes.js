@@ -161,6 +161,7 @@ router.get('/tipo/:tipo', async (req, res) => {
 router.get('/emergencias', async (req, res) => {
   try {
     const prestadoresDb = await Prestador.find({
+      tipo: 'Veterinario',
       disponibleEmergencias: true,
       activo: true
     }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia ubicacionActual radio')
@@ -225,8 +226,9 @@ router.get('/emergencias/disponibles', protectRoute, async (req, res) => {
     clientLat = parseFloat(clientLat);
     clientLng = parseFloat(clientLng);
     
-    // Buscar veterinarios disponibles
+    // Buscar veterinarios disponibles (solo tipo 'Veterinario', no centros)
     const prestadores = await Prestador.find({
+      tipo: 'Veterinario',
       disponibleEmergencias: true,
       activo: true
     }).populate('usuario', 'email username');
@@ -297,8 +299,10 @@ router.get('/emergencias/ubicacion', async (req, res) => {
     console.log('=================================================');
     
     // Buscar prestadores disponibles para emergencias
+    // Solo tipo 'Veterinario' (NO centros), porque /emergencias/asignar exige tipo === 'Veterinario'.
     // Verificar que tengan coordenadas válidas (no solo que exista el campo)
     const query = {
+      tipo: 'Veterinario',
       disponibleEmergencias: true,
       activo: true,
       'ubicacionActual.coordenadas.lat': { $exists: true, $ne: null },
@@ -309,13 +313,15 @@ router.get('/emergencias/ubicacion', async (req, res) => {
     
     // Primero, verificar cuántos prestadores tienen disponibleEmergencias=true
     const totalDisponibles = await Prestador.countDocuments({ 
+      tipo: 'Veterinario',
       disponibleEmergencias: true, 
       activo: true 
     });
-    console.log(`📊 [BACKEND] Total prestadores con disponibleEmergencias=true: ${totalDisponibles}`);
+    console.log(`📊 [BACKEND] Total veterinarios con disponibleEmergencias=true: ${totalDisponibles}`);
     
     // Verificar cuántos tienen ubicacionActual con coordenadas
     const conUbicacion = await Prestador.countDocuments({
+      tipo: 'Veterinario',
       disponibleEmergencias: true,
       activo: true,
       'ubicacionActual.coordenadas.lat': { $exists: true }
