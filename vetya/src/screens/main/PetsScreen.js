@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// Componente modal para agregar mascota - extraído y memoizado
+// Componente modal para agregar mascota - extraído y memoizado (diseño premium)
 const MemoizedAddPetModal = memo(({
   modalVisible,
   setModalVisible,
@@ -57,21 +57,41 @@ const MemoizedAddPetModal = memo(({
     visible={modalVisible}
     onRequestClose={() => setModalVisible(false)}
   >
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.centeredView}
     >
       <View style={styles.modalView}>
+        <View style={styles.modalDragIndicator} />
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Agregar Mascota</Text>
           <TouchableOpacity
             onPress={() => setModalVisible(false)}
+            style={styles.modalCloseBtn}
           >
-            <Ionicons name="close" size={24} color="#333" />
+            <Ionicons name="close" size={22} color="#333" />
           </TouchableOpacity>
         </View>
-        
-        <ScrollView style={styles.modalScrollView}>
+
+        <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
+          {/* Foto (primero, más visual) */}
+          <View style={styles.photoContainer}>
+            <TouchableOpacity
+              style={styles.photoButton}
+              onPress={handleSelectImage}
+              activeOpacity={0.85}
+            >
+              {petImage ? (
+                <Image source={{ uri: petImage.uri }} style={styles.petImagePreview} />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons name="camera" size={30} color="#1E88E5" />
+                  <Text style={styles.photoText}>Agregar foto</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {/* Nombre de mascota */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Nombre *</Text>
@@ -80,57 +100,61 @@ const MemoizedAddPetModal = memo(({
               value={petName}
               onChangeText={setPetName}
               placeholder="Nombre de tu mascota"
+              placeholderTextColor="#AAB0B7"
             />
           </View>
-          
+
           {/* Tipo de mascota */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Tipo de mascota *</Text>
             <View style={styles.selectorContainer}>
-              {petTypes.map((type) => (
-                <TouchableOpacity
-                  key={type.id}
-                  style={[styles.typeOption, petType === type.name && styles.selectedTypeOption]}
-                  onPress={() => handleSelectPetType(type)}
-                >
-                  <View style={styles.typeOptionContent}>
-                    <Ionicons 
-                      name={type.icon} 
-                      size={18} 
-                      color={petType === type.name ? '#fff' : '#1E88E5'} 
+              {petTypes.map((type) => {
+                const selected = petType === type.name;
+                return (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[styles.typeOption, selected && styles.selectedTypeOption]}
+                    onPress={() => handleSelectPetType(type)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={type.icon}
+                      size={16}
+                      color={selected ? '#fff' : '#1E88E5'}
                     />
-                    <Text style={[styles.typeText, petType === type.name && styles.selectedTypeText]}>
+                    <Text style={[styles.typeText, selected && styles.selectedTypeText]}>
                       {type.name}
                     </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
-          
+
           {/* Raza basada en el tipo de mascota */}
           {petType && (
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Raza</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.breedInput}
                 onPress={() => setShowBreedSelector(!showBreedSelector)}
+                activeOpacity={0.85}
               >
                 {petBreed ? (
                   <Text style={styles.breedSelectedText}>{petBreed}</Text>
                 ) : (
                   <Text style={styles.breedPlaceholder}>Selecciona una raza</Text>
                 )}
-                <Ionicons 
-                  name={showBreedSelector ? "chevron-up" : "chevron-down"} 
-                  size={18} 
-                  color="#666" 
+                <Ionicons
+                  name={showBreedSelector ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color="#666"
                 />
               </TouchableOpacity>
-              
+
               {/* Selector de razas */}
               <View style={[styles.breedSelectorContainer, !showBreedSelector && styles.hiddenBreedSelector]}>
-                <ScrollView style={styles.breedsScrollView}>
+                <ScrollView style={styles.breedsScrollView} nestedScrollEnabled>
                   {availableBreeds.map((breed, index) => (
                     <TouchableOpacity
                       key={index}
@@ -146,121 +170,107 @@ const MemoizedAddPetModal = memo(({
               </View>
             </View>
           )}
-          
-          {/* Edad */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Edad *</Text>
-            <TextInput
-              style={styles.input}
-              value={petAge}
-              onChangeText={setPetAge}
-              placeholder="Ej. 2 años, 6 meses"
-            />
+
+          {/* Edad y Peso (fila) */}
+          <View style={styles.inputRow}>
+            <View style={[styles.inputContainer, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.inputLabel}>Edad *</Text>
+              <TextInput
+                style={styles.input}
+                value={petAge}
+                onChangeText={setPetAge}
+                placeholder="Ej. 2 años"
+                placeholderTextColor="#AAB0B7"
+              />
+            </View>
+            <View style={[styles.inputContainer, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>Peso</Text>
+              <TextInput
+                style={styles.input}
+                value={petWeight}
+                onChangeText={setPetWeight}
+                placeholder="Ej. 5.2"
+                placeholderTextColor="#AAB0B7"
+                keyboardType="numeric"
+              />
+            </View>
           </View>
-          
-          {/* Peso */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Peso (opcional)</Text>
-            <TextInput
-              style={styles.input}
-              value={petWeight}
-              onChangeText={setPetWeight}
-              placeholder="Ej. 5.2 kg"
-              keyboardType="numeric"
-            />
-          </View>
-          
+
           {/* Color */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Color (opcional)</Text>
+            <Text style={styles.inputLabel}>Color</Text>
             <TextInput
               style={styles.input}
               value={petColor}
               onChangeText={setPetColor}
               placeholder="Ej. Negro, Blanco, Marrón..."
+              placeholderTextColor="#AAB0B7"
             />
           </View>
-          
+
           {/* Género */}
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Género</Text>
             <View style={styles.genderContainer}>
-              <TouchableOpacity 
-                style={[styles.genderOption, petGender === 'Macho' && styles.selectedGenderOption]}
+              <TouchableOpacity
+                style={[styles.genderOption, petGender === 'Macho' && styles.selectedGenderMale]}
                 onPress={() => handleSelectGender('Macho')}
+                activeOpacity={0.85}
               >
-                <Ionicons 
-                  name="male" 
-                  size={20} 
-                  color={petGender === 'Macho' ? '#fff' : '#1E88E5'} 
+                <Ionicons
+                  name="male"
+                  size={20}
+                  color={petGender === 'Macho' ? '#fff' : '#2196F3'}
                 />
                 <Text style={[styles.genderText, petGender === 'Macho' && styles.selectedGenderText]}>Macho</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.genderOption, petGender === 'Hembra' && styles.selectedGenderOption]}
+
+              <TouchableOpacity
+                style={[styles.genderOption, petGender === 'Hembra' && styles.selectedGenderFemale]}
                 onPress={() => handleSelectGender('Hembra')}
+                activeOpacity={0.85}
               >
-                <Ionicons 
-                  name="female" 
-                  size={20} 
-                  color={petGender === 'Hembra' ? '#fff' : '#1E88E5'} 
+                <Ionicons
+                  name="female"
+                  size={20}
+                  color={petGender === 'Hembra' ? '#fff' : '#E91E63'}
                 />
                 <Text style={[styles.genderText, petGender === 'Hembra' && styles.selectedGenderText]}>Hembra</Text>
               </TouchableOpacity>
             </View>
           </View>
-          
+
           {/* Vacunación */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Información adicional</Text>
-            <View style={styles.switchContainer}>
+          <View style={styles.switchContainer}>
+            <View style={styles.switchLabelWrap}>
+              <Ionicons name="shield-checkmark" size={18} color="#4CAF50" />
               <Text style={styles.switchLabel}>¿Está vacunado?</Text>
-              <Switch
-                value={isVaccinated}
-                onValueChange={setIsVaccinated}
-                trackColor={{ false: '#E0E0E0', true: '#a7d1f5' }}
-                thumbColor={isVaccinated ? '#1E88E5' : '#f4f3f4'}
-              />
             </View>
+            <Switch
+              value={isVaccinated}
+              onValueChange={setIsVaccinated}
+              trackColor={{ false: '#E0E0E0', true: '#A5D6A7' }}
+              thumbColor={isVaccinated ? '#4CAF50' : '#f4f3f4'}
+            />
           </View>
-          
+
           {/* Necesidades especiales */}
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Necesidades especiales (opcional)</Text>
+            <Text style={styles.inputLabel}>Necesidades especiales</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={specialNeeds}
               onChangeText={setSpecialNeeds}
               placeholder="Describe cualquier necesidad especial o condición médica"
+              placeholderTextColor="#AAB0B7"
               multiline
               numberOfLines={4}
             />
           </View>
-          
-          {/* Foto */}
-          <View style={styles.photoContainer}>
-            <Text style={styles.photoText}>Agregar foto</Text>
-            <TouchableOpacity 
-              style={styles.photoButton}
-              onPress={handleSelectImage}
-            >
-              {petImage ? (
-                <Image 
-                  source={{ uri: petImage.uri }} 
-                  style={styles.petImagePreview} 
-                />
-              ) : (
-                <Ionicons name="camera" size={28} color="#1E88E5" />
-              )}
-            </TouchableOpacity>
-          </View>
-          
+
           {/* Botón Guardar */}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={addPet}
-          >
+          <TouchableOpacity style={styles.addButton} onPress={addPet} activeOpacity={0.9}>
+            <Ionicons name="checkmark-circle" size={20} color="#FFF" style={{ marginRight: 8 }} />
             <Text style={styles.addButtonText}>Guardar mascota</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -347,6 +357,25 @@ const PetsScreen = ({ navigation }) => {
     if (selectedPetType === 'all') return pets;
     return pets.filter(pet => pet.tipo === selectedPetType);
   }, [pets, selectedPetType]);
+
+  // Filtros dinámicos: solo mostrar tipos que el usuario realmente tiene registrados.
+  // Ejemplo: si solo tiene un Perro, solo aparece el botón "Perros" (además de "Todas").
+  const availableFilters = useMemo(() => {
+    if (!pets || pets.length === 0) return [];
+    const counts = new Map();
+    pets.forEach((p) => {
+      if (p?.tipo) counts.set(p.tipo, (counts.get(p.tipo) || 0) + 1);
+    });
+    return Array.from(counts.entries()).map(([tipo, count]) => {
+      const meta = petTypes.find((t) => t.name === tipo);
+      return {
+        id: meta?.id || tipo,
+        name: tipo,
+        icon: meta?.icon || 'paw',
+        count
+      };
+    });
+  }, [pets]);
 
   // Cargar mascotas al montar el componente
   useEffect(() => {
@@ -437,46 +466,71 @@ const PetsScreen = ({ navigation }) => {
     setPetImage(null);
   };
 
-  // Renderizar cada mascota con datos del backend
-  const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.petCard}
-      onPress={() => navigation.navigate('PetDetailScreen', { petId: item._id })}
-    >
-      <View style={styles.petImageContainer}>
+  // Renderizar cada mascota con datos del backend (diseño premium)
+  const renderItem = ({ item }) => {
+    const isMale = item.genero === 'Macho';
+    const isFemale = item.genero === 'Hembra';
+    const showGenderBadge = isMale || isFemale;
+
+    return (
+      <TouchableOpacity
+        style={styles.petCard}
+        onPress={() => navigation.navigate('PetDetailScreen', { petId: item._id })}
+        activeOpacity={0.9}
+      >
+        {/* Imagen cuadrada redondeada */}
         {item.imagen ? (
           <Image source={{ uri: item.imagen }} style={styles.petImage} />
         ) : (
-          <View style={styles.petIconContainer}>
-            <Ionicons name="paw" size={40} color="#1E88E5" />
+          <View style={[styles.petImage, styles.petIconContainer]}>
+            <Ionicons name="paw" size={34} color="#1E88E5" />
           </View>
         )}
-      </View>
-      <View style={styles.petInfo}>
-        <Text style={styles.petName}>{item.nombre}</Text>
-        <Text style={styles.petDetails}>{item.tipo} • {item.raza}</Text>
-        <Text style={styles.petAge}>{item.edad}{item.genero ? ` • ${item.genero}` : ''}</Text>
-        
-        {/* Badges para características importantes */}
-        <View style={styles.badgesContainer}>
-          {item.vacunado && (
-            <View style={styles.vaccinatedBadge}>
-              <Ionicons name="checkmark-circle" size={10} color="#fff" />
-              <Text style={styles.vaccinatedText}>Vacunado</Text>
-            </View>
-          )}
+
+        <View style={styles.petInfo}>
+          {/* Nombre + badge de género */}
+          <View style={styles.petHeader}>
+            <Text style={styles.petName} numberOfLines={1}>{item.nombre}</Text>
+            {showGenderBadge && (
+              <View style={[styles.genderBadge, isMale ? styles.maleBg : styles.femaleBg]}>
+                <Ionicons
+                  name={isMale ? 'male' : 'female'}
+                  size={14}
+                  color={isMale ? '#2196F3' : '#E91E63'}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Subtítulo: Raza • Edad */}
+          <Text style={styles.petSubtitle} numberOfLines={1}>
+            {item.raza}{item.edad ? ` • ${item.edad}` : ''}
+          </Text>
+
+          {/* Pills de estado (vacunado + peso) */}
+          <View style={styles.badgesContainer}>
+            {item.vacunado ? (
+              <View style={[styles.statusPill, styles.vaccinatedPill]}>
+                <Ionicons name="shield-checkmark" size={12} color="#4CAF50" />
+                <Text style={styles.vaccinatedPillText}>Vacunado</Text>
+              </View>
+            ) : (
+              <View style={[styles.statusPill, styles.pendingPill]}>
+                <Ionicons name="alert-circle" size={12} color="#FF9800" />
+                <Text style={styles.pendingPillText}>Vacuna Pte.</Text>
+              </View>
+            )}
+
+            {item.peso ? (
+              <View style={[styles.statusPill, styles.weightPill]}>
+                <Text style={styles.weightPillText}>{item.peso}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
-        
-        <View style={styles.lastVisitContainer}>
-          <Ionicons name="calendar-outline" size={14} color="#888" />
-          <Text style={styles.lastVisitText}>Última visita: {item.ultimaVisita ? new Date(item.ultimaVisita).toLocaleDateString() : 'Sin visitas'}</Text>
-        </View>
-      </View>
-      <View style={styles.chevronContainer}>
-        <Ionicons name="chevron-forward" size={20} color="#1E88E5" />
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   // Función para manejar la selección de tipo de mascota en el modal
   const handleSelectPetType = useCallback((type) => {
@@ -504,21 +558,71 @@ const PetsScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
+
+      {/* HEADER PREMIUM (curvo, con back + add glass) */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back-outline" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mis Mascotas</Text>
-        <TouchableOpacity
-          style={styles.addPetButton}
-          onPress={() => setModalVisible(true)}
-          
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Mis Mascotas</Text>
+          <TouchableOpacity
+            style={styles.headerAddButton}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
       </View>
-      
-      {/* Mostrar loader mientras se cargan las mascotas */}
+
+      {/* FILTROS DINÁMICOS (solo tipos que tiene el usuario) */}
+      {!isLoading && !error && pets && pets.length > 0 && (
+        <View style={styles.filtersWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersScroll}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterBtn,
+                selectedPetType === 'all' ? styles.filterBtnActive : styles.filterBtnInactive
+              ]}
+              onPress={() => handleFilterByType('all')}
+              activeOpacity={0.85}
+            >
+              <Text style={selectedPetType === 'all' ? styles.filterTextActive : styles.filterTextInactive}>
+                Todas ({pets.length})
+              </Text>
+            </TouchableOpacity>
+
+            {availableFilters.map((filtro) => {
+              const active = selectedPetType === filtro.name;
+              return (
+                <TouchableOpacity
+                  key={filtro.id}
+                  style={[styles.filterBtn, active ? styles.filterBtnActive : styles.filterBtnInactive]}
+                  onPress={() => handleFilterByType(filtro.name)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name={filtro.icon}
+                    size={14}
+                    color={active ? '#FFF' : '#1E88E5'}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={active ? styles.filterTextActive : styles.filterTextInactive}>
+                    {filtro.name} ({filtro.count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* CONTENIDO */}
       {isLoading ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#1E88E5" />
@@ -538,18 +642,35 @@ const PetsScreen = ({ navigation }) => {
           renderItem={renderItem}
           keyExtractor={item => item._id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           refreshing={refreshing}
           onRefresh={onRefresh}
+          ListFooterComponent={
+            <TouchableOpacity
+              style={styles.dashedAddButton}
+              activeOpacity={0.85}
+              onPress={() => setModalVisible(true)}
+            >
+              <View style={styles.dashedIconCircle}>
+                <Ionicons name="add" size={26} color="#FFF" />
+              </View>
+              <Text style={styles.dashedAddText}>Registrar nueva mascota</Text>
+            </TouchableOpacity>
+          }
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Ionicons name="paw" size={80} color="#1E88E5" style={styles.emptyIcon} />
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="paw" size={56} color="#1E88E5" />
+          </View>
           <Text style={styles.emptyText}>No tienes mascotas registradas</Text>
           <Text style={styles.emptySubText}>Agrega tu primera mascota para comenzar</Text>
           <TouchableOpacity
             style={styles.emptyButton}
             onPress={() => setModalVisible(true)}
+            activeOpacity={0.9}
           >
+            <Ionicons name="add" size={20} color="#FFF" style={{ marginRight: 6 }} />
             <Text style={styles.emptyButtonText}>Agregar mascota</Text>
           </TouchableOpacity>
         </View>
@@ -590,76 +711,161 @@ const PetsScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  // ...
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
+
+  // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 25,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 10,
   },
-  backButton: {
-    padding: 5,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    flex: 1,
+    textAlign: 'center',
   },
-  addPetButton: {
-    backgroundColor: '#1E88E5',//Color del botón
-    width: 40,//Ancho del botón
-    height: 40,//Alto del botón
-    borderRadius: 20,//Radio de la esquina
-    justifyContent: 'center',//Centra el contenido verticalmente
-    alignItems: 'center',//Centra el contenido horizontalmente
-    elevation: 4,//Eleva el botón
-    shadowColor: '#fff',//Color de la sombra
-    shadowOffset: { width: 0, height: 2 },//Posición de la sombra
-    shadowOpacity: 0.3,//Opacidad de la sombra
-    shadowRadius: 3,//Radio de la sombra
+  headerBackButton: {
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  listContent: {
-    padding: 15,
+  headerAddButton: {
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  petCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
+
+  // ─── FILTROS ───
+  filtersWrapper: {
+    marginTop: 15,
+    marginBottom: 5,
+    zIndex: 5,
+  },
+  filtersScroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#fff',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    marginRight: 10,
+    justifyContent: 'center',
   },
-  petImageContainer: {
-    marginRight: 15,
+  filterBtnActive: {
+    backgroundColor: '#1E88E5',
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  filterBtnInactive: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  filterTextActive: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  filterTextInactive: {
+    color: '#666',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+
+  // ─── LOADERS / ERROR / EMPTY ───
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loaderText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 14,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorIcon: {
+    marginBottom: 12,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#1E88E5',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  retryText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  // ─── LISTA Y TARJETAS ───
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 15,
+  },
+  petCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 22,
+    padding: 14,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 15,
+    elevation: 3,
   },
   petImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80,
+    height: 80,
+    borderRadius: 18,
+    marginRight: 14,
   },
   petIconContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
     backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
@@ -667,183 +873,297 @@ const styles = StyleSheet.create({
   petInfo: {
     flex: 1,
   },
+  petHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   petName: {
-    fontSize: 18,
+    flex: 1,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
+    marginRight: 6,
   },
-  petDetails: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-  },
-  petAge: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 5,
-  },
-  lastVisitContainer: {
-    flexDirection: 'row',
+  genderBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  lastVisitText: {
-    fontSize: 12,
-    color: '#888',
-    marginLeft: 5,
+  maleBg: {
+    backgroundColor: '#E3F2FD',
   },
-  moreButton: {
-    padding: 5,
+  femaleBg: {
+    backgroundColor: '#FCE4EC',
   },
+  petSubtitle: {
+    fontSize: 13,
+    color: '#757575',
+    fontWeight: '500',
+    marginBottom: 10,
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  vaccinatedPill: {
+    backgroundColor: '#E8F5E9',
+  },
+  vaccinatedPillText: {
+    color: '#4CAF50',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  pendingPill: {
+    backgroundColor: '#FFF3E0',
+  },
+  pendingPillText: {
+    color: '#FF9800',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  weightPill: {
+    backgroundColor: '#F5F5F5',
+  },
+  weightPillText: {
+    color: '#666',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+
+  // ─── DASHED ADD BUTTON (footer) ───
+  dashedAddButton: {
+    backgroundColor: '#E3F2FD',
+    borderWidth: 2,
+    borderColor: '#90CAF9',
+    borderStyle: 'dashed',
+    borderRadius: 22,
+    paddingVertical: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  dashedIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#1E88E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  dashedAddText: {
+    color: '#1E88E5',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+
+  // ─── EMPTY STATE ───
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 30,
   },
-  emptyIcon: {
-    marginBottom: 20,
-    opacity: 0.7,
+  emptyIconCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#E3F2FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: 'center',
   },
   emptySubText: {
     fontSize: 14,
     color: '#888',
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: 'center',
   },
   emptyButton: {
+    flexDirection: 'row',
     backgroundColor: '#1E88E5',
     paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 25,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   emptyButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 15,
   },
+
+  // ─── MODAL ───
   centeredView: {
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalView: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: '80%',
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    height: '90%',
+    paddingTop: 8,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalDragIndicator: {
+    width: 50,
+    height: 5,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginVertical: 10,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: 25,
+    paddingBottom: 15,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1A237E',
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalScrollView: {
-    padding: 20,
+    paddingHorizontal: 25,
   },
+
+  // ─── INPUTS ───
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  inputRow: {
+    flexDirection: 'row',
   },
   inputLabel: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 14,
+    color: '#444',
+    fontWeight: '600',
     marginBottom: 8,
   },
   input: {
-    height: 50,
+    backgroundColor: '#F5F7FA',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 15,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#333',
   },
   textArea: {
     height: 100,
     textAlignVertical: 'top',
-    paddingTop: 15,
+    paddingTop: 12,
   },
+
+  // ─── SELECTOR DE TIPO ───
   selectorContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 10,
   },
   typeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingVertical: 8,
-    paddingHorizontal: 15,
-    marginRight: 10,
-    marginBottom: 10,
-    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    marginRight: 8,
+    marginBottom: 8,
+    backgroundColor: '#FFF',
   },
   selectedTypeOption: {
     backgroundColor: '#1E88E5',
     borderColor: '#1E88E5',
   },
-  typeOptionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   typeText: {
-    marginLeft: 5,
+    marginLeft: 6,
     color: '#333',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 13,
   },
   selectedTypeText: {
     color: '#fff',
   },
+
+  // ─── SELECTOR DE RAZA ───
   breedInput: {
-    height: 50,
+    backgroundColor: '#F5F7FA',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 15,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   breedPlaceholder: {
-    color: '#999',
-    fontSize: 16,
+    color: '#AAB0B7',
+    fontSize: 15,
   },
   breedSelectedText: {
     color: '#333',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '500',
   },
   breedSelectorContainer: {
     maxHeight: 200,
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    marginTop: 5,
+    borderRadius: 12,
+    backgroundColor: '#FFF',
+    marginTop: 6,
     overflow: 'hidden',
   },
   hiddenBreedSelector: {
@@ -862,105 +1182,123 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3F2FD',
   },
   breedText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#333',
   },
   selectedBreedText: {
     color: '#1E88E5',
-    fontWeight: '500',
+    fontWeight: '600',
   },
+
+  // ─── GÉNERO ───
   genderContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginTop: 10,
+    gap: 10,
   },
   genderOption: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    width: '45%',
     justifyContent: 'center',
+    backgroundColor: '#F5F7FA',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingVertical: 12,
   },
-  selectedGenderOption: {
-    backgroundColor: '#1E88E5',
+  selectedGenderMale: {
+    backgroundColor: '#2196F3',
+    borderColor: '#2196F3',
+  },
+  selectedGenderFemale: {
+    backgroundColor: '#E91E63',
+    borderColor: '#E91E63',
   },
   genderText: {
-    marginLeft: 10,
-    fontSize: 16,
+    marginLeft: 8,
+    fontSize: 15,
     color: '#333',
+    fontWeight: '600',
   },
   selectedGenderText: {
     color: '#fff',
   },
+
+  // ─── SWITCH ───
   switchContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    marginBottom: 20,
-    height: 50,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F7FA',
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    borderRadius: 8,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  switchLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   switchLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#333',
+    fontWeight: '600',
+    marginLeft: 8,
   },
-  badgesContainer: {
-    flexDirection: 'row',
-    marginTop: 5,
-    marginBottom: 5,
-  },
-  vaccinatedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4CAF50',
-    borderRadius: 10,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-  },
-  vaccinatedText: {
-    color: '#fff',
-    fontSize: 10,
-    marginLeft: 3,
-    fontWeight: '500',
-  },
+
+  // ─── FOTO ───
   photoContainer: {
     alignItems: 'center',
-    marginVertical: 10,
-  },
-  photoText: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 10,
+    marginBottom: 20,
+    marginTop: 4,
   },
   photoButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: '#E3F2FD',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#90CAF9',
     borderStyle: 'dashed',
+    overflow: 'hidden',
   },
-  addButton: {
-    backgroundColor: '#1E88E5',
-    borderRadius: 8,
-    padding: 15,
+  photoPlaceholder: {
     alignItems: 'center',
-    marginTop: 20,
+    justifyContent: 'center',
+  },
+  photoText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#1E88E5',
+    fontWeight: '600',
+  },
+  petImagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // ─── BOTÓN GUARDAR ───
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E88E5',
+    borderRadius: 16,
+    paddingVertical: 15,
+    marginTop: 12,
     marginBottom: 30,
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   addButtonText: {
-    color: '#fff',
+    color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
