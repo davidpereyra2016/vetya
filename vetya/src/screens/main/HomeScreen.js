@@ -11,7 +11,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
-  Linking
+  Linking,
+  Platform
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,8 @@ import useCitaStore from '../../store/useCitaStore';
 import usePrestadoresStore from '../../store/usePrestadoresStore';
 import useValoracionesStore from '../../store/useValoracionesStore';
 import useCountPacientesStore from '../../store/useCountPacientesStore';
+import useAuthStore from '../../store/useAuthStore';
+import usePetStore from '../../store/usePetStore';
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -86,6 +89,18 @@ const HomeScreen = ({ navigation }) => {
     fetchTotalPacientes,
     isLoading: loadingPacientes
   } = useCountPacientesStore();
+
+  // Datos del usuario autenticado (para saludo y avatar del header)
+  const user = useAuthStore(state => state.user);
+
+  // Mascotas del usuario (para personalizar el saludo con el nombre de la mascota)
+  const { pets, fetchPets } = usePetStore();
+
+  // Nombre a mostrar en el saludo: primer nombre del username (fallback 'Usuario')
+  const displayName = (user?.username && user.username.trim().split(/\s+/)[0]) || 'Usuario';
+
+  // Nombre de la mascota: primera mascota registrada (si existe)
+  const firstPetName = pets && pets.length > 0 ? (pets[0]?.nombre || null) : null;
   
   // Estado para almacenar prestadores con calificación > 4.5
   const [prestadoresDestacadosConStats, setPrestadoresDestacadosConStats] = useState([]);
@@ -508,13 +523,14 @@ const HomeScreen = ({ navigation }) => {
       // Cargar datos de forma consolidada
       Promise.all([
         loadInitialData(),
-        fetchUserAppointments()
+        fetchUserAppointments(),
+        fetchPets().catch(() => null) // No bloquear si falla (solo se usa para el saludo)
       ]).finally(() => {
         isLoadingRef.current = false;
       });
       
       return () => {};
-    }, [loadInitialData, fetchUserAppointments])
+    }, [loadInitialData, fetchUserAppointments, fetchPets])
   );
 
   // Función para solicitar una emergencia
@@ -578,7 +594,11 @@ const HomeScreen = ({ navigation }) => {
   }, [featuredVets]);
 
   // Veterinarios disponibles para emergencias
-  const availableVetsList = availableVets.length > 0 ? availableVets.filter(vet => vet.disponibleEmergencias).map(vet => ({
+  // IMPORTANTE: solo prestadores de tipo 'Veterinario' (NO Centro Veterinario ni otros tipos),
+  // alineado con AllVetsScreen (/prestadores?tipo=Veterinario).
+  const availableVetsList = availableVets.length > 0 ? availableVets
+    .filter(vet => vet.disponibleEmergencias && vet.tipo === 'Veterinario')
+    .map(vet => ({
     // Mantener todas las propiedades originales
     ...vet,
     // Mantener retrocompatibilidad con propiedades nuevas
@@ -698,106 +718,74 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  // Renderizar cada veterinario destacado
-  const renderFeaturedVetItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.featuredVetCard}
-      onPress={() => handleVetPress(item)}
-    >
-      <View style={styles.vetTopSection}>
-        <View style={styles.vetImageContainer}>
-          {item.image ? (
-            <Image source={{ uri: item.image }} style={styles.vetImage} />
-          ) : (
-            <View style={[styles.vetImagePlaceholder, { backgroundColor: item.available ? '#4CAF50' : '#FFA000' }]}>
-              <Text>
-                <Ionicons name="person" size={32} color="#fff" />
-              </Text>
-            </View>
-          )}
-          {item.available && (
-            <View style={styles.statusBadge}>
-              <Text>
-                <Ionicons name="ellipse" size={10} color="#4CAF50" />
-              </Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.vetInfo}>
-          <Text style={styles.vetName}>{item.name}</Text>
-          <Text style={styles.vetSpecialty}>{item.specialty}</Text>
-          <View style={styles.ratingContainer}>
-            <Text>
-              <Ionicons name="star" size={16} color="#FFC107" />
-            </Text>
-            <Text style={styles.ratingText}>{item.rating.toFixed(1)} ({item.reviews} reseñas)</Text>
-          </View>
-        </View>
-      </View>
-      
-      <View style={styles.vetDetailSection}>
-        <View style={styles.vetDetailItem}>
-          <Text>
-            <Ionicons name="time-outline" size={14} color="#666" />
-          </Text>
-          <Text style={styles.vetDetailText}>{item.experience}</Text>
-        </View>
-        <View style={styles.vetDetailItem}>
-          <Text>
-            <Ionicons name="people-outline" size={14} color="#666" />
-          </Text>
-          <Text style={styles.vetDetailText}>{item.patients} pacientes</Text>
-        </View>
-      </View>
-      
-      <View style={styles.vetSpecialtiesContainer}>
-        {item.especialidades && Array.isArray(item.especialidades) ? 
-          item.especialidades.map((specialty, index) => (
-            <View key={index} style={styles.specialtyBadge}>
-              <Text style={styles.specialtyText}>{specialty}</Text>
-            </View>
-          )) : 
-          <View style={styles.specialtyBadge}>
-            <Text style={styles.specialtyText}>{item.specialty || 'Especialista'}</Text>
-          </View>
-        }
-      </View>
-    </TouchableOpacity>
-  );
+  // Renderizar cada prestador destacado (diseño: imagen arriba + rating overlay + info abajo)
+  const renderFeaturedVetItem = ({ item }) => {
+    // Texto secundario seguro: especialidad (string) o número de pacientes.
+    // NOTA: item.direccion en el backend es un objeto { coordenadas, calle, ... },
+    // no se renderiza como texto porque React no acepta objetos como hijos.
+    const subtitleText = item.specialty
+      || (item.experience ? `${item.experience}` : `${item.patients || 0} pacientes`);
 
-  // Renderizar cada veterinario disponible
-  const renderAvailableVetItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.availableVetCard}
-      onPress={() => handleVetPress(item)}
-    >
-      <View style={styles.vetStatusContainer}>
-        <View style={styles.vetStatusIndicator} />
-        <Text style={styles.vetStatusText}>{item.status}</Text>
-      </View>
-      
-      <View style={styles.vetAvailableContent}>
-        <View style={styles.vetImageContainer}>
-          {item.image ? (
-            <Image source={{ uri: item.image }} style={styles.vetImage} />
-          ) : (
-            <View style={[styles.vetImagePlaceholder, { backgroundColor: '#4CAF50' }]}>
-              <Text>
-                <Ionicons name="person" size={32} color="#fff" />
-              </Text>
-            </View>
-          )}
-        </View>
-        
-        <View style={styles.vetInfo}>
-          <Text style={styles.vetName}>{item.name}</Text>
-          <Text style={styles.vetSpecialty}>{item.specialty}</Text>
-          <View style={styles.ratingContainer}>
-            <Text>
-              <Ionicons name="star" size={16} color="#FFC107" />
-            </Text>
-            <Text style={styles.ratingText}>{item.rating}</Text>
+    return (
+      <TouchableOpacity
+        style={styles.providerCard}
+        onPress={() => handleVetPress(item)}
+        activeOpacity={0.9}
+      >
+        {/* Imagen superior (con placeholder si no hay) */}
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.providerImage} />
+        ) : (
+          <View style={[styles.providerImage, styles.providerImagePlaceholder]}>
+            <Ionicons name="medkit" size={44} color="#FFF" />
           </View>
+        )}
+
+        {/* Rating overlay arriba-derecha */}
+        <View style={styles.providerOverlay}>
+          <View style={styles.ratingBadgeOverlay}>
+            <Ionicons name="star" size={11} color="#FFB300" style={{ marginRight: 3 }} />
+            <Text style={styles.ratingBadgeOverlayText}>
+              {typeof item.rating === 'number' ? item.rating.toFixed(1) : (item.rating || '0.0')}
+            </Text>
+          </View>
+        </View>
+
+        {/* Info inferior */}
+        <View style={styles.providerInfo}>
+          <Text style={styles.providerName} numberOfLines={1}>{item.name}</Text>
+          <View style={styles.providerLocationRow}>
+            <Ionicons name="medical-outline" size={13} color="#888" />
+            <Text style={styles.providerAddress} numberOfLines={1}>{subtitleText}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Renderizar cada veterinario disponible (diseño horizontal: imagen + info + badge)
+  const renderAvailableVetItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.vetCardNew}
+      onPress={() => handleVetPress(item)}
+      activeOpacity={0.9}
+    >
+      {/* Imagen circular del veterinario */}
+      {item.image ? (
+        <Image source={{ uri: item.image }} style={styles.vetImageNew} />
+      ) : (
+        <View style={[styles.vetImageNew, styles.vetImagePlaceholderNew]}>
+          <Ionicons name="person" size={28} color="#fff" />
+        </View>
+      )}
+
+      {/* Info del veterinario (nombre + especialidad + badge disponible) */}
+      <View style={styles.vetInfoNew}>
+        <Text style={styles.vetNameNew} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.vetSpecialtyNew} numberOfLines={1}>{item.specialty}</Text>
+        <View style={styles.vetStatusBadgeNew}>
+          <View style={styles.statusDotNew} />
+          <Text style={styles.vetStatusTextNew}>Disponible ahora</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -806,44 +794,58 @@ const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
+
+      {/* HEADER PERSONALIZADO (fuera del ScrollView, no se superpone al banner) */}
+      <Animated.View style={[styles.header, {
+        opacity: bannerAnim,
+        transform: [{ translateY: bannerAnim.interpolate({
+          inputRange: [0, 1], outputRange: [-16, 0]
+        })}]
+      }]}>
+        <View style={styles.headerContent}>
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={styles.greeting} numberOfLines={1}>
+              {`Hola, ${displayName} 👋`}
+            </Text>
+            <Text style={styles.subGreeting} numberOfLines={2}>
+              {firstPetName
+                ? `¿Cómo podemos ayudar a ${firstPetName} hoy?`
+                : '¿En qué podemos ayudarte hoy?'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.profileButton}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Perfil')}
+          >
+            {user?.profilePicture ? (
+              <Image
+                source={{ uri: user.profilePicture }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={[styles.profileImage, styles.profilePlaceholder]}>
+                <Text style={styles.profileInitial}>
+                  {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
       <ScrollView 
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
+            tintColor="#1E88E5"
           />
         }
       >
-        {/* Banner principal */}
-        <Animated.View style={[styles.banner, {
-          opacity: bannerAnim,
-          transform: [{ translateY: bannerAnim.interpolate({
-            inputRange: [0, 1], outputRange: [24, 0]
-          })}]
-        }]}>
-          <View style={styles.bannerContent}>
-            <Text style={styles.bannerTitle}>¡Bienvenido a VetYa!</Text>
-            <Text style={styles.bannerSubtitle}>
-              Cuidado veterinario profesional en la comodidad de tu hogar
-            </Text>
-            <TouchableOpacity 
-              style={styles.bannerButton}
-              onPress={() => navigation.navigate('AgendarCita')}
-            >
-              <Text style={styles.bannerButtonText}>Agendar cita</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.bannerImageContainer}>
-            <Image
-              source={require('../../assets/logo/logoVetya.png')}
-              style={styles.bannerLogo}
-              resizeMode="contain"
-            />
-          </View>
-        </Animated.View>
-
-        {/* ─── BANNER PUBLICITARIO ADAPTADO AQUÍ ─── */}
+        {/* ─── BANNER PUBLICITARIO (DEBAJO del header, no flotante) ─── */}
         <BannerPublicitario />
 
         {/* Servicios */}
@@ -1322,6 +1324,67 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
+  // ─── HEADER PERSONALIZADO (saludo + avatar) ───
+  header: {
+    backgroundColor: '#1E88E5',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
+    zIndex: 10,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFF',
+    letterSpacing: 0.3,
+  },
+  subGreeting: {
+    fontSize: 14,
+    color: '#E3F2FD',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  profileButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  profileImage: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 3,
+    borderColor: '#FFF',
+  },
+  profilePlaceholder: {
+    backgroundColor: '#1565C0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileInitial: {
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  scrollContent: {
+    paddingBottom: 30,
+  },
+  // Estilos originales del banner de bienvenida (preservados por compatibilidad,
+  // ya no se renderizan pero otros flujos podrían referenciarlos en el futuro).
   banner: {
     backgroundColor: '#1E88E5',//Color azul
     paddingVertical: 25,//Espacio vertical
@@ -1384,13 +1447,15 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1A237E',
+    letterSpacing: 0.2,
   },
   seeAllText: {
     color: '#1E88E5',
-    fontWeight: '500',
+    fontWeight: '700',
+    fontSize: 14,
   },
   servicesList: {
     paddingRight: 10,
@@ -1746,17 +1811,26 @@ const styles = StyleSheet.create({
   },
   tipCard: {
     backgroundColor: '#fff',
-    borderRadius: 15,
+    borderRadius: 20,
     padding: 15,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 2,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F5F5F5',
   },
   tipImageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: '#E3F2FD',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 15,
   },
   tipContent: {
@@ -1807,6 +1881,145 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  // ─── VETERINARIO DISPONIBLE (nuevo diseño horizontal) ───
+  vetCardNew: {
+    backgroundColor: '#fff',
+    width: 280,
+    borderRadius: 20,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 15,
+    marginBottom: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F8F9FA',
+  },
+  vetImageNew: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 15,
+  },
+  vetImagePlaceholderNew: {
+    backgroundColor: '#4CAF50',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vetInfoNew: {
+    flex: 1,
+    marginRight: 8,
+  },
+  vetNameNew: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  vetSpecialtyNew: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+    marginBottom: 6,
+  },
+  vetStatusBadgeNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  statusDotNew: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#4CAF50',
+    marginRight: 5,
+  },
+  vetStatusTextNew: {
+    fontSize: 10,
+    color: '#4CAF50',
+    fontWeight: '700',
+  },
+  callButton: {
+    backgroundColor: '#4CAF50',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  // ─── PRESTADOR DESTACADO (nuevo diseño vertical con imagen top + rating overlay) ───
+  providerCard: {
+    backgroundColor: '#FFF',
+    width: 240,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginRight: 15,
+    marginBottom: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  providerImage: {
+    width: '100%',
+    height: 120,
+    resizeMode: 'cover',
+  },
+  providerImagePlaceholder: {
+    backgroundColor: '#1E88E5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  providerOverlay: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+  },
+  ratingBadgeOverlay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  ratingBadgeOverlayText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  providerInfo: {
+    padding: 12,
+  },
+  providerName: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  providerLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  providerAddress: {
+    fontSize: 11,
+    color: '#666',
+    marginLeft: 4,
+    flex: 1,
   },
 });
 
