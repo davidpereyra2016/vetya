@@ -5,13 +5,34 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  FlatList,
-  Image,
   TextInput,
   Platform,
+  Dimensions,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
+
+// Mapea una categoría a colores e ícono (para el diseño visual de las tarjetas)
+const getCategoryStyles = (category) => {
+  switch (category) {
+    case 'Nutrición':
+      return { color: '#FF9800', bgColor: '#FFF3E0', icon: 'restaurant', featuredBg: '#E65100' };
+    case 'Higiene':
+      return { color: '#26A69A', bgColor: '#E0F2F1', icon: 'water', featuredBg: '#00695C' };
+    case 'Cuidados Generales':
+      return { color: '#42A5F5', bgColor: '#E3F2FD', icon: 'heart', featuredBg: '#1565C0' };
+    case 'Comportamiento':
+      return { color: '#AB47BC', bgColor: '#F3E5F5', icon: 'happy', featuredBg: '#6A1B9A' };
+    case 'Actividad Física':
+      return { color: '#EF5350', bgColor: '#FFEBEE', icon: 'fitness', featuredBg: '#B71C1C' };
+    case 'Prevención':
+      return { color: '#4CAF50', bgColor: '#E8F5E9', icon: 'shield-checkmark', featuredBg: '#2E7D32' };
+    default:
+      return { color: '#1E88E5', bgColor: '#E3F2FD', icon: 'medical', featuredBg: '#1A237E' };
+  }
+};
 
 const HealthTipsScreen = ({ navigation }) => {
   const [selectedPetType, setSelectedPetType] = useState('all');
@@ -167,130 +188,155 @@ const HealthTipsScreen = ({ navigation }) => {
     setFilteredTips(filtered);
   }, [selectedPetType, searchQuery]);
   
-  // Renderizar cada tipo de mascota para el filtro
-  const renderPetTypeItem = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        styles.petTypeItem, 
-        selectedPetType === item.id && styles.selectedPetTypeItem
-      ]}
-      onPress={() => setSelectedPetType(item.id)}
-    >
-      <Ionicons 
-        name={item.icon} 
-        size={20} 
-        color={selectedPetType === item.id ? '#fff' : '#1E88E5'} 
-      />
-      <Text 
-        style={[
-          styles.petTypeText, 
-          selectedPetType === item.id && styles.selectedPetTypeText
-        ]}
-      >
-        {item.name}
-      </Text>
-    </TouchableOpacity>
-  );
-  
-  // Renderizar cada consejo de salud
-  const renderHealthTipItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.tipCard}
-      onPress={() => navigation.navigate('HealthTipDetail', { tip: item })}
-    >
-      <View style={styles.tipCardHeader}>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{item.category}</Text>
-        </View>
-        <View style={styles.metaInfo}>
-          <Text style={styles.readTime}>{item.readTime} de lectura</Text>
-        </View>
-      </View>
-      
-      <View style={styles.tipImageContainer}>
-        <View style={styles.tipImagePlaceholder}>
-          {item.petType === 'dog' && <Ionicons name="logo-reddit" size={40} color="#fff" />}
-          {item.petType === 'cat' && <Ionicons name="logo-octocat" size={40} color="#fff" />}
-          {item.petType === 'bird' && <Ionicons name="airplane" size={40} color="#fff" />}
-          {item.petType === 'fish' && <Ionicons name="fish" size={40} color="#fff" />}
-          {item.petType === 'reptile' && <Ionicons name="leaf" size={40} color="#fff" />}
-          {item.petType === 'rabbit' && <Ionicons name="extension-puzzle" size={40} color="#fff" />}
-          {item.petType === 'rodent' && <Ionicons name="ellipse" size={40} color="#fff" />}
-        </View>
-      </View>
-      
-      <Text style={styles.tipTitle}>{item.title}</Text>
-      <Text style={styles.tipDescription} numberOfLines={2}>{item.description}</Text>
-      
-      <View style={styles.tipFooter}>
-        <Text style={styles.authorText}>{item.author}</Text>
-        <Text style={styles.dateText}>{item.date}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-  
+  // ─── RENDER ──────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
-      {/* Header */}
+
+      {/* HEADER integrado con buscador y bordes curvos */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Consejos de Salud</Text>
-      </View>
-      
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+            <Ionicons name="arrow-back" size={28} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Consejos de Salud</Text>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="bookmark-outline" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar consejos..."
+            placeholder="Buscar consejos, enfermedades..."
+            placeholderTextColor="#999"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity 
-              style={styles.clearButton}
-              onPress={() => setSearchQuery('')}
-            >
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={18} color="#999" />
             </TouchableOpacity>
           )}
         </View>
       </View>
-      
-      {/* Filtros de tipo de mascota */}
-      <View style={styles.petTypesContainer}>
-        <FlatList
-          data={petTypes}
-          renderItem={renderPetTypeItem}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.petTypesList}
-        />
-      </View>
-      
-      {/* Lista de consejos */}
-      <FlatList
-        data={filteredTips}
-        renderItem={renderHealthTipItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.tipsList}
-        showsVerticalScrollIndicator={false}
-        numColumns={2}
-        ListEmptyComponent={
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* FILTROS POR MASCOTA (Pills horizontales) */}
+        <View style={styles.filtersContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
+            {petTypes.map((pet) => {
+              const isActive = selectedPetType === pet.id;
+              return (
+                <TouchableOpacity
+                  key={pet.id}
+                  onPress={() => setSelectedPetType(pet.id)}
+                  style={[styles.filterPill, isActive ? styles.activeFilterPill : styles.inactiveFilterPill]}
+                >
+                  <Ionicons
+                    name={pet.icon}
+                    size={16}
+                    color={isActive ? '#FFF' : '#666'}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.filterText, isActive ? styles.activeFilterText : styles.inactiveFilterText]}>
+                    {pet.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {filteredTips.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="alert-circle-outline" size={60} color="#ccc" />
             <Text style={styles.emptyText}>No hay consejos disponibles para esta categoría.</Text>
           </View>
-        }
-      />
+        ) : (
+          <>
+            {/* TIP DESTACADO (primer tip de la lista filtrada) */}
+            {(() => {
+              const featured = filteredTips[0];
+              const fStyles = getCategoryStyles(featured.category);
+              return (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Tip Destacado</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    style={[styles.featuredCard, { backgroundColor: fStyles.featuredBg }]}
+                    onPress={() => navigation.navigate('HealthTipDetail', { tip: featured })}
+                  >
+                    {/* Ícono gigante de fondo */}
+                    <View style={styles.featuredIconBg}>
+                      <Ionicons
+                        name={fStyles.icon}
+                        size={140}
+                        color="rgba(255,255,255,0.15)"
+                        style={{ transform: [{ rotate: '-15deg' }] }}
+                      />
+                    </View>
+
+                    {/* Contenido superpuesto */}
+                    <View style={styles.featuredContent}>
+                      <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryBadgeText}>{featured.category.toUpperCase()}</Text>
+                      </View>
+                      <Text style={styles.featuredTitle}>{featured.title}</Text>
+                      <View style={styles.featuredMetaRow}>
+                        <Ionicons name="time-outline" size={14} color="#E0E0E0" />
+                        <Text style={styles.featuredMetaText}>{featured.readTime} de lectura</Text>
+                        <Text style={styles.featuredMetaDot}> • </Text>
+                        <Ionicons name="person" size={14} color="#E0E0E0" />
+                        <Text style={styles.featuredMetaText}>{featured.author}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
+
+            {/* LISTA COMPACTA DE TIPS (resto de la lista filtrada) */}
+            {filteredTips.length > 1 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Más consejos</Text>
+
+                {filteredTips.slice(1).map((tip) => {
+                  const tStyles = getCategoryStyles(tip.category);
+                  return (
+                    <TouchableOpacity
+                      key={tip.id}
+                      activeOpacity={0.8}
+                      style={styles.tipListCard}
+                      onPress={() => navigation.navigate('HealthTipDetail', { tip })}
+                    >
+                      {/* Cuadro de color con ícono */}
+                      <View style={[styles.tipListIconContainer, { backgroundColor: tStyles.bgColor }]}>
+                        <Ionicons name={tStyles.icon} size={36} color={tStyles.color} />
+                      </View>
+
+                      <View style={styles.tipListInfo}>
+                        <View style={[styles.tipCategoryBadge, { backgroundColor: `${tStyles.color}1A` }]}>
+                          <Text style={[styles.tipCategoryText, { color: tStyles.color }]}>{tip.category}</Text>
+                        </View>
+                        <Text style={styles.tipListTitle} numberOfLines={2}>{tip.title}</Text>
+                        <View style={styles.tipListFooter}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="book-outline" size={12} color="#888" />
+                            <Text style={styles.tipListReadTime}>{tip.readTime} de lectura</Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={16} color="#CCC" />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -302,161 +348,229 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 40 : 20,
-    paddingBottom: 15,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 25,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,//Radio de la esquina inferior izquierda
-    borderBottomRightRadius: 30,//Radio de la esquina inferior derecha
-    
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 5,
+    zIndex: 10,
   },
-  backButton: {
-    padding: 5,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  iconButton: {
+    padding: 4,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 15,
+    color: '#FFF',
+    letterSpacing: 0.5,
   },
   searchContainer: {
-    padding: 15,
-    paddingBottom: 10,
-  },
-  searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
     paddingHorizontal: 15,
-    height: 45,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    height: 48,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchIcon: {
     marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    height: '100%',
-    fontSize: 16,
-  },
-  clearButton: {
-    padding: 5,
-  },
-  petTypesContainer: {
-    paddingHorizontal: 15,
-  },
-  petTypesList: {
-    paddingBottom: 15,
-  },
-  petTypeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  selectedPetTypeItem: {
-    backgroundColor: '#1E88E5',
-    borderColor: '#1E88E5',
-  },
-  petTypeText: {
-    fontSize: 14,
-    color: '#1E88E5',
-    marginLeft: 5,
+    fontSize: 15,
+    color: '#333',
     fontWeight: '500',
   },
-  selectedPetTypeText: {
-    color: '#fff',
+  clearButton: {
+    padding: 4,
   },
-  tipsList: {
-    padding: 15,
-    paddingTop: 5,
+  scrollContent: {
+    paddingBottom: 40,
   },
-  tipCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
-    marginHorizontal: 5,
-    width: '47%',
+  filtersContainer: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  filtersScroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 5,
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: 3,
     elevation: 2,
   },
-  tipCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+  activeFilterPill: {
+    backgroundColor: '#1E88E5',
+    borderWidth: 0,
   },
-  categoryBadge: {
-    backgroundColor: '#E3F2FD',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 12,
+  inactiveFilterPill: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
   },
-  categoryText: {
-    fontSize: 10,
-    color: '#1E88E5',
-    fontWeight: '500',
+  filterText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
-  metaInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  activeFilterText: {
+    color: '#FFF',
   },
-  readTime: {
-    fontSize: 10,
+  inactiveFilterText: {
     color: '#666',
   },
-  tipImageContainer: {
-    marginBottom: 10,
-    alignItems: 'center',
+  section: {
+    marginTop: 15,
+    paddingHorizontal: 20,
   },
-  tipImagePlaceholder: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  featuredCard: {
     width: '100%',
-    height: 100,
-    backgroundColor: '#1E88E5',
-    borderRadius: 10,
+    height: 190,
+    borderRadius: 20,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  featuredIconBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tipTitle: {
-    fontSize: 14,
+  featuredContent: {
+    padding: 16,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  categoryBadge: {
+    backgroundColor: '#2196F3',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  categoryBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  featuredTitle: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  featuredMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  featuredMetaText: {
+    color: '#E0E0E0',
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  featuredMetaDot: {
+    color: '#E0E0E0',
+    fontSize: 12,
+    marginHorizontal: 4,
+  },
+  tipListCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 14,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  tipListIconContainer: {
+    width: 85,
+    height: 85,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  tipListInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  tipCategoryBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  tipCategoryText: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  tipListTitle: {
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
+    lineHeight: 20,
+    marginBottom: 8,
   },
-  tipDescription: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 10,
-    lineHeight: 18,
-  },
-  tipFooter: {
+  tipListFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  authorText: {
-    fontSize: 10,
-    color: '#1E88E5',
-    fontWeight: '500',
-  },
-  dateText: {
-    fontSize: 10,
-    color: '#999',
+  tipListReadTime: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 4,
   },
   emptyContainer: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
