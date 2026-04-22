@@ -504,7 +504,10 @@ const PetsScreen = ({ navigation }) => {
 
           {/* Subtítulo: Raza • Edad */}
           <Text style={styles.petSubtitle} numberOfLines={1}>
-            {item.raza}{item.edad ? ` • ${item.edad}` : ''}
+            {item.raza}
+            {item.edad
+              ? ` • ${/\b(año|mes)/i.test(item.edad) ? item.edad : `${item.edad} años`}`
+              : ''}
           </Text>
 
           {/* Pills de estado (vacunado + peso) */}
@@ -521,9 +524,11 @@ const PetsScreen = ({ navigation }) => {
               </View>
             )}
 
-            {item.peso ? (
+            {item.peso && item.peso !== 'No especificado' ? (
               <View style={[styles.statusPill, styles.weightPill]}>
-                <Text style={styles.weightPillText}>{item.peso}</Text>
+                <Text style={styles.weightPillText}>
+                  {/kg/i.test(item.peso) ? item.peso : `${item.peso} kg`}
+                </Text>
               </View>
             ) : null}
           </View>
