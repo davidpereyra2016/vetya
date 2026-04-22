@@ -141,13 +141,13 @@ const HomeScreen = ({ navigation }) => {
     //   icon: 'medkit-outline', 
     //   color: '#1E88E5'
     // },
-    {
-      id: '2',
-      title: 'Vacunación',
-      icon: 'shield-checkmark-outline', 
-      color: '#4CAF50'
-      // #4CAF50
-    },
+    // {
+    //   id: '2',
+    //   title: 'Vacunación',
+    //   icon: 'shield-checkmark-outline', 
+    //   color: '#4CAF50'
+    //   // #4CAF50
+    // },
     {
       id: '3',
       title: 'Mis Emergencias',
