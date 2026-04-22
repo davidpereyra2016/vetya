@@ -157,63 +157,85 @@ const PrestaDetailsScreen = ({ navigation }) => {
     const prestadorReviews = ensureNumber(item.totalValoraciones, 0);
     const prestadorPacientes = ensureNumber(item.pacientesAtendidos, 0);
     const prestadorImagen = item.imagen;
+    const defaultImage = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=250&q=80';
     
     return (
-      <TouchableOpacity 
-        style={styles.prestadorCard}
-        onPress={() => navigation.navigate('VetDetail', { vet: item })}
-      >
-        <View style={styles.prestadorHeader}>
-          <View style={styles.prestadorImageContainer}>
-            {prestadorImagen ? (
-              <Image source={{ uri: prestadorImagen }} style={styles.prestadorImage} />
-            ) : (
-              <View style={styles.prestadorImagePlaceholder}>
-                <Text><Ionicons name="person" size={30} color="#fff" /></Text>
-              </View>
-            )}
+      <View style={styles.prestadorCard}>
+        {/* Área tappable que lleva al detalle del prestador */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('VetDetail', { vet: item })}
+        >
+        {/* Hero mini del prestador */}
+        <View style={styles.cardHero}>
+          <View style={styles.cardImageWrapper}>
+            <Image 
+              source={{ uri: prestadorImagen || defaultImage }} 
+              style={styles.cardImage} 
+            />
+            <View style={styles.cardVerifiedBadge}>
+              <Ionicons name="checkmark-circle" size={12} color="#FFF" />
+            </View>
           </View>
-          <View style={styles.prestadorInfo}>
-            <Text style={styles.prestadorNombre}>{prestadorNombre}</Text>
+          <View style={styles.cardHeroInfo}>
+            <Text style={styles.prestadorNombre} numberOfLines={1}>{prestadorNombre}</Text>
             <View style={styles.tipoContainer}>
               <Text style={styles.tipoBadge}>{prestadorTipo}</Text>
             </View>
-            <Text style={styles.prestadorEspecialidad}>{prestadorEspecialidad}</Text>
+            <Text style={styles.prestadorEspecialidad} numberOfLines={1}>{prestadorEspecialidad}</Text>
             <View style={styles.ratingContainer}>
-              <RatingStars rating={prestadorRating} size={16} />
+              <View style={styles.starsRowSmall}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Ionicons
+                    key={star}
+                    name={star <= Math.round(prestadorRating) ? 'star' : 'star-outline'}
+                    size={12}
+                    color="#FFB300"
+                  />
+                ))}
+              </View>
               <Text style={styles.ratingText}>
-                {prestadorRating.toFixed(1)} ({prestadorReviews} reseñas)
+                {prestadorRating.toFixed(1)} ({prestadorReviews})
               </Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.estadisticasContainer}>
-          <View style={styles.estadisticaItem}>
-            <Text><Ionicons name="people" size={18} color="#4285F4" /></Text>
-            <Text style={styles.estadisticaValor}>{prestadorPacientes}</Text>
-            <Text style={styles.estadisticaLabel}>Pacientes</Text>
+        {/* Stats grid mini */}
+        <View style={styles.cardStatsGrid}>
+          <View style={styles.cardStatBox}>
+            <View style={styles.cardStatIconRow}>
+              <Ionicons name="star" size={12} color="#FFB300" style={{ marginRight: 3 }} />
+              <Text style={styles.cardStatValue}>{prestadorRating.toFixed(1)}</Text>
+            </View>
+            <Text style={styles.cardStatLabel}>Rating</Text>
           </View>
-          <View style={styles.estadisticaItem}>
-            <Text><Ionicons name="star" size={18} color="#FFC107" /></Text>
-            <Text style={styles.estadisticaValor}>{prestadorRating.toFixed(1)}</Text>
-            <Text style={styles.estadisticaLabel}>Rating</Text>
+          <View style={styles.cardStatBox}>
+            <View style={styles.cardStatIconRow}>
+              <Ionicons name="people" size={12} color="#1E88E5" style={{ marginRight: 3 }} />
+              <Text style={styles.cardStatValue}>{prestadorPacientes}</Text>
+            </View>
+            <Text style={styles.cardStatLabel}>Pacientes</Text>
           </View>
-          <View style={styles.estadisticaItem}>
-            <Text><Ionicons name="chatbubbles" size={18} color="#4CAF50" /></Text>
-            <Text style={styles.estadisticaValor}>{prestadorReviews}</Text>
-            <Text style={styles.estadisticaLabel}>Reseñas</Text>
+          <View style={styles.cardStatBox}>
+            <View style={styles.cardStatIconRow}>
+              <Ionicons name="chatbubbles" size={12} color="#4CAF50" style={{ marginRight: 3 }} />
+              <Text style={styles.cardStatValue}>{prestadorReviews}</Text>
+            </View>
+            <Text style={styles.cardStatLabel}>Reseñas</Text>
           </View>
         </View>
-      
+        </TouchableOpacity>
+
         <TouchableOpacity 
           style={styles.agendarButton}
           onPress={() => navigation.navigate('AgendarCita', { selectedVet: item })}
+          activeOpacity={0.9}
         >
-          <Text><Ionicons name="calendar" size={18} color="#fff" /></Text>
+          <Ionicons name="calendar" size={18} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.agendarButtonText}>Agendar Cita</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -332,6 +354,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
+
+  // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: '#1E88E5',
     paddingTop: Platform.OS === 'ios' ? 30 : 20,
@@ -359,9 +383,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backButton: {
-    padding: 5,
-  },
   headerSpacer: {
     width: 44,
   },
@@ -373,37 +394,42 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
+
+  // ─── FILTROS DE TIPO ───
   tiposScrollView: {
     maxHeight: 60,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#F0F0F0',
   },
   tiposContainer: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
     paddingVertical: 10,
   },
   tipoButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 8,
     marginHorizontal: 5,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F5F7FA',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#F0F0F0',
   },
   tipoButtonSelected: {
     backgroundColor: '#1E88E5',
     borderColor: '#1E88E5',
   },
   tipoButtonText: {
-    fontSize: 14,
-    color: '#616161',
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
   },
   tipoButtonTextSelected: {
     color: '#fff',
-    fontWeight: '500',
+    fontWeight: '600',
   },
+
+  // ─── LOADING ───
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -411,116 +437,164 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 16,
-    color: '#616161',
+    fontSize: 15,
+    color: '#888',
   },
+
+  // ─── LISTA DE PRESTADORES ───
   prestadoresList: {
     flex: 1,
   },
   prestadoresListContent: {
-    padding: 12,
+    padding: 16,
+    paddingBottom: 30,
   },
+
+  // ─── CARD PREMIUM ───
   prestadorCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 20,
     marginBottom: 16,
-    padding: 16,
-    elevation: 2,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
-  prestadorHeader: {
+  cardHero: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  prestadorImageContainer: {
+  cardImageWrapper: {
+    position: 'relative',
+    backgroundColor: '#FFF',
+    padding: 3,
+    borderRadius: 18,
+    marginRight: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  cardImage: {
     width: 70,
     height: 70,
-    borderRadius: 35,
-    overflow: 'hidden',
-    marginRight: 16,
+    borderRadius: 16,
+    resizeMode: 'cover',
   },
-  prestadorImage: {
-    width: '100%',
-    height: '100%',
+  cardVerifiedBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#4CAF50',
+    borderRadius: 10,
+    padding: 3,
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
-  prestadorImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#90CAF9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  prestadorInfo: {
+  cardHeroInfo: {
     flex: 1,
     justifyContent: 'center',
   },
   prestadorNombre: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '800',
     color: '#212121',
     marginBottom: 4,
+    letterSpacing: 0.3,
   },
   tipoContainer: {
     flexDirection: 'row',
     marginBottom: 4,
   },
   tipoBadge: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#FFF',
-    backgroundColor: '#4285F4',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: '#1E88E5',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: 10,
     overflow: 'hidden',
+    fontWeight: '600',
   },
   prestadorEspecialidad: {
-    fontSize: 14,
-    color: '#757575',
-    marginBottom: 4,
+    fontSize: 13,
+    color: '#888',
+    marginBottom: 6,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  ratingText: {
-    marginLeft: 5,
-    fontSize: 12,
-    color: '#757575',
-  },
-  estadisticasContainer: {
+  starsRowSmall: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#E0E0E0',
-    marginVertical: 12,
+    gap: 1,
   },
-  estadisticaItem: {
-    alignItems: 'center',
-  },
-  estadisticaValor: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212121',
-    marginVertical: 2,
-  },
-  estadisticaLabel: {
+  ratingText: {
+    marginLeft: 6,
     fontSize: 12,
-    color: '#757575',
+    color: '#888',
+    fontWeight: '500',
   },
+
+  // ─── STATS GRID MINI ───
+  cardStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  cardStatBox: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    marginHorizontal: 3,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  cardStatIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  cardStatValue: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#333',
+  },
+  cardStatLabel: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#888',
+    textTransform: 'uppercase',
+  },
+
+  // ─── BOTÓN AGENDAR ───
   agendarButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
-    paddingVertical: 10,
+    backgroundColor: '#1E88E5',
+    borderRadius: 14,
+    height: 46,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
   agendarButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    marginLeft: 6,
+    fontSize: 14,
   },
+
+  // ─── EMPTY STATE ───
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -529,7 +603,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#78909C',
+    color: '#888',
     textAlign: 'center',
     marginTop: 10,
     marginBottom: 20,
@@ -537,15 +611,15 @@ const styles = StyleSheet.create({
   reloadButton: {
     backgroundColor: '#1E88E5',
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
   },
   reloadButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    marginLeft: 6,
+    marginLeft: 8,
   },
 });
 

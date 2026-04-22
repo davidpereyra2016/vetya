@@ -11,9 +11,11 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
-  ActivityIndicator
+  ActivityIndicator,
+  Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import useValoracionesStore from '../../store/useValoracionesStore';
 import useCitaStore from '../../store/useCitaStore';
 import useCountPacientesStore from '../../store/useCountPacientesStore';
@@ -312,182 +314,205 @@ const VetDetailScreen = ({ route, navigation }) => {
   })) || [];
 
 
+  // Imagen para el hero
+  const displayImage = vetImage || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=250&q=80';
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
+      <StatusBar style="light" />
+
+      {/* ============================================== */}
+      {/* HERO SECTION (Header Azul Curvo)               */}
+      {/* ============================================== */}
+      <View style={styles.heroSection}>
+        {/* Controles Superiores */}
+        <View style={styles.headerTopBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassButton} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>Perfil de {vetName}</Text>
-          <View style={styles.headerSpacer} />
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity style={styles.glassButton} activeOpacity={0.8}>
+              <Ionicons name="share-outline" size={20} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.glassButton} activeOpacity={0.8}>
+              <Ionicons name="heart-outline" size={20} color="#FFF" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.mainCard}>
-          <View style={styles.vetImageContainer}>
-            {vetImage ? (
-              <Image source={{ uri: vetImage }} style={styles.vetImage} />
-            ) : (
-              <View style={styles.vetImagePlaceholder}>
-                <Text><Ionicons name="person" size={60} color="#fff" /></Text>
-              </View>
-            )}
+        {/* Info Principal del Veterinario/Clínica */}
+        <View style={styles.heroInfoContainer}>
+          <View style={styles.imageWrapper}>
+            <Image source={{ uri: displayImage }} style={styles.profileImage} />
             {vetAvailable && (
-              <View style={styles.statusBadge}>
-                <Text><Ionicons name="ellipse" size={12} color="#4CAF50" /></Text>
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#FFF" />
               </View>
             )}
           </View>
+          <Text style={styles.vetNameHero}>{vetName}</Text>
+          <Text style={styles.vetSpecialtyHero}>{vetSpecialty}</Text>
+        </View>
 
-          <Text style={styles.vetName}>{vetName}</Text>
-          <Text style={styles.vetSpecialty}>{vetSpecialty}</Text>
+        {/* Fondos abstractos */}
+        <View style={styles.abstractBlobTop} />
+        <View style={styles.abstractBlobBottom} />
+      </View>
 
-          <View style={styles.ratingSection}>
-            <View style={styles.ratingContainer}>
-              <RatingStars rating={vetRating} />
-              <Text style={styles.ratingText}>
-                {vetRating.toFixed(1)} ({vetReviews} reseñas)
-              </Text>
+      {/* ============================================== */}
+      {/* OVERLAPPING SHEET (La hoja superpuesta blanca) */}
+      {/* ============================================== */}
+      <ScrollView
+        style={styles.scrollArea}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.sheetContainer}>
+          {/* Indicador de arrastre visual */}
+          <View style={styles.dragIndicator} />
+
+          {/* GRID DE ESTADÍSTICAS RÁPIDAS */}
+          <View style={styles.statsGrid}>
+            <View style={styles.statBox}>
+              <View style={styles.statIconRow}>
+                <Ionicons name="star" size={14} color="#FFB300" style={{ marginRight: 4 }} />
+                <Text style={styles.statValue}>{vetRating.toFixed(1)}</Text>
+              </View>
+              <Text style={styles.statLabel}>{vetReviews} Reseñas</Text>
             </View>
-            <TouchableOpacity
-              style={[styles.rateButton, !canRate && styles.rateButtonDisabled]}
-              onPress={() => canRate ? setShowRatingModal(true) :
-                Alert.alert(
-                  "No puedes valorar",
-                  alreadyRatedThisPrestador
-                    ? 'Ya has valorado a este prestador.'
-                    : 'Solo puedes valorar a prestadores con los que hayas tenido una cita o emergencia.'
-                )
-              }
-            >
-              <Text>
-                <Ionicons name="star" size={16} color={canRate ? "#fff" : "#aaa"} />
-              </Text>
-              <Text style={[styles.rateButtonText, !canRate && styles.rateButtonTextDisabled]}>
-                Valorar
-              </Text>
+            <View style={styles.statBox}>
+              <View style={styles.statIconRow}>
+                <Ionicons name="people" size={14} color="#1E88E5" style={{ marginRight: 4 }} />
+                <Text style={styles.statValue}>{isLoadingPacientes ? '-' : totalPacientes}</Text>
+              </View>
+              <Text style={styles.statLabel}>Pacientes</Text>
+            </View>
+            <View style={styles.statBox}>
+              <View style={styles.statIconRow}>
+                <Ionicons name="briefcase" size={14} color="#4CAF50" style={{ marginRight: 4 }} />
+                <Text style={styles.statValue}>{ensureNumber(vet.experiencia, 0) || 'N/A'}</Text>
+              </View>
+              <Text style={styles.statLabel}>Años Exp.</Text>
+            </View>
+          </View>
+
+          {/* UBICACIÓN / DIRECCIÓN */}
+          <View style={styles.locationCard}>
+            <View style={styles.locationIconBox}>
+              <Ionicons name="location" size={20} color="#FFF" />
+            </View>
+            <View style={styles.locationInfo}>
+              <Text style={styles.locationTitle}>{ensureString(vet.clinica || vet.nombreClinica, vetTipo)}</Text>
+              <Text style={styles.locationAddress}>{vetAddress}</Text>
+            </View>
+            <TouchableOpacity style={styles.navigateBtn} activeOpacity={0.8}>
+              <Ionicons name="navigate" size={16} color="#1E88E5" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.specialtiesContainer}>
-            {vetSpecialties.map((specialty, index) => (
-              <View key={index} style={styles.specialtyBadge}>
-                <Text style={styles.specialtyText}>{ensureString(specialty)}</Text>
-              </View>
-            ))}
-          </View>
-
-          <TouchableOpacity style={styles.scheduleButton} onPress={scheduleAppointment}>
-            <Text><Ionicons name="calendar" size={20} color="#fff" /></Text>
-            <Text style={styles.scheduleButtonText}>Agendar Cita</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.infoCard}>
-          <Text style={styles.cardTitle}>Información Profesional</Text>
-          
-          <View style={styles.infoRow}>
-            <View style={styles.infoLabel}>
-              <Text><Ionicons name="medical-outline" size={20} color="#1E88E5" /></Text>
-              <Text style={styles.infoLabelText}>Especialidad:</Text>
-            </View>
-            <Text style={styles.infoValue}>{vetSpecialty}</Text>
-          </View>
-          
-          {/* <View style={styles.infoRow}>
-            <View style={styles.infoLabel}>
-              <Text><Ionicons name="checkmark-circle-outline" size={20} color="#1E88E5" /></Text>
-              <Text style={styles.infoLabelText}>Disponibilidad:</Text>
-            </View>
-            <Text style={[styles.infoValue, vetAvailable ? styles.availableText : styles.unavailableText]}>
-              {vetAvailable ? 'Disponible ahora' : 'No disponible'}
-            </Text>
-          </View> */}
-          
-          <View style={styles.infoRow}>
-            <View style={styles.infoLabel}>
-              <Text><Ionicons name="people-outline" size={20} color="#1E88E5" /></Text>
-              <Text style={styles.infoLabelText}>Pacientes atendidos:</Text>
-            </View>
-            <Text style={styles.infoValue}>
-              {isLoadingPacientes ? 'Cargando...' : `${totalPacientes} pacientes`}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.statsCard}>
-          <Text style={styles.cardTitle}>Estadísticas y Valoraciones</Text>
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{vetRating.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Valoración</Text>
-              <View style={styles.smallRatingContainer}>
-                <RatingStars rating={vetRating} />
-              </View>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{ensureString(vetReviews, '0')}</Text>
-              <Text style={styles.statLabel}>Reseñas</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{isLoadingPacientes ? '-' : totalPacientes}</Text>
-              <Text style={styles.statLabel}>Pacientes</Text>
-            </View>
-          </View>
-          <View style={styles.reviewSection}>
-            <Text style={styles.reviewSectionTitle}>Últimas Reseñas</Text>
-            
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#1E88E5" />
-                <Text style={styles.loadingText}>Cargando valoraciones...</Text>
-              </View>
-            ) : formattedRatings.length > 0 ? (
-              formattedRatings.map((review) => (
-                <View key={review.id} style={styles.reviewItem}>
-                  <View style={styles.reviewHeader}>
-                    <View style={styles.reviewUser}>
-                      {review.userImage ? (
-                        <Image source={{ uri: review.userImage }} style={styles.reviewUserImage} />
-                      ) : (
-                        <Text><Ionicons name="person-circle" size={24} color="#1E88E5" /></Text>
-                      )}
-                      <Text style={styles.reviewUserName}>{review.userName}</Text>
-                    </View>
-                    <View style={styles.reviewRating}><RatingStars rating={review.rating} /></View>
+          {/* ESPECIALIDADES */}
+          {vetSpecialties.length > 0 && (
+            <View style={styles.specialtiesSection}>
+              <Text style={styles.sectionTitle}>Especialidades</Text>
+              <View style={styles.specialtiesContainer}>
+                {vetSpecialties.map((specialty, index) => (
+                  <View key={index} style={styles.specialtyBadge}>
+                    <Text style={styles.specialtyText}>{ensureString(specialty)}</Text>
                   </View>
-                  <Text style={styles.reviewDate}>{review.formattedDate}</Text>
-                  <Text style={styles.reviewComment}>{review.comment}</Text>
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyReviewsContainer}>
-                <Text style={styles.emptyReviewsText}>
-                  No hay reseñas disponibles para este prestador.
-                </Text>
-                {canRate && (
-                  <TouchableOpacity 
-                    style={styles.beFirstButton}
-                    onPress={() => setShowRatingModal(true)}
-                  >
-                    <Text style={styles.beFirstButtonText}>¡Sé el primero en valorar!</Text>
-                  </TouchableOpacity>
-                )}
-                {!canRate && alreadyRatedThisPrestador && (
-                  <Text style={styles.emptyReviewsText}>
-                    Ya registraste tu valoración para este prestador.
-                  </Text>
-                )}
+                ))}
               </View>
+            </View>
+          )}
+
+          {/* RESEÑAS */}
+          <View style={styles.reviewsHeader}>
+            <Text style={styles.sectionTitle}>Reseñas ({vetReviews})</Text>
+            {canRate && (
+              <TouchableOpacity
+                style={styles.rateButton}
+                onPress={() => setShowRatingModal(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="create" size={14} color="#FF9800" style={{ marginRight: 4 }} />
+                <Text style={styles.rateButtonText}>Calificar</Text>
+              </TouchableOpacity>
             )}
           </View>
+
+          {/* Lista de Reseñas */}
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#1E88E5" style={{ marginVertical: 20 }} />
+          ) : formattedRatings.length > 0 ? (
+            <View style={styles.reviewsList}>
+              {formattedRatings.map((review) => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewCardHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={styles.reviewAvatar}>
+                        <Text style={styles.reviewAvatarText}>
+                          {ensureString(review.userName, 'U')[0].toUpperCase()}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text style={styles.reviewUserName}>{review.userName}</Text>
+                        <Text style={styles.reviewDate}>{review.formattedDate}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.starsRowSmall}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Ionicons
+                          key={star}
+                          name={star <= ensureNumber(review.rating, 5) ? 'star' : 'star-outline'}
+                          size={10}
+                          color="#FFB300"
+                        />
+                      ))}
+                    </View>
+                  </View>
+                  <Text style={styles.reviewComment}>{review.comment || 'Sin comentarios adicionales.'}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.noReviewsBox}>
+              <Text style={styles.noReviewsText}>
+                No hay reseñas disponibles para este prestador.
+              </Text>
+              {canRate && (
+                <TouchableOpacity
+                  style={styles.beFirstButton}
+                  onPress={() => setShowRatingModal(true)}
+                >
+                  <Text style={styles.beFirstButtonText}>¡Sé el primero en valorar!</Text>
+                </TouchableOpacity>
+              )}
+              {!canRate && alreadyRatedThisPrestador && (
+                <Text style={styles.noReviewsText}>
+                  Ya registraste tu valoración para este prestador.
+                </Text>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
 
+      {/* ============================================== */}
+      {/* BOTÓN FLOTANTE INFERIOR (Sticky Bottom Bar)    */}
+      {/* ============================================== */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={styles.fabButton}
+          activeOpacity={0.9}
+          onPress={scheduleAppointment}
+        >
+          <Ionicons name="calendar" size={20} color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={styles.fabText}>Agendar Cita</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ============================================== */}
+      {/* MODAL DE RESEÑA                                */}
+      {/* ============================================== */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -496,31 +521,30 @@ const VetDetailScreen = ({ route, navigation }) => {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
+          style={styles.modalOverlay}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Valorar Veterinario</Text>
+              <Text style={styles.modalTitle}>Escribir Reseña</Text>
               <TouchableOpacity onPress={() => setShowRatingModal(false)}>
-                <Text><Ionicons name="close" size={24} color="#666" /></Text>
+                <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSubtitle}>¿Cómo calificarías a {vetName}?</Text>
+            <Text style={styles.modalSubtitle}>¿Cómo calificarías tu experiencia con {vetName}?</Text>
             <RatingSelector />
-            <Text style={styles.inputLabel}>Tu comentario (opcional)</Text>
+            <Text style={styles.inputLabel}>Comparte tu experiencia (Opcional)</Text>
             <TextInput
               style={styles.commentInput}
-              placeholder="Comparte tu experiencia con este veterinario"
+              placeholder="¿Qué tal fue la atención?"
               multiline={true}
               numberOfLines={4}
               value={userComment}
               onChangeText={setUserComment}
+              placeholderTextColor="#999"
             />
             <TouchableOpacity style={styles.submitButton} onPress={submitRating}>
-              <Text style={styles.submitButtonText}>Enviar Valoración</Text>
+              <Text style={styles.submitButtonText}>Enviar Reseña</Text>
             </TouchableOpacity>
-            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -528,17 +552,17 @@ const VetDetailScreen = ({ route, navigation }) => {
   );
 };
 
-// Asegúrate de que todos tus estilos estén aquí.
-// He copiado los estilos de tu pregunta original.
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
-  header: {
+
+  // ─── HERO SECTION ───
+  heroSection: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 30 : 20,
-    paddingBottom: 25,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 70,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
     borderBottomRightRadius: 35,
@@ -547,344 +571,324 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 8,
-    zIndex: 10,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerBackButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerSpacer: {
-    width: 44,
-  },
-  headerTitle: {
-    color: '#FFF',
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    flex: 1,
-    textAlign: 'center',
-    paddingHorizontal: 8,
-  },
-  backButton: {
-    padding: 5,
-  },
-  scrollView: {
-    flex: 1,
-    padding: 15,
-  },
-  mainCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  vetImageContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#1E88E5', // Fallback color
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
     position: 'relative',
-    overflow: 'hidden', // Para que la imagen no se salga del borde redondeado
+    overflow: 'hidden',
   },
-  vetImage: {
-    width: '100%', // Ocupar todo el contenedor
-    height: '100%', // Ocupar todo el contenedor
-  },
-  vetImagePlaceholder: {
-    width: 120,
-    height: 120,
-    backgroundColor: '#B0BEC5', // Un color de placeholder diferente
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusBadge: {
-    position: 'absolute',
-    bottom: 5,
-    right: 5,
-    backgroundColor: '#fff', // Fondo blanco para el badge
-    borderRadius: 10,       // Hacerlo circular
-    width: 20,              // Tamaño del badge
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,         // Borde blanco alrededor del punto verde/rojo
-    borderColor: '#fff',    // El borde es blanco para destacar sobre la imagen
-  },
-  vetName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-    textAlign: 'center',
-  },
-  vetSpecialty: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  ratingSection: {
+  headerTopBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
-    width: '100%',
     justifyContent: 'space-between',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
+    zIndex: 20,
   },
-  ratingText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8, // Un poco más de espacio
-  },
-  rateButton: {
-    flexDirection: 'row',
+  glassButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1E88E5',
-    paddingVertical: 8, // Ajuste de padding
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  rateButtonDisabled: {
+  heroInfoContainer: {
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  imageWrapper: {
+    position: 'relative',
+    backgroundColor: '#FFF',
+    padding: 4,
+    borderRadius: 30,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  profileImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 26,
+    resizeMode: 'cover',
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: '#4CAF50',
+    borderRadius: 14,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#1E88E5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  vetNameHero: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FFF',
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  vetSpecialtyHero: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '600',
+    marginTop: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  abstractBlobTop: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 200,
+    height: 200,
+    backgroundColor: '#FFF',
+    opacity: 0.05,
+    borderRadius: 100,
+    transform: [{ scaleX: 1.5 }],
+  },
+  abstractBlobBottom: {
+    position: 'absolute',
+    bottom: -30,
+    left: -40,
+    width: 150,
+    height: 150,
+    backgroundColor: '#42A5F5',
+    opacity: 0.1,
+    borderRadius: 75,
+    transform: [{ scaleX: 1.2 }],
+  },
+
+  // ─── SCROLL Y OVERLAP ───
+  scrollArea: {
+    flex: 1,
+    marginTop: -40,
+    zIndex: 30,
+  },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  sheetContainer: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
+    paddingHorizontal: 25,
+    paddingTop: 12,
+    paddingBottom: 40,
+    minHeight: 600,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  dragIndicator: {
+    width: 48,
+    height: 6,
     backgroundColor: '#E0E0E0',
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 25,
   },
-  rateButtonText: {
-    color: '#fff',
-    marginLeft: 5, // Espacio entre icono y texto
-    fontSize: 12,  // Un poco más pequeño para botones compactos
-    fontWeight: '500',
+
+  // ─── GRID DE ESTADÍSTICAS ───
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 25,
   },
-  rateButtonTextDisabled: {
-    color: '#9E9E9E', // Un gris más oscuro para mejor contraste
+  statBox: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  statIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#333',
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#888',
+    textTransform: 'uppercase',
+  },
+
+  // ─── UBICACIÓN ───
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(227, 242, 253, 0.5)',
+    borderWidth: 1,
+    borderColor: '#BBDEFB',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 25,
+  },
+  locationIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E88E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  locationInfo: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  locationTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#1565C0',
+    marginBottom: 2,
+  },
+  locationAddress: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+  },
+  navigateBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
+  // ─── ESPECIALIDADES ───
+  specialtiesSection: {
+    marginBottom: 25,
   },
   specialtiesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    marginVertical: 10,
-    paddingHorizontal: 5, // Para que los badges no peguen a los bordes si hay muchos
   },
   specialtyBadge: {
     backgroundColor: '#E3F2FD',
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16, // Un poco menos redondeado
-    margin: 4,        // Espacio uniforme alrededor
-  },
-  specialtyText: {
-    color: '#1976D2', // Un azul más oscuro para mejor lectura
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  scheduleButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 14, // Un poco más alto
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 10,
-    width: '90%', // No ocupar todo el ancho para que respire
-    alignSelf: 'center', // Centrar el botón
-  },
-  scheduleButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 8,
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12, // Más espaciado vertical
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0', // Un color de borde más sutil
-  },
-  infoLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1, // Permitir que el label se encoja si el valor es largo
-    marginRight: 10, // Espacio entre label y value
-  },
-  infoLabelText: {
-    fontSize: 15,
-    color: '#424242', // Un poco más oscuro
-    marginLeft: 10,
-  },
-  infoValue: {
-    fontSize: 15,
-    color: '#212121', // Más oscuro para el valor
-    fontWeight: '500',
-    textAlign: 'right',
-    flexGrow: 1, // Permitir que el valor ocupe el espacio restante
-  },
-  availableText: {
-    color: '#388E3C', // Verde más oscuro
-    fontWeight: 'bold',
-  },
-  unavailableText: {
-    color: '#D32F2F', // Rojo más oscuro
-  },
-  statsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 15,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start', // Alinear items al inicio para mejor distribución vertical
-    marginVertical: 15,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1, // Para que cada item ocupe espacio equitativo
-    paddingHorizontal: 5, // Espacio para que no se peguen
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1E88E5',
-    marginBottom: 3, // Espacio debajo del valor
-  },
-  statLabel: {
-    fontSize: 13, // Ligeramente más pequeño
-    color: '#757575', // Gris más oscuro
-    marginTop: 5,
-    textAlign: 'center', // Para etiquetas de múltiples palabras
-  },
-  statDivider: {
-    width: 1,
-    height: '70%', // Ajustar altura del divisor
-    alignSelf: 'center',
-    backgroundColor: '#e0e0e0',
-  },
-  smallRatingContainer: {
-    flexDirection: 'row',
-    marginTop: 4, // Ajuste de espacio
-  },
-  reviewSection: {
-    marginTop: 20,
-  },
-  reviewSectionTitle: {
-    fontSize: 17, // Ligeramente más grande
-    fontWeight: '600', // Un poco más de peso
-    color: '#333',
-    marginBottom: 15,
-  },
-  reviewItem: {
-    backgroundColor: '#FAFAFA', // Un fondo muy sutil
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#EEEEEE', // Borde sutil
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8, // Más espacio
-  },
-  reviewUser: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reviewUserName: {
-    fontSize: 15, // Un poco más grande
-    fontWeight: '600',
-    color: '#424242',
-    marginLeft: 8,
-  },
-  reviewRating: {
-    flexDirection: 'row',
-  },
-  reviewDate: {
-    fontSize: 12,
-    color: '#9E9E9E',
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginRight: 8,
     marginBottom: 8,
   },
+  specialtyText: {
+    color: '#1976D2',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // ─── SECCIONES TEXTO ───
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#1565C0',
+    marginBottom: 12,
+  },
+
+  // ─── RESEÑAS ───
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  rateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  rateButtonText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FF9800',
+  },
+  reviewsList: {
+    gap: 15,
+  },
+  reviewCard: {
+    backgroundColor: '#F5F7FA',
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  reviewCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  reviewAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#BBDEFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  reviewAvatarText: {
+    color: '#1976D2',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  reviewUserName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  reviewDate: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+  },
+  starsRowSmall: {
+    flexDirection: 'row',
+    gap: 2,
+  },
   reviewComment: {
-    fontSize: 14,
-    color: '#616161',
-    lineHeight: 21, // Mejor interlineado
+    fontSize: 13,
+    color: '#555',
+    lineHeight: 18,
   },
-  reviewUserImage: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 8,
-  },
-  loadingContainer: {
+  noReviewsBox: {
     padding: 20,
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#F5F7FA',
+    borderRadius: 16,
   },
-  loadingText: {
-    marginTop: 10,
-    color: '#666',
+  noReviewsText: {
+    color: '#888',
     fontSize: 14,
-  },
-  emptyReviewsContainer: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginVertical: 10,
-  },
-  emptyReviewsText: {
-    color: '#666',
-    fontSize: 14,
+    fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -900,78 +904,112 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+
+  // ─── BOTTOM BAR (Cita) ───
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+    borderTopWidth: 1,
+    borderColor: '#F0F0F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 20,
+    zIndex: 50,
+  },
+  fabButton: {
+    backgroundColor: '#1E88E5',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 56,
+    borderRadius: 16,
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  fabText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  // ─── MODAL ───
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Un poco más oscuro
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 25, // Más padding
-    maxHeight: '85%', // Un poco más de altura máxima
-    shadowColor: "#000",
-    shadowOffset: {
-        width: 0,
-        height: -2 // Sombra hacia arriba
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 25,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 25,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 25, // Más espacio
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 22, // Más grande
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1565C0',
   },
   modalSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#666',
-    marginBottom: 20, // Más espacio
+    marginBottom: 20,
     textAlign: 'center',
   },
   ratingSelector: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginVertical: 25, // Más espacio
+    marginVertical: 25,
+    gap: 10,
   },
   ratingStar: {
-    marginHorizontal: 6, // Un poco más de separación
+    padding: 5,
   },
   inputLabel: {
-    fontSize: 16,
-    color: '#444',
-    marginBottom: 10, // Más espacio
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
   },
   commentInput: {
-    minHeight: 120, // Altura mínima
+    backgroundColor: '#F5F7FA',
     borderWidth: 1,
-    borderColor: '#CFD8DC', // Color de borde más definido
-    borderRadius: 10, // Bordes más redondeados
-    padding: 15,    // Más padding interno
-    fontSize: 16,
+    borderColor: '#E0E0E0',
+    borderRadius: 15,
+    padding: 15,
+    fontSize: 15,
+    color: '#333',
+    minHeight: 120,
     textAlignVertical: 'top',
-    backgroundColor: '#F7F9FA', // Un fondo muy sutil
-    marginBottom: 20, // Espacio antes del botón
+    marginBottom: 25,
   },
   submitButton: {
-    backgroundColor: '#1E88E5',
-    borderRadius: 10, // Bordes más redondeados
-    paddingVertical: 16, // Botón más alto
+    backgroundColor: '#4CAF50',
+    borderRadius: 16,
+    height: 56,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
   },
   submitButtonText: {
-    color: '#fff',
-    fontSize: 17, // Texto un poco más grande
+    color: '#FFF',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
