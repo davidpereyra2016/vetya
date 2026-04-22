@@ -126,7 +126,8 @@
                           <% if (bns.length > 0) { %>
                             <div class="thumb-stack">
                               <% bns.slice(0, 4).forEach(b => { %>
-                                <img src="<%= b.urlImagen %>" class="banner-thumb" alt="banner">
+                                <% const proxiedBannerUrl = `/admin/media/banner/${Buffer.from(b.urlImagen, 'utf8').toString('base64url')}`; %>
+                                <img src="<%= proxiedBannerUrl %>" class="banner-thumb" alt="banner">
                               <% }); %>
                               <% if (bns.length > 4) { %>
                                 <span class="badge bg-secondary align-self-center">+<%= bns.length - 4 %></span>
@@ -192,7 +193,7 @@
     $(document).ready(function(){
       if ($.fn.DataTable && $('#dataTable tbody tr').length > 1) {
         $('#dataTable').DataTable({
-          language: { url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json' },
+          language: { url: '/i18n/datatables-es-ES.json' },
           order: [[4, 'desc']],
           pageLength: 25,
           columnDefs: [{ orderable: false, targets: [2, 6] }]

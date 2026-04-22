@@ -118,9 +118,10 @@
                 <h6 class="fw-bold mb-3">Banners (<%= banners.length %>)</h6>
                 <div class="row g-3">
                   <% banners.forEach(b => { %>
+                    <% const proxiedBannerUrl = `/admin/media/banner/${Buffer.from(b.urlImagen, 'utf8').toString('base64url')}`; %>
                     <div class="col-md-4 col-lg-3">
                       <div class="banner-card">
-                        <img src="<%= b.urlImagen %>" alt="banner">
+                        <img src="<%= proxiedBannerUrl %>" alt="banner">
                         <div class="p-2">
                           <% if (b.enlace) { %>
                             <small class="text-muted d-block text-truncate mb-2"><i class="fas fa-link me-1"></i><%= b.enlace %></small>

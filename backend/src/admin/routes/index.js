@@ -40,6 +40,20 @@ const uploadBufferToCloudinary = (buffer, folder = 'vetya/publicidad') =>
     stream.end(buffer);
   });
 
+const isAllowedCloudinaryUrl = (value) => {
+  try {
+    const parsed = new URL(value);
+    const expectedHost = 'res.cloudinary.com';
+    const expectedPathPrefix = `/${process.env.CLOUDINARY_CLOUD_NAME || ''}/`;
+
+    return parsed.protocol === 'https:' &&
+      parsed.hostname === expectedHost &&
+      parsed.pathname.startsWith(expectedPathPrefix);
+  } catch {
+    return false;
+  }
+};
+
 const router = express.Router();
 
 // Middleware para autenticación del panel administrativo
@@ -212,6 +226,33 @@ router.post('/resend-verification', async (req, res) => {
       mensaje: null,
       isResending: false
     });
+  }
+});
+
+router.get('/media/banner/:encodedUrl', isAuthenticated, async (req, res) => {
+  try {
+    const decodedUrl = Buffer.from(req.params.encodedUrl, 'base64url').toString('utf8');
+
+    if (!isAllowedCloudinaryUrl(decodedUrl)) {
+      return res.status(400).send('URL de banner invalida');
+    }
+
+    const response = await axios.get(decodedUrl, {
+      responseType: 'arraybuffer',
+      timeout: 15000,
+      validateStatus: (status) => status >= 200 && status < 500,
+    });
+
+    if (response.status >= 400) {
+      return res.status(response.status).send('Imagen no disponible');
+    }
+
+    res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return res.send(Buffer.from(response.data));
+  } catch (error) {
+    console.error('Error al servir banner del admin:', error.message);
+    return res.status(502).send('No se pudo cargar la imagen');
   }
 });
 
