@@ -301,7 +301,11 @@ router.get("/", protectRoute, async (req, res) => {
     
     const citas = await Cita.find({ usuario: req.user._id })
       .populate("mascota", "nombre tipo raza imagen")
-      .populate("prestador", "nombre especialidades imagen rating")
+      .populate({
+        path: "prestador",
+        select: "nombre especialidades imagen rating usuario",
+        populate: { path: "usuario", select: "profilePicture username" }
+      })
       .populate("servicio", "nombre icono color")
       .sort({ fecha: 1 });
     
