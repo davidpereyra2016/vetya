@@ -554,10 +554,13 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       <StatusBar style="light" />
       
       <View style={newStyles.header}>
-        <TouchableOpacity style={newStyles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back-outline" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={newStyles.headerTitle}>Agendar Cita</Text>
+        <View style={newStyles.headerTop}>
+          <TouchableOpacity style={newStyles.headerBackButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={newStyles.headerTitle}>Agendar Cita</Text>
+          <View style={newStyles.headerSpacer} />
+        </View>
       </View>
       
       <Stepper currentStep={currentStep} />
@@ -608,32 +611,49 @@ const newStyles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 50 : 40,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === 'ios' ? 30 : 20,
+    paddingBottom: 25,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 10,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerBackButton: {
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerSpacer: {
+    width: 44,
   },
   backButton: {
     padding: 5,
   },
   headerTitle: {
+    color: '#FFF',
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 15,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    flex: 1,
+    textAlign: 'center',
   },
   stepperCard: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
-    marginTop: -20,
+    marginTop: 20,
     marginBottom: 15,
     borderRadius: 20,
     paddingVertical: 25,

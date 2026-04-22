@@ -1327,7 +1327,7 @@ const styles = StyleSheet.create({
   // ─── HEADER PERSONALIZADO (saludo + avatar) ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 30 : 20,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
