@@ -29,10 +29,34 @@ const BannerPublicitario = () => {
   const { banners, isLoading, fetchBanners } = usePublicidadStore();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef(null);
+  const activeIndexRef = useRef(0);
 
   useEffect(() => {
     fetchBanners();
   }, [fetchBanners]);
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  useEffect(() => {
+    if (!banners || banners.length <= 1) {
+      return undefined;
+    }
+
+    const autoScrollInterval = setInterval(() => {
+      const nextIndex = (activeIndexRef.current + 1) % banners.length;
+
+      flatListRef.current?.scrollToIndex({
+        index: nextIndex,
+        animated: true,
+      });
+
+      setActiveIndex(nextIndex);
+    }, 5000);
+
+    return () => clearInterval(autoScrollInterval);
+  }, [banners]);
 
   // Handler al tocar la tarjeta: abre el enlace si existe
   const handlePress = async (banner) => {
@@ -108,6 +132,14 @@ const BannerPublicitario = () => {
         ItemSeparatorComponent={() => <View style={{ width: CARD_MARGIN }} />}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        onScrollToIndexFailed={({ index }) => {
+          setTimeout(() => {
+            flatListRef.current?.scrollToIndex({
+              index,
+              animated: true,
+            });
+          }, 250);
+        }}
       />
 
       {banners.length > 1 && (
