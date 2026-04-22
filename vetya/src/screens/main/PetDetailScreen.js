@@ -199,9 +199,6 @@ const PetDetailScreen = ({ route, navigation }) => {
             </View>
           )}
 
-          {/* Degradado oscuro para legibilidad de los botones */}
-          <View style={styles.heroGradient} />
-
           {/* Header flotante (glassmorphism) */}
           <View style={styles.floatingHeader}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassButton}>
@@ -247,12 +244,18 @@ const PetDetailScreen = ({ route, navigation }) => {
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>EDAD</Text>
-              <Text style={styles.statValue} numberOfLines={1}>{pet.edad || '--'}</Text>
+              <Text style={styles.statValue} numberOfLines={1}>
+                {pet.edad
+                  ? (/\b(año|mes)/i.test(pet.edad) ? pet.edad : `${pet.edad} años`)
+                  : '--'}
+              </Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>PESO</Text>
               <Text style={styles.statValue} numberOfLines={1}>
-                {pet.peso && pet.peso !== 'No especificado' ? pet.peso : '--'}
+                {pet.peso && pet.peso !== 'No especificado'
+                  ? (/kg/i.test(pet.peso) ? pet.peso : `${pet.peso} kg`)
+                  : '--'}
               </Text>
             </View>
             <View style={styles.statBox}>
