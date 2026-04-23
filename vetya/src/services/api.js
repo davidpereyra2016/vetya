@@ -305,18 +305,24 @@ export const emergenciaService = {
   // Obtener actualización de ubicación del veterinario (datos reales del backend)
   getVetLocationUpdate: async (emergencyId) => {
     try {
-      console.log('📍 [API] Solicitando ubicación del veterinario para emergencia:', emergencyId);
       const response = await axios.get(`/emergencias/${emergencyId}/ubicacion-veterinario`);
-      console.log('✅ [API] Ubicación recibida:', response.data);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('❌ [API] Error al obtener ubicación del veterinario:', error.response?.data || error.message);
+      const backendMsg = error.response?.data?.message;
+      // "Coordenadas del veterinario inválidas" es un caso esperado cuando el vet
+      // no tiene ubicación en tiempo real cargada. Lo logueamos como warn silencioso
+      // (una sola vez) en lugar de saturar la consola con ERROR en cada poll.
+      if (backendMsg === 'Coordenadas del veterinario inválidas') {
+        // Silencioso: el HomeScreen cuenta errores consecutivos y detiene el polling.
+      } else {
+        console.error('❌ [API] Error al obtener ubicación del veterinario:', backendMsg || error.message);
+      }
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al obtener ubicación del veterinario'
+        error: backendMsg || 'Error al obtener ubicación del veterinario'
       };
     }
   },
