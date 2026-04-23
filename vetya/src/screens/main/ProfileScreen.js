@@ -387,12 +387,13 @@ const styles = StyleSheet.create({
 
   // ─── SECCIONES Y TARJETAS ───
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 19,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#1A237E',
+    letterSpacing: 0.2,
     marginLeft: 4,
-    marginBottom: 8,
-    marginTop: 4,
+    marginBottom: 12,
+    marginTop: 8,
   },
   cardGroup: {
     backgroundColor: '#FFF',
