@@ -309,7 +309,12 @@ const EmergencyDetailScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const EmergencyDetailsModal = () => (
+  // NOTA: Anteriormente esto era `const EmergencyDetailsModal = () => (...)` (un componente
+  // creado dentro del render). En cada `setState` (p.ej. `setLoadingPago`, `setPagoInfo`)
+  // React trataba al componente como uno nuevo y desmontaba/remontaba el Modal mientras
+  // estaba animando, lo que congelaba la app al abrir el detalle.
+  // Ahora es simplemente JSX guardado en una variable -> sin remounts -> sin freeze.
+  const emergencyDetailsModal = (
     <Modal
       animationType="slide"
       transparent={true}
@@ -592,7 +597,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
         </View>
       )}
       
-      <EmergencyDetailsModal />
+      {emergencyDetailsModal}
     </View>
   );
 };
