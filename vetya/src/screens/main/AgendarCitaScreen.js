@@ -366,18 +366,23 @@ const AgendarCitaScreen = ({ navigation, route }) => {
 
   const renderSectionTitle = (title) => <Text style={newStyles.sectionTitle}>{title}</Text>;
 
-  // CAMBIO: Renombrado y ajustado para el nuevo flujo.
+  // Flujo: tipo prestador → prestador → servicio (diseño premium)
   const renderProviderSelectionStep = () => (
     <View>
-      {/* Paso 1.1: Seleccionar Tipo de Prestador */}
-      {renderSectionTitle('1. Elige el tipo de prestador')}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={newStyles.horizontalList}>
+      {/* 1. Tipo de prestador - chips horizontales */}
+      {renderSectionTitle('Elige el tipo de prestador')}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={newStyles.hScroll} contentContainerStyle={newStyles.hScrollContent}>
         {providerTypes.map(type => {
           const isSelected = selectedProviderType?.id === type.id;
           return (
-            <TouchableOpacity key={type.id} style={[newStyles.card, isSelected && newStyles.selectedCard]} onPress={() => handleSelectProviderType(type)}>
-              <Ionicons name={type.icon} size={28} color={isSelected ? '#fff' : '#1E88E5'} />
-              <Text style={[newStyles.cardText, isSelected && newStyles.selectedCardText]}>{type.name}</Text>
+            <TouchableOpacity
+              key={type.id}
+              activeOpacity={0.85}
+              style={[newStyles.chip, isSelected ? newStyles.chipActive : newStyles.chipInactive]}
+              onPress={() => handleSelectProviderType(type)}
+            >
+              <Ionicons name={type.icon} size={16} color={isSelected ? '#FFF' : '#666'} style={{ marginRight: 6 }} />
+              <Text style={[newStyles.chipText, isSelected ? newStyles.chipTextActive : newStyles.chipTextInactive]}>{type.name}</Text>
             </TouchableOpacity>
           );
         })}
@@ -385,165 +390,294 @@ const AgendarCitaScreen = ({ navigation, route }) => {
 
       {isLoading && !providers.length && selectedProviderType && renderLoader()}
 
-      {/* Paso 1.2: Seleccionar Prestador específico */}
+      {/* 2. Prestador - tarjetas horizontales */}
       {selectedProviderType && providers.length > 0 && (
         <>
-          {renderSectionTitle('2. Selecciona un prestador')}
-          {providers.map(provider => {
-             const isSelected = selectedProvider?._id === provider._id;
-             return (
-                <TouchableOpacity key={provider._id} style={[newStyles.providerCard, isSelected && newStyles.selectedCard]} onPress={() => handleSelectProvider(provider)}>
-                  <Image source={{ uri: provider.imagen || `https://placehold.co/100x100/E3F2FD/1E88E5?text=${provider.nombre.charAt(0)}` }} style={newStyles.providerImage} />
-                  <View style={newStyles.providerInfo}>
-                    <Text style={[newStyles.providerName, isSelected && newStyles.selectedCardText]}>{provider.nombre}</Text>
-                    <Text style={[newStyles.providerSpecialty, isSelected && newStyles.selectedCardText]}>{provider.tipo}</Text>
-                  </View>
-                  {isSelected && <Ionicons name="checkmark-circle" size={24} color="#fff" style={newStyles.checkIcon} />}
+          {renderSectionTitle('Selecciona un prestador')}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={newStyles.hScroll} contentContainerStyle={newStyles.hScrollContent}>
+            {providers.map(provider => {
+              const isSelected = selectedProvider?._id === provider._id;
+              const img = provider.usuario?.profilePicture || provider.imagen;
+              return (
+                <TouchableOpacity
+                  key={provider._id}
+                  activeOpacity={0.9}
+                  style={[newStyles.prestadorCard, isSelected ? newStyles.prestadorCardActive : newStyles.prestadorCardInactive]}
+                  onPress={() => handleSelectProvider(provider)}
+                >
+                  {isSelected && (
+                    <View style={newStyles.checkIconTopRight}>
+                      <Ionicons name="checkmark-circle" size={20} color="#1E88E5" />
+                    </View>
+                  )}
+                  {img ? (
+                    <Image source={{ uri: img }} style={newStyles.prestadorImg} />
+                  ) : (
+                    <View style={newStyles.logoPlaceholder}>
+                      <Ionicons name="medical" size={24} color="#B0BEC5" />
+                    </View>
+                  )}
+                  <Text style={newStyles.prestadorNombre} numberOfLines={1}>{provider.nombre}</Text>
+                  {provider.rating ? (
+                    <View style={newStyles.ratingBadge}>
+                      <Ionicons name="star" size={10} color="#FFB300" style={{ marginRight: 2 }} />
+                      <Text style={newStyles.ratingBadgeText}>{provider.rating}</Text>
+                    </View>
+                  ) : (
+                    <Text style={newStyles.prestadorTipo} numberOfLines={1}>{provider.tipo || ''}</Text>
+                  )}
                 </TouchableOpacity>
-             );
-          })}
+              );
+            })}
+          </ScrollView>
         </>
       )}
 
       {isLoading && !services.length && selectedProvider && renderLoader()}
 
-      {/* Paso 1.3: Seleccionar Servicio del Prestador */}
+      {/* 3. Servicio - filas con precio y duración */}
       {selectedProvider && services.length > 0 && (
         <>
-          {renderSectionTitle('3. ¿Qué servicio necesitas?')}
-            <View style={newStyles.serviceListContainer}>
-                {services.map(service => {
-                    const isSelected = selectedService?._id === service._id;
-                    return (
-                    <TouchableOpacity key={service._id} style={[newStyles.serviceCard, isSelected && newStyles.selectedCard]} onPress={() => setSelectedService(service)}>
-                        <Ionicons name={service.icon || 'medical-outline'} size={24} color={isSelected ? '#fff' : '#1E88E5'} />
-                        <View style={newStyles.serviceInfo}>
-                          <Text style={[newStyles.serviceName, isSelected && newStyles.selectedCardText]}>{service.nombre}</Text>
-                          <Text style={[newStyles.serviceDetails, isSelected && newStyles.selectedCardText]}>${service.precio || '0'} • {service.duracion || 30} min</Text>
-                        </View>
-                    </TouchableOpacity>
-                    );
-                })}
-            </View>
+          {renderSectionTitle('Servicio a realizar')}
+          {services.map(service => {
+            const isSelected = selectedService?._id === service._id;
+            return (
+              <TouchableOpacity
+                key={service._id}
+                activeOpacity={0.9}
+                style={[newStyles.servicioRow, isSelected ? newStyles.servicioRowActive : newStyles.servicioRowInactive]}
+                onPress={() => setSelectedService(service)}
+              >
+                <View style={newStyles.servicioInfo}>
+                  <View style={newStyles.servicioHeader}>
+                    <Text style={[newStyles.servicioNombre, isSelected && { color: '#1E88E5' }]} numberOfLines={1}>{service.nombre}</Text>
+                    <Text style={[newStyles.servicioPrecio, isSelected && { color: '#1E88E5' }]}>${service.precio || '0'}</Text>
+                  </View>
+                  <View style={newStyles.servicioFooter}>
+                    <Ionicons name="time-outline" size={14} color={isSelected ? '#1E88E5' : '#999'} style={{ marginRight: 4 }} />
+                    <Text style={newStyles.servicioTiempo}>{service.duracion || 30} min aprox.</Text>
+                  </View>
+                </View>
+                <View style={[newStyles.radioOuter, isSelected && newStyles.radioOuterActive]}>
+                  {isSelected && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </>
       )}
     </View>
   );
 
-  // El resto de las funciones de renderizado (renderPetStep, renderDateTimeStep, etc.) no necesitan cambios.
+  // Paso 2 - Mascota (grid 2 columnas)
   const renderPetStep = () => (
     <View>
       {renderSectionTitle('Selecciona tu mascota')}
-      {pets.map(pet => {
-        const isSelected = selectedPet?.id === pet.id;
-        return (
-          <TouchableOpacity key={pet.id} style={[newStyles.providerCard, isSelected && newStyles.selectedCard]} onPress={() => setSelectedPet(pet)}>
-            <Image source={{ uri: pet.imagen || `https://placehold.co/100x100/EBF2FA/1E88E5?text=${pet.nombre.charAt(0)}` }} style={newStyles.providerImage} />
-            <View style={newStyles.providerInfo}>
-              <Text style={[newStyles.providerName, isSelected && newStyles.selectedCardText]}>{pet.nombre}</Text>
-              <Text style={[newStyles.providerSpecialty, isSelected && newStyles.selectedCardText]}>{pet.tipo} {pet.raza ? `• ${pet.raza}` : ''}</Text>
-            </View>
-            {isSelected && <Ionicons name="checkmark-circle" size={24} color="#fff" style={newStyles.checkIcon} />}
-          </TouchableOpacity>
-        );
-      })}
+      <View style={newStyles.gridContainer}>
+        {pets.map(pet => {
+          const isSelected = selectedPet?.id === pet.id;
+          return (
+            <TouchableOpacity
+              key={pet.id}
+              activeOpacity={0.9}
+              style={[newStyles.mascotaCard, isSelected ? newStyles.mascotaCardActive : newStyles.mascotaCardInactive]}
+              onPress={() => setSelectedPet(pet)}
+            >
+              {isSelected && (
+                <View style={newStyles.checkIconTopRight}>
+                  <Ionicons name="checkmark-circle" size={22} color="#1E88E5" />
+                </View>
+              )}
+              {pet.imagen ? (
+                <Image source={{ uri: pet.imagen }} style={newStyles.mascotaImg} />
+              ) : (
+                <View style={newStyles.mascotaImgPlaceholder}>
+                  <Ionicons name="paw" size={28} color="#B0BEC5" />
+                </View>
+              )}
+              <Text style={newStyles.mascotaNombre} numberOfLines={1}>{pet.nombre}</Text>
+              <Text style={newStyles.mascotaTipo} numberOfLines={1}>
+                {pet.tipo}{pet.raza ? ` · ${pet.raza}` : ''}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 
-  const renderDateTimeStep = () => ( <View>
-        {renderSectionTitle('Elige una fecha')}
-        <FlatList
-            data={availableDates}
-            renderItem={({ item }) => {
-                const isSelected = selectedDate?.id === item.id;
+  // Paso 3 - Fecha y hora
+  const renderDateTimeStep = () => (
+    <View>
+      {renderSectionTitle('Elige una fecha')}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={newStyles.hScroll} contentContainerStyle={newStyles.hScrollContent}>
+        {availableDates.map(item => {
+          const isSelected = selectedDate?.id === item.id;
+          return (
+            <TouchableOpacity
+              key={item.id}
+              activeOpacity={0.85}
+              style={[newStyles.fechaCard, isSelected ? newStyles.fechaCardActive : newStyles.fechaCardInactive]}
+              onPress={() => setSelectedDate(item)}
+            >
+              <Text style={[newStyles.fechaDia, { color: isSelected ? '#BBDEFB' : '#999' }]}>{item.dayName.substring(0, 3)}</Text>
+              <Text style={[newStyles.fechaNum, { color: isSelected ? '#FFF' : '#333' }]}>{item.day}</Text>
+              <Text style={[newStyles.fechaMes, { color: isSelected ? '#BBDEFB' : '#999' }]}>{item.month.substring(0, 3)}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {isLoading && selectedDate && renderLoader()}
+
+      {selectedDate && !isLoading && (
+        <>
+          {renderSectionTitle('Elige un horario')}
+          {availableTimes.length > 0 ? (
+            <View style={newStyles.horasGrid}>
+              {availableTimes.map(item => {
+                const isSelected = selectedTime?.id === item.id;
+                const isDisabled = !item.available;
                 return (
-                    <TouchableOpacity style={[newStyles.dateItem, isSelected && newStyles.selectedCard]} onPress={() => setSelectedDate(item)}>
-                        <Text style={[newStyles.dateDay, isSelected && newStyles.selectedCardText]}>{item.dayName.substring(0, 3)}</Text>
-                        <Text style={[newStyles.dateNumber, isSelected && newStyles.selectedCardText]}>{item.day}</Text>
-                        <Text style={[newStyles.dateMonth, isSelected && newStyles.selectedCardText]}>{item.month.substring(0, 3)}</Text>
-                    </TouchableOpacity>
+                  <TouchableOpacity
+                    key={item.id}
+                    activeOpacity={0.8}
+                    disabled={isDisabled}
+                    style={[
+                      newStyles.horaCard,
+                      isSelected && newStyles.horaCardActive,
+                      isDisabled && newStyles.horaCardDisabled,
+                    ]}
+                    onPress={() => setSelectedTime(item)}
+                  >
+                    <Text style={[
+                      newStyles.horaText,
+                      isSelected && newStyles.horaTextActive,
+                      isDisabled && newStyles.horaTextDisabled,
+                    ]}>{item.time}</Text>
+                  </TouchableOpacity>
                 );
-            }}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={newStyles.horizontalList}
-        />
-        
-        {isLoading && selectedDate && renderLoader()}
+              })}
+            </View>
+          ) : (
+            <Text style={newStyles.noDataText}>No hay horarios disponibles para la fecha y servicio seleccionados.</Text>
+          )}
+        </>
+      )}
+    </View>
+  );
 
-        {selectedDate && !isLoading && (
-            <>
-                {renderSectionTitle('Elige un horario')}
-                {availableTimes.length > 0 ? (
-                    <FlatList
-                        data={availableTimes}
-                        renderItem={({ item }) => {
-                            const isSelected = selectedTime?.id === item.id;
-                            return (
-                                <TouchableOpacity 
-                                    style={[
-                                        newStyles.timeItem, 
-                                        !item.available && newStyles.unavailableTimeItem,
-                                        isSelected && newStyles.selectedCard
-                                    ]} 
-                                    onPress={() => item.available && setSelectedTime(item)}
-                                    disabled={!item.available}
-                                >
-                                    <Text style={[newStyles.timeText, isSelected && newStyles.selectedCardText, !item.available && newStyles.unavailableTimeText]}>{item.time}</Text>
-                                </TouchableOpacity>
-                            );
-                        }}
-                        keyExtractor={item => item.id}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={newStyles.horizontalList}
-                    />
-                ) : (
-                    <Text style={newStyles.noDataText}>No hay horarios disponibles para la fecha y servicio seleccionados.</Text>
-                )}
-            </>
-        )}
-    </View>);
+  // Paso 4 - Ubicación, motivo y resumen premium
+  const renderDetailsStep = () => {
+    const locationOptions = getLocationOptionsForService();
+    const providerImg = selectedProvider?.usuario?.profilePicture || selectedProvider?.imagen;
+    const petImg = selectedPet?.imagen;
 
-    const renderDetailsStep = () => {
-      const locationOptions = getLocationOptionsForService();
-
-      return(
-        <View>
-            {renderSectionTitle('¿Dónde será la cita?')}
-            {locationOptions.map(loc => {
-                const isSelected = selectedLocation?.id === loc.id;
-                return(
-                    <TouchableOpacity key={loc.id} style={[newStyles.providerCard, isSelected && newStyles.selectedCard]} onPress={() => setSelectedLocation(loc)}>
-                        <Ionicons name={loc.icon} size={28} color={isSelected ? '#fff' : '#1E88E5'} style={{marginRight: 15}}/>
-                        <View style={newStyles.providerInfo}>
-                            <Text style={[newStyles.providerName, isSelected && newStyles.selectedCardText]}>{loc.type}</Text>
-                            <Text style={[newStyles.providerSpecialty, isSelected && newStyles.selectedCardText]}>{loc.description}</Text>
-                        </View>
-                        {isSelected && <Ionicons name="checkmark-circle" size={24} color="#fff" style={newStyles.checkIcon} />}
-                    </TouchableOpacity>
-                );
-            })}
-
-            {selectedService?.modalidadAtencion?.length === 1 && (
-              <Text style={newStyles.helperText}>
-                Este servicio solo está disponible en {selectedService.modalidadAtencion[0]}.
-              </Text>
-            )}
-
-            {renderSectionTitle('Motivo de la Cita')}
-            <TextInput
-              style={newStyles.reasonInput}
-              placeholder="Describe brevemente el motivo de la visita (ej: control anual, vacuna, etc.)"
-              placeholderTextColor="#999"
-              multiline
-              value={reasonForVisit}
-              onChangeText={setReasonForVisit}
-              textAlignVertical="top"
-            />
+    return (
+      <View>
+        {renderSectionTitle('¿Dónde será la cita?')}
+        <View style={newStyles.ubicacionContainer}>
+          {locationOptions.map(loc => {
+            const isSelected = selectedLocation?.id === loc.id;
+            return (
+              <TouchableOpacity
+                key={loc.id}
+                activeOpacity={0.85}
+                style={[
+                  newStyles.ubiCard,
+                  isSelected ? newStyles.ubiCardActive : newStyles.ubiCardInactive,
+                  locationOptions.length === 1 && { width: '100%' },
+                ]}
+                onPress={() => setSelectedLocation(loc)}
+              >
+                <Ionicons name={loc.icon} size={28} color={isSelected ? '#1E88E5' : '#999'} style={{ marginBottom: 4 }} />
+                <Text style={[newStyles.ubiText, { color: isSelected ? '#1E88E5' : '#666' }]}>{loc.type}</Text>
+                <Text style={[newStyles.ubiSubText, isSelected && { color: '#1E88E5' }]} numberOfLines={2}>{loc.description}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      );
+
+        {selectedService?.modalidadAtencion?.length === 1 && (
+          <Text style={newStyles.helperText}>
+            Este servicio solo está disponible en {selectedService.modalidadAtencion[0]}.
+          </Text>
+        )}
+
+        {renderSectionTitle('Motivo de la Cita')}
+        <TextInput
+          style={newStyles.textArea}
+          placeholder="Describe brevemente el motivo de la visita (ej: control anual, vacuna, etc.)"
+          placeholderTextColor="#999"
+          multiline
+          value={reasonForVisit}
+          onChangeText={setReasonForVisit}
+          textAlignVertical="top"
+        />
+
+        {/* RESUMEN DE LA CITA */}
+        <View style={newStyles.resumenCard}>
+          <Ionicons name="paw" size={140} color="rgba(255,255,255,0.08)" style={newStyles.resumenBgIcon} />
+          <Text style={newStyles.resumenTitle}>RESUMEN DE TU CITA</Text>
+
+          <View style={newStyles.resumenHeader}>
+            <View style={[newStyles.resumenRow, { flex: 1, marginBottom: 0 }]}>
+              <View style={newStyles.resumenIconBox}>
+                <Ionicons name="medical" size={16} color="#FFF" />
+              </View>
+              <Text style={newStyles.resumenMainText} numberOfLines={1}>
+                {selectedService?.nombre || 'Servicio no seleccionado'}
+              </Text>
+            </View>
+            <Text style={newStyles.resumenPrice}>${selectedService?.precio || '0'}</Text>
+          </View>
+
+          <View style={newStyles.resumenRow}>
+            <View style={newStyles.resumenIconBox}>
+              {providerImg ? (
+                <Image source={{ uri: providerImg }} style={newStyles.resumenMiniImg} />
+              ) : (
+                <Ionicons name="person" size={14} color="#FFF" />
+              )}
+            </View>
+            <Text style={newStyles.resumenSubText} numberOfLines={1}>
+              Con {selectedProvider?.nombre || '---'}
+            </Text>
+          </View>
+
+          <View style={newStyles.resumenRow}>
+            <View style={newStyles.resumenIconBox}>
+              {petImg ? (
+                <Image source={{ uri: petImg }} style={newStyles.resumenMiniImg} />
+              ) : (
+                <Ionicons name="paw" size={14} color="#FFF" />
+              )}
+            </View>
+            <Text style={newStyles.resumenSubText} numberOfLines={1}>
+              Para {selectedPet?.nombre || '---'}
+            </Text>
+          </View>
+
+          <View style={newStyles.resumenRow}>
+            <View style={newStyles.resumenIconBox}>
+              <Ionicons name="calendar" size={16} color="#FFF" />
+            </View>
+            <Text style={newStyles.resumenSubText}>
+              {selectedDate ? `${selectedDate.dayName.substring(0,3)} ${selectedDate.day} ${selectedDate.month.substring(0,3)}` : '---'} · {selectedTime?.time || '--:--'}
+            </Text>
+          </View>
+
+          <View style={[newStyles.resumenRow, { marginBottom: 0 }]}>
+            <View style={newStyles.resumenIconBox}>
+              <Ionicons name={selectedLocation?.icon || 'location-outline'} size={16} color="#FFF" />
+            </View>
+            <Text style={newStyles.resumenSubText}>
+              {selectedLocation?.type || '---'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
   };
   
   return (
@@ -1012,7 +1146,424 @@ const newStyles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '500',
-  }
+  },
+
+  // ─── SCROLLS HORIZONTALES ───
+  hScroll: {
+    marginHorizontal: -20,
+    marginBottom: 5,
+  },
+  hScrollContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+
+  // ─── PASO 1: CHIPS TIPO PRESTADOR ───
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  chipActive: {
+    backgroundColor: '#1E88E5',
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  chipInactive: {
+    backgroundColor: '#FFF',
+    borderColor: '#E0E0E0',
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  chipTextActive: { color: '#FFF' },
+  chipTextInactive: { color: '#666' },
+
+  // ─── PASO 1: TARJETAS DE PRESTADORES ───
+  prestadorCard: {
+    width: 150,
+    padding: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    position: 'relative',
+  },
+  prestadorCardActive: {
+    backgroundColor: 'rgba(227, 242, 253, 0.5)',
+    borderColor: '#1E88E5',
+  },
+  prestadorCardInactive: {
+    backgroundColor: '#FFF',
+    borderColor: '#F0F0F0',
+  },
+  prestadorImg: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    marginBottom: 8,
+    backgroundColor: '#E3F2FD',
+  },
+  logoPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  prestadorNombre: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  prestadorTipo: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  checkIconTopRight: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    zIndex: 10,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+  },
+
+  // ─── PASO 1: FILA DE SERVICIO ───
+  servicioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 2,
+  },
+  servicioRowActive: {
+    backgroundColor: 'rgba(227, 242, 253, 0.4)',
+    borderColor: '#1E88E5',
+  },
+  servicioRowInactive: {
+    backgroundColor: '#FFF',
+    borderColor: '#F0F0F0',
+  },
+  servicioInfo: {
+    flex: 1,
+  },
+  servicioHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  servicioNombre: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#444',
+    flex: 1,
+    marginRight: 8,
+  },
+  servicioPrecio: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#666',
+  },
+  servicioFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  servicioTiempo: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#D0D0D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 15,
+  },
+  radioOuterActive: {
+    backgroundColor: '#1E88E5',
+    borderColor: '#1E88E5',
+  },
+
+  // ─── PASO 2: GRID DE MASCOTAS ───
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  mascotaCard: {
+    width: '48%',
+    padding: 16,
+    borderRadius: 22,
+    alignItems: 'center',
+    borderWidth: 2,
+    marginBottom: 15,
+    position: 'relative',
+  },
+  mascotaCardActive: {
+    backgroundColor: 'rgba(227, 242, 253, 0.4)',
+    borderColor: '#1E88E5',
+  },
+  mascotaCardInactive: {
+    backgroundColor: '#FFF',
+    borderColor: '#F0F0F0',
+  },
+  mascotaImg: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    marginBottom: 8,
+    backgroundColor: '#E3F2FD',
+  },
+  mascotaImgPlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  mascotaNombre: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  mascotaTipo: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '500',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  // ─── PASO 3: FECHA Y HORA ───
+  fechaCard: {
+    width: 74,
+    height: 92,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingVertical: 8,
+  },
+  fechaCardActive: {
+    backgroundColor: '#1E88E5',
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  fechaCardInactive: {
+    backgroundColor: '#FFF',
+    borderColor: '#E0E0E0',
+  },
+  fechaDia: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  fechaNum: {
+    fontSize: 22,
+    fontWeight: '900',
+    marginVertical: 2,
+  },
+  fechaMes: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  horasGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  horaCard: {
+    width: '31%',
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  horaCardActive: {
+    backgroundColor: 'rgba(227, 242, 253, 0.4)',
+    borderColor: '#1E88E5',
+    borderWidth: 2,
+  },
+  horaCardDisabled: {
+    opacity: 0.4,
+    backgroundColor: '#F5F5F5',
+  },
+  horaText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  horaTextActive: {
+    color: '#1E88E5',
+    fontWeight: '900',
+  },
+  horaTextDisabled: {
+    textDecorationLine: 'line-through',
+  },
+
+  // ─── PASO 4: UBICACIÓN ───
+  ubicacionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    gap: 12,
+  },
+  ubiCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 18,
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  ubiCardActive: {
+    backgroundColor: 'rgba(227, 242, 253, 0.4)',
+    borderColor: '#1E88E5',
+  },
+  ubiCardInactive: {
+    backgroundColor: '#FFF',
+    borderColor: '#E0E0E0',
+  },
+  ubiText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  ubiSubText: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '500',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  // ─── PASO 4: MOTIVO (TEXT AREA) ───
+  textArea: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 14,
+    color: '#333',
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 25,
+  },
+
+  // ─── PASO 4: TARJETA RESUMEN (color del header) ───
+  resumenCard: {
+    backgroundColor: '#1E88E5',
+    borderRadius: 25,
+    padding: 20,
+    position: 'relative',
+    overflow: 'hidden',
+    marginTop: 10,
+    marginBottom: 10,
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  resumenBgIcon: {
+    position: 'absolute',
+    right: -25,
+    bottom: -25,
+  },
+  resumenTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#BBDEFB',
+    letterSpacing: 1.2,
+    marginBottom: 16,
+  },
+  resumenHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.15)',
+    paddingBottom: 12,
+    marginBottom: 12,
+  },
+  resumenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  resumenIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  resumenMiniImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  resumenMainText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#FFF',
+    flex: 1,
+  },
+  resumenPrice: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFD54F',
+    marginLeft: 8,
+  },
+  resumenSubText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#E3F2FD',
+    flex: 1,
+  },
 });
 
 export default AgendarCitaScreen;
