@@ -49,6 +49,12 @@ const HomeScreen = ({ navigation }) => {
   
   // Referencia al temporizador para actualización de ubicación
   const locationUpdateTimerRef = useRef(null);
+  // Contador de errores consecutivos del endpoint /ubicacion-veterinario.
+  // Si el backend reporta "Coordenadas del veterinario inválidas" varias veces seguidas
+  // significa que el vet no está compartiendo ubicación en tiempo real: detenemos el
+  // polling para no saturar logs ni red.
+  const locationUpdateErrorCountRef = useRef(0);
+  const LOCATION_UPDATE_MAX_ERRORS = 3;
 
   // Animaciones
   const bannerAnim = useRef(new Animated.Value(0)).current;
@@ -254,6 +260,9 @@ const HomeScreen = ({ navigation }) => {
       locationUpdateTimerRef.current = null;
     }
 
+    // Resetear contador de errores al iniciar seguimiento de una emergencia nueva
+    locationUpdateErrorCountRef.current = 0;
+
     // Realizar la primera actualización inmediatamente
     updateVetLocation(activeEmergency);
 
@@ -282,15 +291,37 @@ const HomeScreen = ({ navigation }) => {
     setUpdatingLocation(true);
     try {
       const response = await emergenciaService.getVetLocationUpdate(emergencyId);
-      const data = response.success ? response.data : null;
 
-      if (data) {
-        setCurrentDistance(data.distancia?.texto || '---');
-        setEstimatedArrivalTime(data.tiempoEstimado?.texto || '---');
+      if (response?.success && response.data) {
+        // Éxito: resetear contador de errores
+        locationUpdateErrorCountRef.current = 0;
+        setCurrentDistance(response.data.distancia?.texto || '---');
+        setEstimatedArrivalTime(response.data.tiempoEstimado?.texto || '---');
         setLastUpdated(new Date());
+      } else {
+        // Error controlado (p.ej. "Coordenadas del veterinario inválidas")
+        locationUpdateErrorCountRef.current += 1;
+
+        if (locationUpdateErrorCountRef.current >= LOCATION_UPDATE_MAX_ERRORS
+            && locationUpdateTimerRef.current) {
+          // Detener el polling cuando el vet claramente no tiene ubicación en vivo
+          console.warn(`⏸️  Polling de ubicación detenido: ${locationUpdateErrorCountRef.current} errores consecutivos. El veterinario no comparte ubicación en tiempo real.`);
+          clearInterval(locationUpdateTimerRef.current);
+          locationUpdateTimerRef.current = null;
+          setCurrentDistance('---');
+          setEstimatedArrivalTime('---');
+        }
       }
     } catch (error) {
-      console.error('Error al actualizar ubicación del veterinario:', error);
+      locationUpdateErrorCountRef.current += 1;
+      console.error('Error al actualizar ubicación del veterinario:', error?.message || error);
+
+      if (locationUpdateErrorCountRef.current >= LOCATION_UPDATE_MAX_ERRORS
+          && locationUpdateTimerRef.current) {
+        console.warn('⏸️  Polling de ubicación detenido por errores repetidos de red.');
+        clearInterval(locationUpdateTimerRef.current);
+        locationUpdateTimerRef.current = null;
+      }
     } finally {
       setUpdatingLocation(false);
     }
