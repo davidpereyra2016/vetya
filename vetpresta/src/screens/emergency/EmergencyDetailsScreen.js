@@ -295,7 +295,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
           "Has marcado esta emergencia como atendida. ¿Deseas volver a la pantalla principal?",
           [
             { text: "Permanecer aquí", style: "cancel" },
-            { text: "Volver al inicio", onPress: () => navigation.navigate('Inicio') }
+            { text: "Volver al inicio", onPress: () => navigation.navigate('MainTabs', { screen: 'Inicio' }) }
           ]
         );
       } else {
