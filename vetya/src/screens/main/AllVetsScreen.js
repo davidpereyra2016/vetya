@@ -157,91 +157,115 @@ const AllVetsScreen = ({ navigation, route }) => {
     }
   };
 
-  // Renderizar un veterinario individual
+  // Renderizar un veterinario individual (diseño premium consistente con PrestaDetailsScreen)
   const renderVeterinario = ({ item }) => {
     const veterinarioNombre = ensureString(item.nombre, 'Nombre no disponible');
-    
+
     // Manejar especialidades (puede ser array o string)
     let especialidadTexto = 'Medicina general';
     if (Array.isArray(item.especialidades) && item.especialidades.length > 0) {
       especialidadTexto = item.especialidades.join(', ');
     } else if (item.especialidad) {
-      especialidadTexto = Array.isArray(item.especialidad) 
+      especialidadTexto = Array.isArray(item.especialidad)
         ? item.especialidad.join(', ')
         : item.especialidad;
     }
-    
+
     const veterinarioRating = ensureNumber(item.rating, 0);
     const veterinarioReviews = ensureNumber(item.totalValoraciones, 0);
     const veterinarioPacientes = ensureNumber(item.pacientesAtendidos, 0);
-    const veterinarioImagen = item.imagen;
-    // Usar disponibleEmergencias para veterinarios (campo correcto del modelo)
+    const veterinarioImagen = item.usuario?.profilePicture || item.imagen;
     const disponible = item.disponibleEmergencias === true;
-    
-    return (
-      <TouchableOpacity 
-        style={styles.veterinarioCard}
-        onPress={() => navigation.navigate('VetDetail', { vet: item })}
-      >
-        <View style={styles.veterinarioHeader}>
-          <View style={styles.veterinarioImageContainer}>
-            {veterinarioImagen ? (
-              <Image source={{ uri: veterinarioImagen }} style={styles.veterinarioImage} />
-            ) : (
-              <View style={styles.veterinarioImagePlaceholder}>
-                <Text><Ionicons name="person" size={30} color="#fff" /></Text>
-              </View>
-            )}
-            {disponible && (
-              <View style={styles.disponibleBadge}>
-                <View style={styles.disponibleDot} />
-              </View>
-            )}
-          </View>
-          <View style={styles.veterinarioInfo}>
-            <Text style={styles.veterinarioNombre}>{veterinarioNombre}</Text>
-            <Text style={styles.veterinarioEspecialidad}>{especialidadTexto}</Text>
-            <View style={styles.ratingContainer}>
-              <RatingStars rating={veterinarioRating} size={16} />
-              <Text style={styles.ratingText}>
-                {veterinarioRating.toFixed(1)} ({veterinarioReviews} reseñas)
-              </Text>
-            </View>
-            {disponible && (
-              <View style={styles.disponibleTag}>
-                <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
-                <Text style={styles.disponibleTagText}>Disponible ahora</Text>
-              </View>
-            )}
-          </View>
-        </View>
+    const defaultImage = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=250&q=80';
 
-        <View style={styles.estadisticasContainer}>
-          <View style={styles.estadisticaItem}>
-            <Text><Ionicons name="people" size={18} color="#4285F4" /></Text>
-            <Text style={styles.estadisticaValor}>{veterinarioPacientes}</Text>
-            <Text style={styles.estadisticaLabel}>Pacientes</Text>
+    return (
+      <View style={styles.prestadorCard}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('VetDetail', { vet: item })}
+        >
+          {/* Hero mini del veterinario */}
+          <View style={styles.cardHero}>
+            <View style={styles.cardImageWrapper}>
+              <Image
+                source={{ uri: veterinarioImagen || defaultImage }}
+                style={styles.cardImage}
+              />
+              {disponible ? (
+                <View style={styles.cardAvailableBadge}>
+                  <View style={styles.availableDot} />
+                </View>
+              ) : (
+                <View style={styles.cardVerifiedBadge}>
+                  <Ionicons name="checkmark-circle" size={12} color="#FFF" />
+                </View>
+              )}
+            </View>
+            <View style={styles.cardHeroInfo}>
+              <Text style={styles.prestadorNombre} numberOfLines={1}>{veterinarioNombre}</Text>
+              <View style={styles.tipoContainer}>
+                <Text style={styles.tipoBadge}>Veterinario</Text>
+                {disponible && (
+                  <View style={styles.disponibleTag}>
+                    <Ionicons name="checkmark-circle" size={12} color="#4CAF50" />
+                    <Text style={styles.disponibleTagText}>Disponible ahora</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.prestadorEspecialidad} numberOfLines={1}>{especialidadTexto}</Text>
+              <View style={styles.ratingContainer}>
+                <View style={styles.starsRowSmall}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Ionicons
+                      key={star}
+                      name={star <= Math.round(veterinarioRating) ? 'star' : 'star-outline'}
+                      size={12}
+                      color="#FFB300"
+                    />
+                  ))}
+                </View>
+                <Text style={styles.ratingText}>
+                  {veterinarioRating.toFixed(1)} ({veterinarioReviews})
+                </Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.estadisticaItem}>
-            <Text><Ionicons name="star" size={18} color="#FFC107" /></Text>
-            <Text style={styles.estadisticaValor}>{veterinarioRating.toFixed(1)}</Text>
-            <Text style={styles.estadisticaLabel}>Rating</Text>
+
+          {/* Stats grid mini */}
+          <View style={styles.cardStatsGrid}>
+            <View style={styles.cardStatBox}>
+              <View style={styles.cardStatIconRow}>
+                <Ionicons name="star" size={12} color="#FFB300" style={{ marginRight: 3 }} />
+                <Text style={styles.cardStatValue}>{veterinarioRating.toFixed(1)}</Text>
+              </View>
+              <Text style={styles.cardStatLabel}>Rating</Text>
+            </View>
+            <View style={styles.cardStatBox}>
+              <View style={styles.cardStatIconRow}>
+                <Ionicons name="people" size={12} color="#1E88E5" style={{ marginRight: 3 }} />
+                <Text style={styles.cardStatValue}>{veterinarioPacientes}</Text>
+              </View>
+              <Text style={styles.cardStatLabel}>Pacientes</Text>
+            </View>
+            <View style={styles.cardStatBox}>
+              <View style={styles.cardStatIconRow}>
+                <Ionicons name="chatbubbles" size={12} color="#4CAF50" style={{ marginRight: 3 }} />
+                <Text style={styles.cardStatValue}>{veterinarioReviews}</Text>
+              </View>
+              <Text style={styles.cardStatLabel}>Reseñas</Text>
+            </View>
           </View>
-          <View style={styles.estadisticaItem}>
-            <Text><Ionicons name="chatbubbles" size={18} color="#4CAF50" /></Text>
-            <Text style={styles.estadisticaValor}>{veterinarioReviews}</Text>
-            <Text style={styles.estadisticaLabel}>Reseñas</Text>
-          </View>
-        </View>
-      
-        <TouchableOpacity 
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={styles.agendarButton}
           onPress={() => navigation.navigate('AgendarCita', { selectedVet: item })}
+          activeOpacity={0.9}
         >
-          <Text><Ionicons name="calendar" size={18} color="#fff" /></Text>
+          <Ionicons name="calendar" size={18} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.agendarButtonText}>Agendar Cita</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -278,19 +302,19 @@ const AllVetsScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
+      {/* Header premium (consistente con PrestaDetailsScreen) */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back-outline" size={28} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Veterinarios Disponibles</Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Veterinarios Disponibles</Text>
+          <View style={styles.headerSpacer} />
+        </View>
       </View>
 
       {/* Filtros */}
-      <ScrollView 
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filtrosScrollView}
@@ -301,14 +325,14 @@ const AllVetsScreen = ({ navigation, route }) => {
             key={filtro}
             style={[
               styles.filtroButton,
-              selectedFilter === filtro && styles.filtroButtonSelected
+              selectedFilter === filtro && styles.filtroButtonSelected,
             ]}
             onPress={() => setSelectedFilter(filtro)}
           >
-            <Text 
+            <Text
               style={[
                 styles.filtroButtonText,
-                selectedFilter === filtro && styles.filtroButtonTextSelected
+                selectedFilter === filtro && styles.filtroButtonTextSelected,
               ]}
             >
               {filtro}
@@ -339,20 +363,19 @@ const AllVetsScreen = ({ navigation, route }) => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text><Ionicons name="alert-circle-outline" size={60} color="#78909C" /></Text>
+          <Ionicons name="alert-circle-outline" size={60} color="#78909C" />
           <Text style={styles.emptyText}>
-            {selectedFilter === 'Todos' 
-              ? 'No hay veterinarios disponibles en este momento' 
+            {selectedFilter === 'Todos'
+              ? 'No hay veterinarios disponibles en este momento'
               : selectedFilter === 'Disponibles'
                 ? 'No hay veterinarios disponibles ahora'
-                : 'No hay veterinarios con valoración mayor a 4.5'
-            }
+                : 'No hay veterinarios con valoración mayor a 4.5'}
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.reloadButton}
             onPress={loadVeterinarios}
           >
-            <Text><Ionicons name="refresh" size={18} color="#fff" /></Text>
+            <Ionicons name="refresh" size={18} color="#fff" />
             <Text style={styles.reloadButtonText}>Reintentar</Text>
           </TouchableOpacity>
         </View>
@@ -366,66 +389,82 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
+
+  // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 30 : 20,
+    paddingBottom: 25,
     paddingHorizontal: 20,
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 10,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
   },
-  backButton: {
-    padding: 5,
+  headerBackButton: {
+    width: 44,
+    height: 44,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerSpacer: {
+    width: 44,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    color: '#FFF',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.5,
     flex: 1,
     textAlign: 'center',
   },
-  headerSpacer: {
-    width: 34, // Para balancear el botón de atrás
-  },
+
+  // ─── FILTROS ───
   filtrosScrollView: {
     maxHeight: 60,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#F0F0F0',
   },
   filtrosContainer: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 15,
     paddingVertical: 10,
   },
   filtroButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 8,
     marginHorizontal: 5,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F5F7FA',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#F0F0F0',
   },
   filtroButtonSelected: {
     backgroundColor: '#1E88E5',
     borderColor: '#1E88E5',
   },
   filtroButtonText: {
-    fontSize: 14,
-    color: '#616161',
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
   },
   filtroButtonTextSelected: {
     color: '#fff',
-    fontWeight: '500',
+    fontWeight: '600',
   },
+
+  // ─── LOADING ───
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -433,130 +472,198 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 16,
-    color: '#616161',
+    fontSize: 15,
+    color: '#888',
   },
+
+  // ─── LISTA ───
   veterinariosList: {
     flex: 1,
   },
   veterinariosListContent: {
-    padding: 12,
-  },
-  veterinarioCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 16,
     padding: 16,
-    elevation: 2,
+    paddingBottom: 30,
   },
-  veterinarioHeader: {
+
+  // ─── CARD PREMIUM (consistente con PrestaDetailsScreen) ───
+  prestadorCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginBottom: 16,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  cardHero: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  veterinarioImageContainer: {
+  cardImageWrapper: {
+    position: 'relative',
+    backgroundColor: '#FFF',
+    padding: 3,
+    borderRadius: 18,
+    marginRight: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  cardImage: {
     width: 70,
     height: 70,
-    borderRadius: 35,
-    overflow: 'hidden',
-    marginRight: 16,
-    position: 'relative',
+    borderRadius: 16,
+    resizeMode: 'cover',
+    backgroundColor: '#E3F2FD',
   },
-  veterinarioImage: {
-    width: '100%',
-    height: '100%',
-  },
-  veterinarioImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#90CAF9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  disponibleBadge: {
+  cardVerifiedBadge: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    backgroundColor: '#fff',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#4CAF50',
     borderRadius: 10,
-    padding: 2,
+    padding: 3,
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
-  disponibleDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  cardAvailableBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 3,
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  availableDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#4CAF50',
   },
-  veterinarioInfo: {
+  cardHeroInfo: {
     flex: 1,
     justifyContent: 'center',
   },
-  veterinarioNombre: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  prestadorNombre: {
+    fontSize: 17,
+    fontWeight: '800',
     color: '#212121',
     marginBottom: 4,
+    letterSpacing: 0.3,
   },
-  veterinarioEspecialidad: {
-    fontSize: 14,
-    color: '#757575',
+  tipoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
+    flexWrap: 'wrap',
+  },
+  tipoBadge: {
+    fontSize: 11,
+    color: '#FFF',
+    backgroundColor: '#1E88E5',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: 'hidden',
+    fontWeight: '600',
+    marginRight: 6,
+  },
+  prestadorEspecialidad: {
+    fontSize: 13,
+    color: '#888',
+    marginBottom: 6,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+  },
+  starsRowSmall: {
+    flexDirection: 'row',
+    gap: 1,
   },
   ratingText: {
-    marginLeft: 5,
+    marginLeft: 6,
     fontSize: 12,
-    color: '#757575',
+    color: '#888',
+    fontWeight: '500',
   },
   disponibleTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   disponibleTagText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#4CAF50',
-    marginLeft: 4,
-    fontWeight: '500',
+    marginLeft: 3,
+    fontWeight: '700',
   },
-  estadisticasContainer: {
+
+  // ─── STATS GRID MINI ───
+  cardStatsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#E0E0E0',
-    marginVertical: 12,
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-  estadisticaItem: {
+  cardStatBox: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+    borderRadius: 12,
+    padding: 10,
     alignItems: 'center',
+    marginHorizontal: 3,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
-  estadisticaValor: {
-    fontSize: 16,
+  cardStatIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  cardStatValue: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#333',
+  },
+  cardStatLabel: {
+    fontSize: 9,
     fontWeight: 'bold',
-    color: '#212121',
-    marginVertical: 2,
+    color: '#888',
+    textTransform: 'uppercase',
   },
-  estadisticaLabel: {
-    fontSize: 12,
-    color: '#757575',
-  },
+
+  // ─── BOTÓN AGENDAR ───
   agendarButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
-    paddingVertical: 10,
+    backgroundColor: '#1E88E5',
+    borderRadius: 14,
+    height: 46,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#1E88E5',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
   agendarButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    marginLeft: 6,
+    fontSize: 14,
   },
+
+  // ─── EMPTY STATE ───
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -565,7 +672,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#78909C',
+    color: '#888',
     textAlign: 'center',
     marginTop: 10,
     marginBottom: 20,
@@ -573,15 +680,15 @@ const styles = StyleSheet.create({
   reloadButton: {
     backgroundColor: '#1E88E5',
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
   },
   reloadButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    marginLeft: 6,
+    marginLeft: 8,
   },
 });
 
