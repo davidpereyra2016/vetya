@@ -1097,5 +1097,30 @@ export const pagoService = {
         error: error.response?.data?.message || 'Error al obtener los pagos'
       };
     }
+  },
+
+  /**
+   * Registrar un pago en efectivo para una cita o emergencia
+   */
+  crearPagoEfectivo: async (emergenciaId, citaId, monto, descripcion) => {
+    try {
+      const response = await axios.post('/pagos/efectivo', {
+        emergenciaId,
+        citaId,
+        monto,
+        descripcion,
+      });
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error.response?.data?.message ||
+          'Error al registrar el pago en efectivo',
+      };
+    }
   }
 };

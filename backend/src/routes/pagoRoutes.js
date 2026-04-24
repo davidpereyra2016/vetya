@@ -9,9 +9,140 @@ import { preferenceClient, paymentClient } from "../lib/mercadopago.js";
 
 const router = express.Router();
 
+const ESTADOS_PAGO_POSITIVOS = new Set(["Pendiente", "Procesando", "Pagado", "Capturado", "Completado"]);
+const ESTADOS_PAGO_NEGATIVOS = new Set(["Fallido", "Reembolsado", "Cancelado", "Expirado"]);
+
+function normalizarMetodoPagoDesdeCita(metodoPago) {
+  switch (metodoPago) {
+    case "MercadoPago":
+      return "MercadoPago";
+    case "Transferencia":
+      return "Transferencia";
+    case "Tarjeta":
+      return "Otro";
+    case "Efectivo":
+    case "Por definir":
+    default:
+      return "Efectivo";
+  }
+}
+
+function obtenerMontoCita(cita) {
+  return Number(cita?.costoEstimado || cita?.servicio?.precio || 0);
+}
+
+async function reconciliarPagosCitasCompletadas({ usuarioId = null, prestadorId = null } = {}) {
+  const filtro = { estado: "Completada" };
+
+  if (usuarioId) {
+    filtro.usuario = usuarioId;
+  }
+
+  if (prestadorId) {
+    filtro.prestador = prestadorId;
+  }
+
+  const citas = await Cita.find(filtro)
+    .populate("servicio", "nombre precio")
+    .select("usuario prestador servicio costoEstimado metodoPago fecha createdAt updatedAt");
+
+  if (!citas.length) {
+    return { creados: 0, actualizados: 0 };
+  }
+
+  const citasIds = citas.map((cita) => cita._id);
+  const pagosExistentes = await Pago.find({
+    "referencia.tipo": "Cita",
+    "referencia.id": { $in: citasIds },
+  }).sort({ createdAt: -1 });
+
+  const pagosPorCita = new Map();
+  for (const pago of pagosExistentes) {
+    const citaId = pago.referencia?.id?.toString();
+    if (!citaId) continue;
+
+    const pagosCita = pagosPorCita.get(citaId) || [];
+    pagosCita.push(pago);
+    pagosPorCita.set(citaId, pagosCita);
+  }
+
+  let creados = 0;
+  let actualizados = 0;
+
+  for (const cita of citas) {
+    const monto = obtenerMontoCita(cita);
+    if (monto <= 0) {
+      continue;
+    }
+
+    const pagosCita = pagosPorCita.get(cita._id.toString()) || [];
+    let pago = pagosCita.find((item) => ESTADOS_PAGO_POSITIVOS.has(item.estado));
+
+    if (!pago) {
+      pago = new Pago({
+        usuario: cita.usuario,
+        concepto: "Cita",
+        referencia: {
+          tipo: "Cita",
+          id: cita._id,
+        },
+        prestador: cita.prestador,
+        monto,
+        metodoPago: normalizarMetodoPagoDesdeCita(cita.metodoPago),
+        estado: "Completado",
+        fechaPago: cita.updatedAt || cita.createdAt || new Date(),
+        idTransaccion: `SYNC-CITA-${cita._id.toString()}`,
+        notasAdicionales: "Pago reconciliado automáticamente desde una cita completada",
+      });
+
+      await pago.save();
+      creados += 1;
+      continue;
+    }
+
+    if (ESTADOS_PAGO_NEGATIVOS.has(pago.estado)) {
+      continue;
+    }
+
+    let huboCambios = false;
+
+    if (pago.estado !== "Completado") {
+      pago.estado = "Completado";
+      huboCambios = true;
+    }
+
+    if ((!pago.monto || pago.monto <= 0) && monto > 0) {
+      pago.monto = monto;
+      huboCambios = true;
+    }
+
+    if (!pago.fechaPago) {
+      pago.fechaPago = cita.updatedAt || cita.createdAt || new Date();
+      huboCambios = true;
+    }
+
+    if (!pago.idTransaccion) {
+      pago.idTransaccion = `SYNC-CITA-${cita._id.toString()}`;
+      huboCambios = true;
+    }
+
+    if (huboCambios) {
+      await pago.save();
+      actualizados += 1;
+    }
+  }
+
+  return { creados, actualizados };
+}
+
 // Obtener todos los pagos del usuario autenticado (CLIENTE)
 router.get("/", protectRoute, async (req, res) => {
   try {
+    const reconciliacion = await reconciliarPagosCitasCompletadas({ usuarioId: req.user._id });
+    if (reconciliacion.creados || reconciliacion.actualizados) {
+      console.log("🔄 Pagos de citas reconciliados para cliente:", reconciliacion);
+    }
+
     const pagos = await Pago.find({ usuario: req.user._id })
       .populate("prestador", "nombre especialidades imagen tipo direccion telefono email")
       .sort({ createdAt: -1 });
@@ -53,6 +184,11 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
     }
 
     console.log('🔍 Buscando pagos para prestador:', prestador._id);
+
+    const reconciliacion = await reconciliarPagosCitasCompletadas({ prestadorId: prestador._id });
+    if (reconciliacion.creados || reconciliacion.actualizados) {
+      console.log("🔄 Pagos de citas reconciliados para prestador:", reconciliacion);
+    }
 
     // Buscar todos los pagos donde el prestador es el destinatario
     const pagos = await Pago.find({ prestador: prestador._id })
@@ -319,12 +455,32 @@ router.patch("/:id/solicitar-factura", protectRoute, async (req, res) => {
 router.get("/referencia/:tipo/:id", protectRoute, async (req, res) => {
   try {
     const { tipo, id } = req.params;
-    
-    const pagos = await Pago.find({
-      usuario: req.user._id,
+
+    if (tipo === "Cita") {
+      const prestadorActual = await Prestador.findOne({ usuario: req.user._id }).select("_id");
+      await reconciliarPagosCitasCompletadas({
+        usuarioId: prestadorActual ? null : req.user._id,
+        prestadorId: prestadorActual?._id || null,
+      });
+    }
+
+    const prestador = await Prestador.findOne({ usuario: req.user._id }).select('_id');
+    const filtro = {
       "referencia.tipo": tipo,
       "referencia.id": id
-    }).populate("prestador", "nombre especialidades imagen");
+    };
+
+    if (prestador) {
+      filtro.$or = [
+        { usuario: req.user._id },
+        { prestador: prestador._id }
+      ];
+    } else {
+      filtro.usuario = req.user._id;
+    }
+
+    const pagos = await Pago.find(filtro)
+      .populate("prestador", "nombre especialidades imagen");
     
     res.status(200).json(pagos);
   } catch (error) {
@@ -803,6 +959,111 @@ router.post("/mercadopago/cancel-payment", protectRoute, async (req, res) => {
     res.status(500).json({ 
       message: "Error al cancelar el pago",
       error: error.message 
+    });
+  }
+});
+
+// ============================================
+// 🔷 PAGOS EN EFECTIVO
+// ============================================
+
+/**
+ * Registrar un pago en efectivo para una cita o emergencia.
+ * Se ejecuta cuando el CLIENTE elige "Efectivo" como método de pago.
+ * El pago queda en estado "Pendiente" hasta que se completa el servicio.
+ */
+router.post("/efectivo", protectRoute, async (req, res) => {
+  try {
+    const { emergenciaId, citaId, monto, descripcion } = req.body;
+
+    if (!emergenciaId && !citaId) {
+      return res.status(400).json({
+        message: "Debe proporcionar emergenciaId o citaId",
+      });
+    }
+
+    if (!monto || monto <= 0) {
+      return res.status(400).json({
+        message: "El monto debe ser mayor a 0",
+      });
+    }
+
+    // Resolver referencia, prestador y dueño
+    let referencia, prestadorId;
+
+    if (emergenciaId) {
+      const emergencia = await Emergencia.findById(emergenciaId).populate(
+        "veterinario",
+        "_id"
+      );
+      if (!emergencia) {
+        return res.status(404).json({ message: "Emergencia no encontrada" });
+      }
+      if (emergencia.usuario.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          message: "No autorizado para crear pago de esta emergencia",
+        });
+      }
+      referencia = { tipo: "Emergencia", id: emergenciaId };
+      prestadorId = emergencia.veterinario?._id;
+    } else {
+      const cita = await Cita.findById(citaId).populate("prestador", "_id");
+      if (!cita) {
+        return res.status(404).json({ message: "Cita no encontrada" });
+      }
+      if (cita.usuario.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          message: "No autorizado para crear pago de esta cita",
+        });
+      }
+      referencia = { tipo: "Cita", id: citaId };
+      prestadorId = cita.prestador?._id;
+    }
+
+    if (!prestadorId) {
+      return res
+        .status(400)
+        .json({ message: "No se pudo determinar el prestador asociado" });
+    }
+
+    // Evitar duplicados: si ya hay un pago activo para esta referencia, lo devolvemos
+    const pagoExistente = await Pago.findOne({
+      "referencia.tipo": referencia.tipo,
+      "referencia.id": referencia.id,
+      estado: { $in: ["Pendiente", "Procesando", "Pagado", "Capturado"] },
+    });
+
+    if (pagoExistente) {
+      return res.status(200).json({
+        message: "Ya existe un pago activo para este servicio",
+        pago: pagoExistente,
+      });
+    }
+
+    const nuevoPago = new Pago({
+      usuario: req.user._id,
+      concepto: referencia.tipo,
+      referencia,
+      prestador: prestadorId,
+      monto,
+      metodoPago: "Efectivo",
+      estado: "Pendiente",
+      notasAdicionales: descripcion || undefined,
+    });
+
+    await nuevoPago.save();
+
+    console.log("💵 Pago en efectivo registrado:", nuevoPago._id);
+
+    res.status(201).json({
+      message: "Pago en efectivo registrado exitosamente",
+      pago: nuevoPago,
+    });
+  } catch (error) {
+    console.error("❌ Error al registrar pago en efectivo:", error);
+    res.status(500).json({
+      message: "Error al registrar el pago en efectivo",
+      error: error.message,
     });
   }
 });

@@ -35,6 +35,54 @@ function obtenerCoordenadasNormalizadas(coordenadas) {
   return { lat, lng };
 }
 
+async function completarPagoEfectivoEmergencia(emergencia) {
+  if (!emergencia?._id || emergencia.metodoPago !== 'Efectivo') {
+    return null;
+  }
+
+  let pago = await Pago.findOne({
+    'referencia.tipo': 'Emergencia',
+    'referencia.id': emergencia._id,
+    metodoPago: 'Efectivo'
+  }).sort({ createdAt: -1 });
+
+  if (!pago) {
+    const prestador = await Prestador.findById(emergencia.veterinario).select('_id precioEmergencia');
+
+    if (!prestador) {
+      throw new Error('No se encontró el prestador para completar el pago en efectivo');
+    }
+
+    const monto = emergencia.costoTotal || prestador.precioEmergencia || 0;
+
+    if (monto <= 0) {
+      throw new Error('No se pudo determinar el monto del pago en efectivo');
+    }
+
+    pago = new Pago({
+      usuario: emergencia.usuario,
+      concepto: 'Emergencia',
+      referencia: {
+        tipo: 'Emergencia',
+        id: emergencia._id
+      },
+      prestador: prestador._id,
+      monto,
+      metodoPago: 'Efectivo'
+    });
+  }
+
+  pago.estado = 'Completado';
+  pago.fechaPago = new Date();
+
+  if (!pago.idTransaccion) {
+    pago.idTransaccion = `EFECTIVO-EMERG-${emergencia._id.toString()}`;
+  }
+
+  await pago.save();
+  return pago;
+}
+
 // Obtener todas las emergencias del usuario autenticado
 router.get("/", protectRoute, async (req, res) => {
   try {
@@ -960,8 +1008,19 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
         
         console.log(`✅ Pago verificado - Estado: ${pagoEmergencia.estado}`);
         emergencia.pagado = true;
+      } else if (emergencia.metodoPago === 'Efectivo') {
+        console.log('💵 Método de pago: Efectivo - Completando pago al cerrar la emergencia...');
+
+        const pagoEfectivo = await completarPagoEfectivoEmergencia(emergencia);
+        emergencia.pagado = true;
+
+        if (!emergencia.costoTotal && pagoEfectivo?.monto) {
+          emergencia.costoTotal = pagoEfectivo.monto;
+        }
+
+        console.log(`✅ Pago en efectivo completado - Estado: ${pagoEfectivo?.estado}`);
       } else {
-        console.log(`💵 Método de pago: ${emergencia.metodoPago || 'Efectivo'} - No requiere verificación`);
+        console.log(`💵 Método de pago: ${emergencia.metodoPago || 'Por definir'} - No requiere verificación adicional`);
       }
       
       console.log('📝 Registrando fecha de atención y actualizando historial...');
@@ -1669,7 +1728,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
           prestador: prestador._id,
           monto: monto,
           metodoPago: 'Efectivo',
-          estado: 'Pendiente', // El prestador lo marcará como Completado cuando reciba el efectivo
+          estado: 'Pendiente', // Se completa automáticamente cuando el veterinario marca la emergencia como Atendida
           fechaPago: null // Se actualizará cuando se complete el pago
         });
         

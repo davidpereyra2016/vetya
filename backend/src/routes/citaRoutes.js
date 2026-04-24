@@ -97,6 +97,88 @@ function formatearFechaCita(fecha) {
   }
 }
 
+function normalizarMetodoPagoCitaParaPago(metodoPago) {
+  switch (metodoPago) {
+    case "MercadoPago":
+      return "MercadoPago";
+    case "Transferencia":
+      return "Transferencia";
+    case "Tarjeta":
+      return "Otro";
+    case "Efectivo":
+    case "Por definir":
+    default:
+      return "Efectivo";
+  }
+}
+
+async function sincronizarPagoCitaCompletada(cita) {
+  if (!cita?._id) {
+    throw new Error("No se pudo sincronizar el pago porque la cita es inválida");
+  }
+
+  const citaCompleta = await Cita.findById(cita._id)
+    .populate("servicio", "nombre precio")
+    .select("usuario prestador servicio costoEstimado metodoPago fecha createdAt updatedAt");
+
+  if (!citaCompleta) {
+    throw new Error("No se encontró la cita para sincronizar su pago");
+  }
+
+  const monto = Number(citaCompleta.costoEstimado || citaCompleta.servicio?.precio || 0);
+  if (monto <= 0) {
+    throw new Error("No se pudo determinar el monto de la cita completada");
+  }
+
+  const metodoPagoPago = normalizarMetodoPagoCitaParaPago(citaCompleta.metodoPago);
+  let pago = await Pago.findOne({
+    "referencia.tipo": "Cita",
+    "referencia.id": citaCompleta._id,
+  }).sort({ createdAt: -1 });
+
+  if (citaCompleta.metodoPago === "MercadoPago") {
+    if (!pago) {
+      throw new Error("No se encontró el pago de Mercado Pago asociado a la cita");
+    }
+
+    if (["Fallido", "Reembolsado", "Cancelado", "Expirado"].includes(pago.estado)) {
+      throw new Error(`El pago asociado a la cita no es válido para completarla. Estado actual: ${pago.estado}`);
+    }
+
+    if (!["Pagado", "Capturado", "Completado"].includes(pago.estado)) {
+      throw new Error(`La cita no se puede completar hasta que Mercado Pago confirme el cobro. Estado actual: ${pago.estado}`);
+    }
+  }
+
+  if (!pago) {
+    pago = new Pago({
+      usuario: citaCompleta.usuario,
+      concepto: "Cita",
+      referencia: {
+        tipo: "Cita",
+        id: citaCompleta._id,
+      },
+      prestador: citaCompleta.prestador,
+      monto,
+      metodoPago: metodoPagoPago,
+      notasAdicionales: "Pago generado automáticamente al completar la cita",
+    });
+  }
+
+  pago.monto = pago.monto > 0 ? pago.monto : monto;
+  pago.metodoPago = pago.metodoPago || metodoPagoPago;
+  pago.estado = "Completado";
+  pago.fechaPago = pago.fechaPago || new Date();
+
+  if (!pago.idTransaccion) {
+    const prefijo = pago.metodoPago === "MercadoPago" ? "MP" : "MANUAL";
+    pago.idTransaccion = `${prefijo}-CITA-${citaCompleta._id.toString()}`;
+  }
+
+  await pago.save();
+  return pago;
+}
+
 async function notificarPrestadorNuevaCita({ cita, usuario, mascota, servicio, prestador }) {
   try {
     if (!prestador?._id) return;
@@ -746,7 +828,7 @@ router.get("/:id", protectRoute, async (req, res) => {
 // POST /api/citas
 router.post("/", protectRoute, async (req, res) => {
   try {
-    const { mascota, prestador, servicio, fecha, horaInicio, motivo, ubicacion } = req.body;
+    const { mascota, prestador, servicio, fecha, horaInicio, motivo, ubicacion, metodoPago } = req.body;
     
     console.log('=== INICIO DE CREACIÓN DE CITA ===');
     console.log('Datos recibidos:', { mascota, prestador, servicio, fecha, horaInicio, motivo, ubicacion });
@@ -885,6 +967,7 @@ router.post("/", protectRoute, async (req, res) => {
       ubicacion: ubicacion || "Clínica",
       usuario: req.user._id,
       costoEstimado: servicioObj.precio || 0,
+      metodoPago: metodoPago || "Por definir",
       disponibilidad: disponibilidad._id
     });
 
@@ -1136,6 +1219,13 @@ router.patch("/prestador/:prestadorId/cita/:citaId", protectRoute, async (req, r
     
     // Si se completa la cita, agregar al historial médico de la mascota
     if (estado === "Completada") {
+      const pagoSincronizado = await sincronizarPagoCitaCompletada(cita);
+      cita.pagado = true;
+
+      if (pagoSincronizado?.monto && !cita.costoEstimado) {
+        cita.costoEstimado = pagoSincronizado.monto;
+      }
+
       const mascota = await Mascota.findById(cita.mascota);
       
       if (mascota) {

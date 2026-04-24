@@ -33,6 +33,7 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
 import AddressesScreen from '../screens/profile/AddressesScreen';
 import PaymentHistoryScreen from '../screens/profile/PaymentHistoryScreen';
+import ReceiptDetailScreen from '../screens/profile/ReceiptDetailScreen';
 
 // Pantallas de emergencia
 import EmergencyFormScreen from '../screens/main/EmergencyFormScreen';
@@ -200,6 +201,18 @@ function MainNavigator() {
       <Stack.Screen 
         name="PaymentHistory" 
         component={PaymentHistoryScreen} 
+        options={{
+          headerShown: false,
+          cardStyleInterpolator: ({ current }) => ({
+            cardStyle: {
+              opacity: current.progress,
+            },
+          }),
+        }}
+      />
+      <Stack.Screen 
+        name="ReceiptDetail" 
+        component={ReceiptDetailScreen} 
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({

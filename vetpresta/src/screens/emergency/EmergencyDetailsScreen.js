@@ -40,6 +40,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
   const locationUpdateIntervalRef = useRef(null);
   const [pagoInfo, setPagoInfo] = useState(null);
   const [loadingPago, setLoadingPago] = useState(false);
+  const emergencyReferenceId = emergencyDetails?.id || emergencyDetails?._id;
   
   // Obtener información del prestador desde el store
   const user = useAuthStore(state => state.user);
@@ -78,18 +79,18 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
   
   // Cargar información del pago
   useEffect(() => {
-    if (emergencyDetails?.id) {
+    if (emergencyReferenceId) {
       loadPaymentInfo();
     }
-  }, [emergencyDetails?.id]);
+  }, [emergencyReferenceId]);
   
   // Función para cargar información de pago
   const loadPaymentInfo = async () => {
-    if (!emergencyDetails?.id) return;
+    if (!emergencyReferenceId) return;
     
     try {
       setLoadingPago(true);
-      const result = await obtenerPagosPorReferencia('Emergencia', emergencyDetails.id);
+      const result = await obtenerPagosPorReferencia('Emergencia', emergencyReferenceId);
       if (result.success && result.data && result.data.length > 0) {
         setPagoInfo(result.data[0]);
         // console.log('💰 Info de pago cargada:', result.data[0]);
@@ -283,6 +284,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
         // console.log('✅ Emergencia completada exitosamente');
         setCurrentStatus('Atendida');
         setEmergencyDetails(prev => ({ ...prev, estado: 'Atendida' }));
+        await loadPaymentInfo();
         
         // Detener actualizaciones de ubicación
         if (locationUpdateIntervalRef.current) {

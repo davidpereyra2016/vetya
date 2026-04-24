@@ -11,7 +11,6 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import useAuthStore from "../../store/useAuthStore";
@@ -56,17 +55,21 @@ const PaymentHistoryScreen = ({ navigation }) => {
       console.log("🔄 Cargando historial de pagos del cliente...");
 
       await obtenerPagos();
-      
+
       // Obtener pagos del store después de la llamada
       const result = usePagoStore.getState().pagos;
-      
+
       if (result && result.length > 0) {
         console.log("✅ Pagos cargados:", result.length);
 
         // Transformar pagos del backend al formato de la UI
         const paymentsData = result.map((pago) => {
-          // Determinar nombre del prestador
           const prestadorNombre = pago.prestador?.nombre || "Prestador";
+          const prestadorTipo = pago.prestador?.tipo || "Servicio veterinario";
+          const prestadorImagen =
+            pago.prestador?.usuario?.profilePicture ||
+            pago.prestador?.imagen ||
+            null;
 
           // Determinar servicio según el concepto
           let servicio = pago.concepto || "Servicio";
@@ -77,7 +80,13 @@ const PaymentHistoryScreen = ({ navigation }) => {
           }
 
           // Determinar mascota si está disponible
-          const mascota = pago.referencia?.id?.mascota?.nombre || "N/A";
+          const mascotaNombre =
+            pago.referencia?.id?.mascota?.nombre || "N/A";
+          const mascotaTipo =
+            pago.referencia?.id?.mascota?.tipo || null;
+          const mascotaLabel = mascotaTipo
+            ? `${mascotaNombre} (${mascotaTipo})`
+            : mascotaNombre;
 
           // Determinar estado para la UI
           let estadoUI = "pendiente";
@@ -98,25 +107,61 @@ const PaymentHistoryScreen = ({ navigation }) => {
             .toString()
             .padStart(2, "0")}/${fecha.getFullYear()}`;
 
+          // Fecha larga para el recibo
+          const meses = [
+            "Ene",
+            "Feb",
+            "Mar",
+            "Abr",
+            "May",
+            "Jun",
+            "Jul",
+            "Ago",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dic",
+          ];
+          const fechaLarga = `${fecha.getDate().toString().padStart(2, "0")} ${
+            meses[fecha.getMonth()]
+          } ${fecha.getFullYear()}, ${fecha
+            .getHours()
+            .toString()
+            .padStart(2, "0")}:${fecha
+            .getMinutes()
+            .toString()
+            .padStart(2, "0")}`;
+
           return {
             id: pago._id,
             prestador: prestadorNombre,
-            mascota: mascota,
+            prestadorData: {
+              nombre: prestadorNombre,
+              tipo: prestadorTipo,
+              imagen: prestadorImagen,
+            },
+            mascota: mascotaLabel,
             servicio: servicio,
+            concepto: pago.concepto || servicio,
             monto: pago.monto,
             fecha: fechaFormateada,
-            fechaObj: fecha,
+            fechaLarga,
+            fechaISO: fecha.toISOString(),
             estado: estadoUI,
             referencia: `#${pago._id.slice(-8).toUpperCase()}`,
+            transaccionId: `#${pago._id.slice(-8).toUpperCase()}`,
             metodoPago: pago.metodoPago || "No especificado",
-            concepto: pago.concepto,
           };
         });
 
         // Calcular estadísticas
-        const completados = paymentsData.filter(p => p.estado === "completado");
-        const pendientes = paymentsData.filter(p => p.estado === "pendiente");
-        
+        const completados = paymentsData.filter(
+          (p) => p.estado === "completado"
+        );
+        const pendientes = paymentsData.filter(
+          (p) => p.estado === "pendiente"
+        );
+
         setTotalPayments({
           total: paymentsData.reduce((sum, p) => sum + p.monto, 0),
           completado: completados.reduce((sum, p) => sum + p.monto, 0),
@@ -141,32 +186,21 @@ const PaymentHistoryScreen = ({ navigation }) => {
     }
   };
 
-  // Función para filtrar transacciones por período
-  const filterByPeriod = (period) => {
-    setFilterPeriod(period);
-  };
-
-  // Obtener transacciones filtradas por período
+  // Obtener transacciones filtradas
   const getFilteredTransactions = () => {
     if (filterPeriod === "all") return transactions;
-
-    const now = new Date();
-    let cutoffDate = new Date();
-
-    if (filterPeriod === "week") {
-      cutoffDate.setDate(now.getDate() - 7);
-    } else if (filterPeriod === "month") {
-      cutoffDate.setMonth(now.getMonth() - 1);
+    if (filterPeriod === "completado") {
+      return transactions.filter((t) => t.estado === "completado");
     }
-
-    return transactions.filter((trans) => {
-      return trans.fechaObj >= cutoffDate;
-    });
+    if (filterPeriod === "pendiente") {
+      return transactions.filter((t) => t.estado === "pendiente");
+    }
+    return transactions;
   };
 
-  // Función para formatear montos en pesos argentinos
+  // Formatear montos
   const formatCurrency = (amount) => {
-    return `$${amount.toLocaleString("es-AR")}`;
+    return `$${Number(amount || 0).toLocaleString("es-AR")}`;
   };
 
   // Pull to refresh
@@ -175,336 +209,243 @@ const PaymentHistoryScreen = ({ navigation }) => {
     loadPayments();
   };
 
-  // Función para obtener el ícono del método de pago
-  const getPaymentMethodIcon = (method) => {
-    switch (method?.toLowerCase()) {
-      case "mercadopago":
-        return "card";
-      case "efectivo":
-        return "cash";
-      default:
-        return "wallet";
-    }
+  // Abrir detalle del recibo
+  const handleTransactionDetails = (transaction) => {
+    navigation.navigate("ReceiptDetail", { payment: transaction });
   };
 
-  // Función para obtener el color del método de pago
-  const getPaymentMethodColor = (method) => {
-    switch (method?.toLowerCase()) {
-      case "mercadopago":
-        return "#009EE3";
-      case "efectivo":
-        return "#4CAF50";
-      default:
-        return COLORS.grey;
-    }
-  };
+  // ─── RENDER DE CADA PAGO ───
+  const renderPaymentCard = ({ item }) => {
+    const isCompleted = item.estado === "completado";
 
-  // Renderizar cada transacción (recibo)
-  const renderTransactionItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.transactionCard}
-      onPress={() => handleTransactionDetails(item)}
-      activeOpacity={0.7}
-    >
-      {/* Header del recibo */}
-      <View style={styles.receiptHeader}>
-        <View style={styles.receiptLogoContainer}>
-          <Ionicons name="receipt" size={24} color={COLORS.primary} />
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => handleTransactionDetails(item)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.cardInfo}>
+            <View
+              style={[
+                styles.iconBox,
+                {
+                  backgroundColor: isCompleted ? "#E8F5E9" : "#FFF3E0",
+                },
+              ]}
+            >
+              <Ionicons
+                name="receipt"
+                size={20}
+                color={isCompleted ? COLORS.success : COLORS.warning}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.concepto} numberOfLines={1}>
+                {item.servicio}
+              </Text>
+              <Text style={styles.fecha}>{item.fecha}</Text>
+            </View>
+          </View>
+          <Text style={styles.monto}>{formatCurrency(item.monto)}</Text>
         </View>
-        <View style={styles.receiptTitleContainer}>
-          <Text style={styles.receiptTitle}>Recibo de Pago</Text>
-          <Text style={styles.receiptRef}>{item.referencia}</Text>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            item.estado === "completado"
-              ? styles.completedBadge
-              : styles.pendingBadge,
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              item.estado === "completado"
-                ? styles.completedText
-                : styles.pendingText,
-            ]}
-          >
-            {item.estado === "completado" ? "Pagado" : "Pendiente"}
-          </Text>
-        </View>
-      </View>
 
-      {/* Línea divisoria */}
-      <View style={styles.divider} />
-
-      {/* Detalles del servicio */}
-      <View style={styles.receiptBody}>
-        <View style={styles.receiptRow}>
-          <Text style={styles.receiptLabel}>Servicio:</Text>
-          <Text style={styles.receiptValue}>{item.servicio}</Text>
-        </View>
-        <View style={styles.receiptRow}>
-          <Text style={styles.receiptLabel}>Prestador:</Text>
-          <Text style={styles.receiptValue}>{item.prestador}</Text>
-        </View>
-        <View style={styles.receiptRow}>
-          <Text style={styles.receiptLabel}>Mascota:</Text>
-          <Text style={styles.receiptValue}>{item.mascota}</Text>
-        </View>
-        <View style={styles.receiptRow}>
-          <Text style={styles.receiptLabel}>Fecha:</Text>
-          <Text style={styles.receiptValue}>{item.fecha}</Text>
-        </View>
-      </View>
-
-      {/* Línea divisoria */}
-      <View style={styles.divider} />
-
-      {/* Método de pago y monto */}
-      <View style={styles.receiptFooter}>
-        <View style={styles.paymentMethodContainer}>
+        <View style={styles.cardFooter}>
           <View
             style={[
-              styles.paymentMethodIcon,
-              { backgroundColor: getPaymentMethodColor(item.metodoPago) + "20" },
+              styles.statusBadge,
+              {
+                backgroundColor: isCompleted ? "#E8F5E9" : "#FFF3E0",
+              },
             ]}
           >
             <Ionicons
-              name={getPaymentMethodIcon(item.metodoPago)}
-              size={20}
-              color={getPaymentMethodColor(item.metodoPago)}
+              name={isCompleted ? "checkmark-circle" : "time"}
+              size={12}
+              color={isCompleted ? COLORS.success : COLORS.warning}
+              style={{ marginRight: 4 }}
             />
+            <Text
+              style={[
+                styles.statusText,
+                { color: isCompleted ? "#2E7D32" : "#E65100" },
+              ]}
+            >
+              {isCompleted ? "Completado" : "Pendiente"}
+            </Text>
           </View>
-          <Text style={styles.paymentMethodText}>{item.metodoPago}</Text>
+
+          <View style={styles.actionRow}>
+            <Text style={styles.verReciboText}>Ver recibo</Text>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+          </View>
         </View>
-        <View style={styles.amountContainer}>
-          <Text style={styles.amountLabel}>Total</Text>
-          <Text style={styles.amountValue}>{formatCurrency(item.monto)}</Text>
-        </View>
-      </View>
-
-      {/* Indicador de ver más */}
-      <View style={styles.viewMoreContainer}>
-        <Text style={styles.viewMoreText}>Ver detalles</Text>
-        <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
-      </View>
-    </TouchableOpacity>
-  );
-
-  // Función para mostrar detalles de una transacción
-  const handleTransactionDetails = (transaction) => {
-    Alert.alert(
-      "📄 Detalle del Recibo",
-      `
-━━━━━━━━━━━━━━━━━━━━━━━━
-Referencia: ${transaction.referencia}
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 SERVICIO
-${transaction.servicio}
-
-🏥 PRESTADOR
-${transaction.prestador}
-
-🐾 MASCOTA
-${transaction.mascota}
-
-📅 FECHA
-${transaction.fecha}
-
-💳 MÉTODO DE PAGO
-${transaction.metodoPago}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-💰 TOTAL PAGADO
-${formatCurrency(transaction.monto)}
-━━━━━━━━━━━━━━━━━━━━━━━━
-
-Estado: ${transaction.estado === "completado" ? "✅ Pagado" : "⏳ Pendiente"}
-      `,
-      [{ text: "Cerrar", style: "default" }]
+      </TouchableOpacity>
     );
   };
 
-  // Renderizar el filtro de período
-  const renderPeriodFilter = () => (
-    <View style={styles.filterContainer}>
-      <Text style={styles.filterTitle}>Mostrar:</Text>
-      <View style={styles.filterButtonsContainer}>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filterPeriod === "all" && styles.activeFilterButton,
-          ]}
-          onPress={() => filterByPeriod("all")}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              filterPeriod === "all" && styles.activeFilterButtonText,
-            ]}
-          >
-            Todo
-          </Text>
-        </TouchableOpacity>
+  // ─── FILTROS ───
+  const filtrosDisponibles = [
+    { key: "all", label: "Todos" },
+    { key: "completado", label: "Completados" },
+    { key: "pendiente", label: "Pendientes" },
+  ];
 
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filterPeriod === "month" && styles.activeFilterButton,
-          ]}
-          onPress={() => filterByPeriod("month")}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              filterPeriod === "month" && styles.activeFilterButtonText,
-            ]}
-          >
-            Último mes
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filterPeriod === "week" && styles.activeFilterButton,
-          ]}
-          onPress={() => filterByPeriod("week")}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              filterPeriod === "week" && styles.activeFilterButtonText,
-            ]}
-          >
-            Última semana
-          </Text>
-        </TouchableOpacity>
+  // ─── HEADER DE LA LISTA (stats) ───
+  const ListHeader = () => (
+    <View style={styles.paymentsOverview}>
+      {/* Total pagado - Card principal */}
+      <View style={styles.totalCard}>
+        <View style={styles.totalCardHeader}>
+          <Ionicons name="wallet" size={28} color={COLORS.white} />
+          <Text style={styles.totalCardLabel}>Total pagado</Text>
+        </View>
+        <Text style={styles.totalCardValue}>
+          {formatCurrency(totalPayments.total)}
+        </Text>
       </View>
+
+      {/* Tarjetas de detalle */}
+      <View style={styles.overviewDetails}>
+        <View style={styles.detailCard}>
+          <View
+            style={[
+              styles.iconBadge,
+              { backgroundColor: COLORS.success + "15" },
+            ]}
+          >
+            <Ionicons
+              name="checkmark-circle"
+              size={26}
+              color={COLORS.success}
+            />
+          </View>
+          <Text style={styles.detailCardLabel}>Completado</Text>
+          <Text style={[styles.detailCardValue, { color: COLORS.success }]}>
+            {formatCurrency(totalPayments.completado)}
+          </Text>
+        </View>
+
+        <View style={styles.detailCard}>
+          <View
+            style={[
+              styles.iconBadge,
+              { backgroundColor: COLORS.warning + "15" },
+            ]}
+          >
+            <Ionicons name="time" size={26} color={COLORS.warning} />
+          </View>
+          <Text style={styles.detailCardLabel}>Pendiente</Text>
+          <Text style={[styles.detailCardValue, { color: COLORS.warning }]}>
+            {formatCurrency(totalPayments.pendiente)}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Historial de pagos</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Header */}
+      {/* ─── HEADER PREMIUM ─── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity
-            style={styles.headerBackButton}
+            style={styles.headerBtn}
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Mis Pagos</Text>
-          <View style={styles.headerRight} />
+          <View style={styles.headerBtnPlaceholder} />
         </View>
       </View>
 
-      {/* Resumen de pagos */}
-      <View style={styles.paymentsOverview}>
-        {/* Total pagado - Card principal */}
-        <View style={styles.totalCard}>
-          <View style={styles.totalCardHeader}>
-            <Ionicons name="wallet" size={28} color={COLORS.white} />
-            <Text style={styles.totalCardLabel}>Total pagado</Text>
-          </View>
-          <Text style={styles.totalCardValue}>
-            {formatCurrency(totalPayments.total)}
-          </Text>
-        </View>
+      {/* ─── FILTROS PILL ─── */}
+      <View style={styles.filtersWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersScroll}
+        >
+          {filtrosDisponibles.map((filtro) => {
+            const isActive = filterPeriod === filtro.key;
+            return (
+              <TouchableOpacity
+                key={filtro.key}
+                activeOpacity={0.8}
+                style={[
+                  styles.filterPill,
+                  isActive
+                    ? styles.filterPillActive
+                    : styles.filterPillInactive,
+                ]}
+                onPress={() => setFilterPeriod(filtro.key)}
+              >
+                <Text
+                  style={
+                    isActive ? styles.filterTextActive : styles.filterTextInactive
+                  }
+                >
+                  {filtro.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
-        {/* Tarjetas de detalle */}
-        <View style={styles.overviewDetails}>
-          {/* Completado */}
-          <View style={styles.detailCard}>
-            <View style={styles.detailCardHeader}>
-              <View style={[styles.iconBadge, { backgroundColor: COLORS.success + '15' }]}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={28}
-                  color={COLORS.success}
-                />
+      {/* ─── LISTA ─── */}
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Cargando historial de pagos...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={getFilteredTransactions()}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPaymentCard}
+          ListHeaderComponent={ListHeader}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[COLORS.primary]}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyStateContainer}>
+              <View style={styles.emptyIconContainer}>
+                <Ionicons name="receipt-outline" size={70} color="#DDD" />
               </View>
+              <Text style={styles.emptyStateTitle}>
+                Sin pagos registrados
+              </Text>
+              <Text style={styles.emptyStateText}>
+                Aquí aparecerán los recibos de tus pagos por servicios
+                veterinarios
+              </Text>
             </View>
-            <Text style={styles.detailCardLabel}>Completado</Text>
-            <Text style={[styles.detailCardValue, { color: COLORS.success }]}>
-              {formatCurrency(totalPayments.completado)}
-            </Text>
-          </View>
-
-          {/* Pendiente */}
-          <View style={styles.detailCard}>
-            <View style={styles.detailCardHeader}>
-              <View style={[styles.iconBadge, { backgroundColor: COLORS.warning + '15' }]}>
-                <Ionicons 
-                  name="time" 
-                  size={28} 
-                  color={COLORS.warning} 
-                />
-              </View>
-            </View>
-            <Text style={styles.detailCardLabel}>Pendiente</Text>
-            <Text style={[styles.detailCardValue, { color: COLORS.warning }]}>
-              {formatCurrency(totalPayments.pendiente)}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Filtro de período */}
-      {renderPeriodFilter()}
-
-      {/* Lista de transacciones */}
-      <View style={styles.transactionsContainer}>
-        <Text style={styles.sectionTitle}>Historial de pagos</Text>
-
-        {loading ? (
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>
-              Cargando historial de pagos...
-            </Text>
-          </View>
-        ) : getFilteredTransactions().length > 0 ? (
-          <FlatList
-            data={getFilteredTransactions()}
-            renderItem={renderTransactionItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        ) : (
-          <View style={styles.emptyStateContainer}>
-            <View style={styles.emptyIconContainer}>
-              <Ionicons name="receipt-outline" size={70} color="#DDD" />
-            </View>
-            <Text style={styles.emptyStateTitle}>Sin pagos registrados</Text>
-            <Text style={styles.emptyStateText}>
-              Aquí aparecerán los recibos de tus pagos por servicios veterinarios
-            </Text>
-          </View>
-        )}
-      </View>
-    </SafeAreaView>
+          }
+        />
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+
+  // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: Platform.OS === 'ios' ? 30 : 20,
+    paddingTop: Platform.OS === "ios" ? 30 : 20,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -517,54 +458,76 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerContent: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
   },
-  headerBackButton: {
+  headerBtn: {
     width: 44,
     height: 44,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
     justifyContent: "center",
     alignItems: "center",
+  },
+  headerBtnPlaceholder: {
+    width: 44,
   },
   headerTitle: {
     color: COLORS.white,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.5,
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  headerRight: {
-    width: 44,
+
+  // ─── FILTROS PILL ───
+  filtersWrapper: {
+    paddingVertical: 15,
+    backgroundColor: COLORS.background,
   },
+  filtersScroll: {
+    paddingHorizontal: 20,
+  },
+  filterPill: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  filterPillActive: {
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  filterPillInactive: {
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: "#E8EAED",
+  },
+  filterTextActive: { color: COLORS.white, fontWeight: "bold", fontSize: 13 },
+  filterTextInactive: { color: "#666", fontWeight: "bold", fontSize: 13 },
+
+  // ─── STATS OVERVIEW ───
   paymentsOverview: {
-    paddingHorizontal: 15,
-    paddingTop: 15,
-    paddingBottom: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 4,
   },
   totalCard: {
     backgroundColor: COLORS.primary,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 20,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
     elevation: 5,
   },
   totalCardHeader: {
@@ -576,249 +539,149 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.white,
     marginLeft: 10,
-    fontWeight: "500",
-    opacity: 0.9,
+    fontWeight: "600",
+    opacity: 0.95,
   },
   totalCardValue: {
-    fontSize: 36,
-    fontWeight: "bold",
+    fontSize: 34,
+    fontWeight: "900",
     color: COLORS.white,
     letterSpacing: 0.5,
   },
   overviewDetails: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 20,
   },
   detailCard: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     alignItems: "center",
-    marginHorizontal: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
     elevation: 2,
-  },
-  detailCardHeader: {
-    marginBottom: 12,
   },
   iconBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: "center",
     alignItems: "center",
+    marginBottom: 10,
   },
   detailCardLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.grey,
-    marginBottom: 6,
-    fontWeight: "500",
-  },
-  detailCardValue: {
-    fontSize: 20,
-    fontWeight: "bold",
+    marginBottom: 4,
+    fontWeight: "600",
+    textTransform: "uppercase",
     letterSpacing: 0.3,
   },
-  filterContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 10,
-  },
-  filterTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: COLORS.dark,
-    marginBottom: 8,
-  },
-  filterButtonsContainer: {
-    flexDirection: "row",
-  },
-  filterButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.white,
-    marginRight: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  activeFilterButton: {
-    backgroundColor: COLORS.primary,
-  },
-  filterButtonText: {
-    fontSize: 14,
-    color: COLORS.dark,
-  },
-  activeFilterButtonText: {
-    color: COLORS.white,
-  },
-  transactionsContainer: {
-    flex: 1,
-    paddingHorizontal: 15,
+  detailCardValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 0.3,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: "bold",
-    color: COLORS.dark,
-    marginBottom: 10,
+    color: "#1A237E",
+    letterSpacing: 0.2,
+    marginBottom: 12,
+    marginTop: 4,
   },
+
+  // ─── LISTA ───
   listContainer: {
-    paddingBottom: 30,
+    paddingBottom: 40,
+    paddingHorizontal: 0,
+    flexGrow: 1,
   },
-  // Estilos del recibo
-  transactionCard: {
+  card: {
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 22,
     padding: 16,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 14,
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  receiptHeader: {
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  cardInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    flex: 1,
+    marginRight: 10,
   },
-  receiptLogoContainer: {
+  iconBox: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.primary + "15",
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
-  receiptTitleContainer: {
-    flex: 1,
-  },
-  receiptTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: COLORS.dark,
-  },
-  receiptRef: {
-    fontSize: 12,
-    color: COLORS.grey,
-    marginTop: 2,
+  concepto: { fontSize: 15, fontWeight: "bold", color: "#333", marginBottom: 2 },
+  fecha: { fontSize: 12, color: "#888", fontWeight: "500" },
+  monto: { fontSize: 18, fontWeight: "900", color: "#1A237E" },
+
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#F5F5F5",
   },
   statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 5,
+    borderRadius: 8,
   },
-  completedBadge: {
-    backgroundColor: COLORS.success + "20",
-  },
-  pendingBadge: {
-    backgroundColor: COLORS.warning + "20",
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  completedText: {
-    color: COLORS.success,
-  },
-  pendingText: {
-    color: COLORS.warning,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#E0E0E0",
-    marginVertical: 12,
-  },
-  receiptBody: {
-    marginBottom: 4,
-  },
-  receiptRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  receiptLabel: {
-    fontSize: 14,
-    color: COLORS.grey,
-  },
-  receiptValue: {
-    fontSize: 14,
-    color: COLORS.dark,
-    fontWeight: "500",
-    flex: 1,
-    textAlign: "right",
-  },
-  receiptFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  paymentMethodContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  paymentMethodIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  paymentMethodText: {
-    fontSize: 14,
-    color: COLORS.dark,
-    fontWeight: "500",
-  },
-  amountContainer: {
-    alignItems: "flex-end",
-  },
-  amountLabel: {
-    fontSize: 12,
-    color: COLORS.grey,
-  },
-  amountValue: {
-    fontSize: 20,
+  statusText: { fontSize: 11, fontWeight: "bold", textTransform: "uppercase" },
+  actionRow: { flexDirection: "row", alignItems: "center" },
+  verReciboText: {
+    fontSize: 13,
     fontWeight: "bold",
     color: COLORS.primary,
+    marginRight: 2,
   },
-  viewMoreContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F0F0F0",
-  },
-  viewMoreText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: "500",
-    marginRight: 4,
-  },
+
+  // ─── LOADING / EMPTY ───
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    padding: 30,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 15,
     color: COLORS.grey,
     marginTop: 12,
   },
   emptyStateContainer: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    paddingHorizontal: 30,
+    paddingVertical: 40,
   },
   emptyIconContainer: {
     width: 120,

@@ -27,7 +27,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   const [createdAppointment, setCreatedAppointment] = useState(null);
   
   // Stores
-  const { crearPreferencia } = usePagoStore();
+  const { crearPreferencia, crearPagoEfectivo } = usePagoStore();
   const { createAppointment } = useCitaStore();
   
   // Si no hay datos de appointment, mostrar mensaje de error
@@ -83,6 +83,33 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
 
       const nuevaCita = citaResult.data;
       console.log('Cita creada:', nuevaCita._id);
+
+      // Registrar el pago en efectivo (estado "Pendiente" hasta que se complete el servicio)
+      const montoPago =
+        nuevaCita.servicio?.precio ||
+        nuevaCita.costoEstimado ||
+        service?.precio ||
+        0;
+
+      if (montoPago > 0) {
+        const pagoResult = await crearPagoEfectivo(
+          null,
+          nuevaCita._id,
+          montoPago,
+          `Cita veterinaria - ${nuevaCita.servicio?.nombre || service?.nombre || 'Consulta general'}`
+        );
+
+        if (!pagoResult.success) {
+          console.warn(
+            '⚠️ La cita se creó pero no se pudo registrar el pago en efectivo:',
+            pagoResult.error
+          );
+        } else {
+          console.log('💵 Pago en efectivo registrado para la cita');
+        }
+      } else {
+        console.warn('⚠️ Monto 0 o no definido, no se registra pago');
+      }
 
       Alert.alert(
         'Reserva enviada',

@@ -66,6 +66,39 @@ const usePagoStore = create((set, get) => ({
   },
 
   /**
+   * Registrar un pago en efectivo (cita o emergencia).
+   * Crea un Pago en estado "Pendiente" hasta que se complete el servicio.
+   */
+  crearPagoEfectivo: async (emergenciaId, citaId, monto, descripcion) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const result = await pagoService.crearPagoEfectivo(
+        emergenciaId,
+        citaId,
+        monto,
+        descripcion
+      );
+
+      if (result.success) {
+        set({
+          pagoActual: result.data.pago,
+          isLoading: false,
+        });
+        return { success: true, pago: result.data.pago };
+      } else {
+        console.error('❌ Store: Error al crear pago en efectivo:', result.error);
+        set({ error: result.error, isLoading: false });
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('❌ Store: Excepción al crear pago en efectivo:', error);
+      set({ error: error.message, isLoading: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
    * Capturar pago cuando el servicio se completa
    * El cliente confirma que el servicio fue completado satisfactoriamente
    */
