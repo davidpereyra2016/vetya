@@ -41,6 +41,18 @@ const citaService = {
     }
   },
 
+  reprogramAppointment: async (appointmentId, appointmentData) => {
+    try {
+      const response = await axios.patch(`/citas/${appointmentId}/reprogramar`, appointmentData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al reprogramar la cita'
+      };
+    }
+  },
+
   /**
    * Obtiene los horarios disponibles para una fecha específica
    * @param {string} date - Fecha en formato YYYY-MM-DD

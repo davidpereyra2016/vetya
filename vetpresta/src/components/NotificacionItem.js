@@ -39,7 +39,7 @@ const NotificacionItem = ({ item, onRead, onDelete }) => {
         emergencyId: item.datos.emergenciaId,
         fromNotification: true
       });
-    } else if (['cita_solicitada', 'cita_confirmada', 'cita_cancelada', 'cita_completada', 'Cita'].includes(item.tipo)) {
+    } else if (['cita_solicitada', 'cita_confirmada', 'cita_cancelada', 'cita_completada', 'cita_reprogramada', 'Cita'].includes(item.tipo)) {
       navigation.navigate('MainTabs', { screen: 'Citas' });
     } else {
       navigation.navigate('Notificaciones');
@@ -60,7 +60,7 @@ const NotificacionItem = ({ item, onRead, onDelete }) => {
       <View style={styles.iconoContainer}>
         {item.tipo === 'emergencia_asignada' ? (
           <Ionicons name="medical" size={24} color="#e74c3c" />
-        ) : ['cita_solicitada', 'cita_confirmada', 'cita_cancelada', 'cita_completada', 'Cita'].includes(item.tipo) ? (
+        ) : ['cita_solicitada', 'cita_confirmada', 'cita_cancelada', 'cita_completada', 'cita_reprogramada', 'Cita'].includes(item.tipo) ? (
           <Ionicons name="calendar" size={24} color="#1E88E5" />
         ) : item.tipo === 'valoracion_nueva' ? (
           <Ionicons name="star" size={24} color="#f59e0b" />

@@ -26,7 +26,7 @@ const notificacionSchema = new mongoose.Schema({
   },
   tipo: {
     type: String,
-    enum: ['Cita', 'Emergencia', 'emergencia_asignada', 'emergencia_confirmada', 'emergencia_en_camino', 'emergencia_atendida', 'emergencia_cancelada', 'llegada_confirmada', 'cita_solicitada', 'cita_confirmada', 'cita_cancelada', 'cita_completada', 'valoracion_nueva', 'Recordatorio', 'Sistema', 'Promocion'],
+    enum: ['Cita', 'Emergencia', 'emergencia_asignada', 'emergencia_confirmada', 'emergencia_en_camino', 'emergencia_atendida', 'emergencia_cancelada', 'llegada_confirmada', 'cita_solicitada', 'cita_confirmada', 'cita_cancelada', 'cita_completada', 'cita_reprogramada', 'valoracion_nueva', 'Recordatorio', 'Sistema', 'Promocion'],
     default: 'Sistema'
   },
   accion: {

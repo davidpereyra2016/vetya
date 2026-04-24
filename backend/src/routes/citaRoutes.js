@@ -14,7 +14,7 @@ import { enviarNotificacionPush, esTokenValido } from "../utils/notificacionesUt
 const router = express.Router();
 
 // =====================================================================
-// FUNCIÓN HELPER: Auto-cancelar citas vencidas
+// FUNCI�N HELPER: Auto-cancelar citas vencidas
 // =====================================================================
 /**
  * Cancela automáticamente las citas en estado "Pendiente" que ya pasaron
@@ -30,24 +30,11 @@ const router = express.Router();
 async function autoCancelarCitasVencidas(prestadorId = null) {
   try {
     const ahora = new Date();
-    const fechaHoy = new Date(ahora.toISOString().split('T')[0]);
-    const horaActual = `${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}`;
-    
-    // Construir filtro base
+
+    // Construir filtro base usando el inicio real de la cita.
     const filtroBase = {
       estado: 'Pendiente',
-      $or: [
-        // Citas de días anteriores (ya pasó el día completo)
-        { fecha: { $lt: fechaHoy } },
-        // Citas del mismo día pero con hora ya pasada
-        {
-          fecha: {
-            $gte: fechaHoy,
-            $lt: new Date(fechaHoy.getTime() + 24 * 60 * 60 * 1000)
-          },
-          horaInicio: { $lt: horaActual }
-        }
-      ]
+      fecha: { $lt: ahora }
     };
     
     // Si se proporciona prestadorId, filtrar solo sus citas
@@ -80,7 +67,7 @@ async function autoCancelarCitasVencidas(prestadorId = null) {
     
     return citasVencidas.length;
   } catch (error) {
-    console.error('❌ Error al auto-cancelar citas vencidas:', error);
+    console.error('�R Error al auto-cancelar citas vencidas:', error);
     return 0;
   }
 }
@@ -179,6 +166,185 @@ async function sincronizarPagoCitaCompletada(cita) {
   return pago;
 }
 
+function construirFechaConHora(fecha, hora) {
+  const [horaNum, minutoNum] = hora.split(":").map(Number);
+  const fechaCompleta = new Date(fecha);
+  fechaCompleta.setHours(horaNum, minutoNum, 0, 0);
+  return fechaCompleta;
+}
+
+function horariosSeSolapan(inicioA, finA, inicioB, finB) {
+  return inicioA < finB && finA > inicioB;
+}
+
+async function liberarReservaDisponibilidad(cita) {
+  if (!cita?.disponibilidad) {
+    return;
+  }
+
+  const disponibilidad = await Disponibilidad.findById(cita.disponibilidad);
+  if (!disponibilidad) {
+    return;
+  }
+
+  const reservasOriginales = disponibilidad.reservas.length;
+  disponibilidad.reservas = disponibilidad.reservas.filter((reserva) => {
+    if (reserva.cita && reserva.cita.toString() === cita._id.toString()) {
+      return false;
+    }
+
+    const mismaFecha = new Date(reserva.fecha).toDateString() === new Date(cita.fecha).toDateString();
+    const mismoHorario = reserva.horaInicio === cita.horaInicio && reserva.horaFin === cita.horaFin;
+    return !(mismaFecha && mismoHorario);
+  });
+
+  if (disponibilidad.reservas.length !== reservasOriginales) {
+    await disponibilidad.save();
+  }
+}
+
+async function asegurarDisponibilidadParaServicio(prestadorId, servicioId) {
+  let disponibilidad = await Disponibilidad.findOne({
+    prestador: prestadorId,
+    servicio: servicioId
+  });
+
+  if (!disponibilidad) {
+    disponibilidad = new Disponibilidad({
+      prestador: prestadorId,
+      servicio: servicioId,
+      horarioEspecifico: {
+        activo: false,
+        horarios: []
+      },
+      reservas: []
+    });
+    await disponibilidad.save();
+  }
+
+  return disponibilidad;
+}
+
+async function registrarReservaDisponibilidad({ disponibilidadId, fecha, horaInicio, horaFin, citaId }) {
+  if (!disponibilidadId) {
+    return;
+  }
+
+  const disponibilidad = await Disponibilidad.findById(disponibilidadId);
+  if (!disponibilidad) {
+    return;
+  }
+
+  disponibilidad.reservas = disponibilidad.reservas.filter((reserva) => {
+    return !(reserva.cita && reserva.cita.toString() === citaId.toString());
+  });
+
+  disponibilidad.reservas.push({
+    fecha,
+    horaInicio,
+    horaFin,
+    cita: citaId
+  });
+
+  await disponibilidad.save();
+}
+
+async function validarHorarioCita({ prestadorId, servicioId, fecha, horaInicio, citaExcluirId = null }) {
+  const servicio = await Servicio.findById(servicioId);
+  if (!servicio) {
+    throw new Error("Servicio no encontrado");
+  }
+
+  const prestador = await Prestador.findById(prestadorId);
+  if (!prestador) {
+    throw new Error("Prestador no encontrado");
+  }
+
+  const duracion = servicio.duracion || 30;
+  const fechaInicio = construirFechaConHora(fecha, horaInicio);
+  const fechaFin = new Date(fechaInicio.getTime() + duracion * 60000);
+  const horaFin = fechaFin.toTimeString().substring(0, 5);
+
+  const disponibilidad = await asegurarDisponibilidadParaServicio(prestadorId, servicioId);
+
+  const diaSemana = fechaInicio.getDay();
+  let horarioValido = false;
+
+  if (disponibilidad.horarioEspecifico?.activo) {
+    const horarioDia = disponibilidad.horarioEspecifico.horarios.find((h) => h.dia === diaSemana);
+    if (!horarioDia) {
+      throw new Error(`El prestador no atiende los ${obtenerNombreDia(diaSemana)}`);
+    }
+
+    const horaInicioNum = parseHora(horaInicio);
+    const horaFinNum = parseHora(horaFin);
+    const enManana =
+      horarioDia.manana?.activo &&
+      horaInicioNum >= parseHora(horarioDia.manana.apertura) &&
+      horaFinNum <= parseHora(horarioDia.manana.cierre);
+    const enTarde =
+      horarioDia.tarde?.activo &&
+      horaInicioNum >= parseHora(horarioDia.tarde.apertura) &&
+      horaFinNum <= parseHora(horarioDia.tarde.cierre);
+
+    horarioValido = enManana || enTarde;
+  } else {
+    const horarioDia = prestador.horarios?.find((h) => h.dia === diaSemana);
+    if (!horarioDia) {
+      throw new Error(`El prestador no atiende los ${obtenerNombreDia(diaSemana)}`);
+    }
+
+    const horaInicioNum = parseHora(horaInicio);
+    const horaFinNum = parseHora(horaFin);
+    const enManana =
+      horarioDia.manana?.activo &&
+      horaInicioNum >= parseHora(horarioDia.manana.apertura) &&
+      horaFinNum <= parseHora(horarioDia.manana.cierre);
+    const enTarde =
+      horarioDia.tarde?.activo &&
+      horaInicioNum >= parseHora(horarioDia.tarde.apertura) &&
+      horaFinNum <= parseHora(horarioDia.tarde.cierre);
+
+    horarioValido = enManana || enTarde;
+  }
+
+  if (!horarioValido) {
+    throw new Error("Horario no disponible");
+  }
+
+  const inicioDia = new Date(fechaInicio);
+  inicioDia.setHours(0, 0, 0, 0);
+  const finDia = new Date(inicioDia);
+  finDia.setDate(finDia.getDate() + 1);
+
+  const filtroConflictos = {
+    prestador: prestadorId,
+    estado: { $in: ["Pendiente", "Confirmada"] },
+    fecha: { $gte: inicioDia, $lt: finDia }
+  };
+
+  if (citaExcluirId) {
+    filtroConflictos._id = { $ne: citaExcluirId };
+  }
+
+  const citasConflicto = await Cita.find(filtroConflictos).select("fecha horaInicio horaFin");
+  const conflicto = citasConflicto.some((citaExistente) => {
+    const inicioExistente = construirFechaConHora(citaExistente.fecha, citaExistente.horaInicio);
+    const finExistente = construirFechaConHora(citaExistente.fecha, citaExistente.horaFin);
+    return horariosSeSolapan(fechaInicio, fechaFin, inicioExistente, finExistente);
+  });
+
+  if (conflicto) {
+    throw new Error("El horario seleccionado ya fue reservado por otro cliente");
+  }
+
+  return {
+    disponibilidad,
+    fechaInicio,
+    horaFin
+  };
+}
+
 async function notificarPrestadorNuevaCita({ cita, usuario, mascota, servicio, prestador }) {
   try {
     if (!prestador?._id) return;
@@ -231,6 +397,65 @@ async function notificarPrestadorNuevaCita({ cita, usuario, mascota, servicio, p
     }
   } catch (error) {
     console.error("Error al notificar nueva cita al prestador:", error);
+  }
+}
+
+async function notificarPrestadorReprogramacionCita({ cita, usuario, mascota, servicio, prestador, estadoAnterior }) {
+  try {
+    if (!prestador?._id) return;
+
+    const titulo = "Cita reprogramada por el cliente";
+    const nombreCliente = usuario?.username || usuario?.nombre || usuario?.email || "Un cliente";
+    const nombreMascota = mascota?.nombre || "una mascota";
+    const nombreServicio = servicio?.nombre || "servicio";
+    const detalleEstado = estadoAnterior === "Confirmada"
+      ? "La cita que ya habías aceptado volvió a quedar pendiente de aprobación."
+      : "La cita continúa pendiente hasta que vuelvas a aprobarla.";
+    const mensaje = `${nombreCliente} reprogramó la cita de ${nombreMascota} para el ${formatearFechaCita(cita.fecha)} a las ${cita.horaInicio}. ${detalleEstado}`;
+
+    const notificacion = new Notificacion({
+      tipo: "cita_reprogramada",
+      titulo,
+      mensaje,
+      prestador: prestador._id,
+      datos: {
+        citaId: cita._id,
+        clienteNombre: nombreCliente,
+        mascotaNombre: nombreMascota,
+        servicioNombre: nombreServicio,
+        fecha: cita.fecha,
+        horaInicio: cita.horaInicio,
+        estado: cita.estado,
+        estadoAnterior
+      },
+      enlace: {
+        tipo: "Cita",
+        id: cita._id
+      },
+      icono: "calendar",
+      color: "#FB8C00",
+      prioridad: "Alta",
+      accion: "ver_detalle"
+    });
+
+    await notificacion.save();
+
+    if (prestador.usuario?.deviceToken && esTokenValido(prestador.usuario.deviceToken)) {
+      await enviarNotificacionPush(
+        prestador.usuario.deviceToken,
+        titulo,
+        mensaje,
+        {
+          tipo: "cita_reprogramada",
+          citaId: cita._id.toString(),
+          notificacionId: notificacion._id.toString(),
+          accion: "ver_detalle",
+          datos: notificacion.datos
+        }
+      );
+    }
+  } catch (error) {
+    console.error("Error al notificar reprogramación de cita al prestador:", error);
   }
 }
 
@@ -297,22 +522,10 @@ router.post("/verificar-citas-vencidas", protectRoute, async (req, res) => {
     // Convertir la hora local a objeto Date
     const fechaHoraActual = new Date(horaLocal);
     
-    // Encontrar todas las citas pendientes con fecha y hora anterior a la actual
+    // Encontrar todas las citas pendientes cuyo inicio real ya quedó atrás
     const citasVencidas = await Cita.find({
       estado: 'Pendiente',
-      $or: [
-        // Citas de días anteriores
-        { fecha: { $lt: new Date(fechaHoraActual.toISOString().split('T')[0]) } },
-        // Citas del mismo día pero con hora anterior
-        {
-          fecha: new Date(fechaHoraActual.toISOString().split('T')[0]),
-          horaInicio: { 
-            $lt: `${fechaHoraActual.getHours().toString().padStart(2, '0')}:${
-              fechaHoraActual.getMinutes().toString().padStart(2, '0')
-            }` 
-          }
-        }
-      ]
+      fecha: { $lt: fechaHoraActual }
     });
     
     console.log(`Se encontraron ${citasVencidas.length} citas vencidas`);
@@ -347,24 +560,12 @@ router.post("/verificar-citas-vencidas", protectRoute, async (req, res) => {
 router.get("/", protectRoute, async (req, res) => {
   try {
     // ⏰ AUTO-CANCELAR CITAS VENCIDAS del usuario antes de retornar
-    // Buscar citas pendientes vencidas de este usuario
     const ahora = new Date();
-    const fechaHoy = new Date(ahora.toISOString().split('T')[0]);
-    const horaActual = `${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}`;
-    
+
     const citasVencidasUsuario = await Cita.find({
       usuario: req.user._id,
       estado: 'Pendiente',
-      $or: [
-        { fecha: { $lt: fechaHoy } },
-        {
-          fecha: {
-            $gte: fechaHoy,
-            $lt: new Date(fechaHoy.getTime() + 24 * 60 * 60 * 1000)
-          },
-          horaInicio: { $lt: horaActual }
-        }
-      ]
+      fecha: { $lt: ahora }
     });
     
     if (citasVencidasUsuario.length > 0) {
@@ -493,22 +694,11 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
     
     // ⏰ AUTO-CANCELAR CITAS VENCIDAS del usuario antes de retornar
     const ahora = new Date();
-    const fechaHoy = new Date(ahora.toISOString().split('T')[0]);
-    const horaActual = `${ahora.getHours().toString().padStart(2, '0')}:${ahora.getMinutes().toString().padStart(2, '0')}`;
-    
+
     const citasVencidasUsuario = await Cita.find({
       usuario: req.user._id,
       estado: 'Pendiente',
-      $or: [
-        { fecha: { $lt: fechaHoy } },
-        {
-          fecha: {
-            $gte: fechaHoy,
-            $lt: new Date(fechaHoy.getTime() + 24 * 60 * 60 * 1000)
-          },
-          horaInicio: { $lt: horaActual }
-        }
-      ]
+      fecha: { $lt: ahora }
     });
     
     if (citasVencidasUsuario.length > 0) {
@@ -830,7 +1020,7 @@ router.post("/", protectRoute, async (req, res) => {
   try {
     const { mascota, prestador, servicio, fecha, horaInicio, motivo, ubicacion, metodoPago } = req.body;
     
-    console.log('=== INICIO DE CREACIÓN DE CITA ===');
+    console.log('=== INICIO DE CREACI�N DE CITA ===');
     console.log('Datos recibidos:', { mascota, prestador, servicio, fecha, horaInicio, motivo, ubicacion });
     
     // 1. Validación básica
@@ -1006,7 +1196,7 @@ router.post("/", protectRoute, async (req, res) => {
       prestador: prestadorNotificacion
     });
 
-    console.log('=== FIN DE CREACIÓN DE CITA ===');
+    console.log('=== FIN DE CREACI�N DE CITA ===');
     res.status(201).json(citaConDatos);
   } catch (error) {
     res.status(500).json({ message: "Error creando cita", error: error.message });
@@ -1034,10 +1224,15 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
       return res.status(401).json({ message: "No autorizado para modificar esta cita" });
     }
     
+    const estadoAnterior = cita.estado;
     cita.estado = estado;
+
+    if (estado === "Cancelada" && estadoAnterior !== "Cancelada") {
+      await liberarReservaDisponibilidad(cita);
+    }
     
     // Si se completa la cita, agregar automáticamente al historial médico de la mascota
-    if (estado === "Completada" && cita.estado !== "Completada") {
+    if (estado === "Completada" && estadoAnterior !== "Completada") {
       const mascota = await Mascota.findById(cita.mascota);
       
       if (mascota) {
@@ -1067,6 +1262,119 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
   }
 });
 
+router.patch("/:id/reprogramar", protectRoute, async (req, res) => {
+  try {
+    const { fecha, horaInicio, motivo, ubicacion } = req.body;
+
+    if (!fecha || !horaInicio) {
+      return res.status(400).json({ message: "La nueva fecha y hora son obligatorias" });
+    }
+
+    const cita = await Cita.findById(req.params.id)
+      .populate("prestador", "nombre usuario")
+      .populate("servicio", "nombre precio duracion")
+      .populate("mascota", "nombre")
+      .populate("usuario", "username nombre email");
+
+    if (!cita) {
+      return res.status(404).json({ message: "Cita no encontrada" });
+    }
+
+    if (cita.usuario._id.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: "No autorizado para reprogramar esta cita" });
+    }
+
+    if (!["Pendiente", "Confirmada"].includes(cita.estado)) {
+      return res.status(400).json({
+        message: "Solo se pueden reprogramar citas pendientes o confirmadas"
+      });
+    }
+
+    const fechaNueva = new Date(fecha);
+    if (Number.isNaN(fechaNueva.getTime())) {
+      return res.status(400).json({ message: "La nueva fecha es inválida" });
+    }
+
+    const mismaFecha = new Date(cita.fecha).toDateString() === fechaNueva.toDateString();
+    const mismaHora = cita.horaInicio === horaInicio;
+    if (mismaFecha && mismaHora) {
+      return res.status(400).json({ message: "La nueva fecha y hora deben ser distintas a la cita actual" });
+    }
+
+    const estadoAnterior = cita.estado;
+    const horarioValidado = await validarHorarioCita({
+      prestadorId: cita.prestador._id,
+      servicioId: cita.servicio._id,
+      fecha: fechaNueva,
+      horaInicio,
+      citaExcluirId: cita._id
+    });
+
+    await liberarReservaDisponibilidad(cita);
+
+    cita.fecha = horarioValidado.fechaInicio;
+    cita.horaInicio = horaInicio;
+    cita.horaFin = horarioValidado.horaFin;
+    cita.estado = "Pendiente";
+    cita.ubicacion = ubicacion || cita.ubicacion;
+    cita.motivo = motivo || cita.motivo;
+    cita.disponibilidad = horarioValidado.disponibilidad._id;
+    cita.notas = `${cita.notas || ""}${cita.notas ? " " : ""}[Reprogramada por el cliente el ${new Date().toLocaleString("es-AR")}]`;
+
+    await cita.save();
+    await registrarReservaDisponibilidad({
+      disponibilidadId: horarioValidado.disponibilidad._id,
+      fecha: horarioValidado.fechaInicio,
+      horaInicio,
+      horaFin: horarioValidado.horaFin,
+      citaId: cita._id
+    });
+
+    const citaActualizada = await Cita.findById(cita._id)
+      .populate("mascota", "nombre tipo raza imagen")
+      .populate({
+        path: "prestador",
+        select: "nombre especialidades imagen rating usuario",
+        populate: { path: "usuario", select: "profilePicture username deviceToken" }
+      })
+      .populate("servicio", "nombre icono color precio duracion categoria");
+
+    await notificarPrestadorReprogramacionCita({
+      cita: citaActualizada,
+      usuario: cita.usuario,
+      mascota: cita.mascota,
+      servicio: cita.servicio,
+      prestador: citaActualizada.prestador,
+      estadoAnterior
+    });
+
+    res.status(200).json({
+      message: "Cita reprogramada correctamente. El prestador debe aprobarla nuevamente.",
+      cita: citaActualizada
+    });
+  } catch (error) {
+    console.error("Error al reprogramar la cita:", error);
+    const erroresCliente = [
+      "La nueva fecha y hora son obligatorias",
+      "La nueva fecha es inválida",
+      "La nueva fecha y hora deben ser distintas a la cita actual",
+      "Solo se pueden reprogramar citas pendientes o confirmadas",
+      "Servicio no encontrado",
+      "Prestador no encontrado",
+      "Horario no disponible",
+      "El horario seleccionado ya fue reservado por otro cliente"
+    ];
+
+    const status = erroresCliente.includes(error.message) || error.message?.includes("no atiende los")
+      ? 400
+      : 500;
+
+    res.status(status).json({
+      message: error.message || "Error al reprogramar la cita"
+    });
+  }
+});
+
 // Eliminar una cita
 router.delete("/:id", protectRoute, async (req, res) => {
   try {
@@ -1086,6 +1394,7 @@ router.delete("/:id", protectRoute, async (req, res) => {
       return res.status(400).json({ message: "Solo se pueden eliminar citas pendientes o canceladas" });
     }
     
+    await liberarReservaDisponibilidad(cita);
     await Cita.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Cita eliminada con éxito" });
   } catch (error) {
@@ -1129,7 +1438,7 @@ router.get("/prestador/:prestadorId", protectRoute, async (req, res) => {
     // Esto asegura que las citas pendientes que ya pasaron se marquen como canceladas
     const citasCanceladas = await autoCancelarCitasVencidas(prestadorId);
     if (citasCanceladas > 0) {
-      console.log(`📋 Prestador ${prestadorId}: ${citasCanceladas} citas auto-canceladas por vencimiento`);
+      console.log(`�x9 Prestador ${prestadorId}: ${citasCanceladas} citas auto-canceladas por vencimiento`);
     }
     
     // Construir filtro de búsqueda
@@ -1215,7 +1524,12 @@ router.patch("/prestador/:prestadorId/cita/:citaId", protectRoute, async (req, r
     }
     
     // Actualizar estado
+    const estadoAnterior = cita.estado;
     cita.estado = estado;
+
+    if (estado === "Cancelada" && estadoAnterior !== "Cancelada") {
+      await liberarReservaDisponibilidad(cita);
+    }
     
     // Si se completa la cita, agregar al historial médico de la mascota
     if (estado === "Completada") {
@@ -1362,7 +1676,7 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
         model: "User"
       });
     
-    console.log('✅ Método de pago en efectivo registrado para cita pendiente');
+    console.log('�S& Método de pago en efectivo registrado para cita pendiente');
 
     res.status(200).json({
       cita: citaActualizada,
@@ -1370,7 +1684,7 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
     });
     
   } catch (error) {
-    console.error('❌ Error al confirmar cita con pago:', error);
+    console.error('�R Error al confirmar cita con pago:', error);
     res.status(500).json({ 
       message: "Error al confirmar cita con método de pago", 
       error: error.message 
@@ -1582,3 +1896,4 @@ router.get("/horarios-disponibles/:veterinarioId/:fecha", async (req, res) => {
 });
 
 export default router;
+

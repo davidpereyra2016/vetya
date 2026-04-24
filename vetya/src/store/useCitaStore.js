@@ -302,6 +302,18 @@ const useCitaStore = create((set, get) => ({
     }
   },
 
+  reprogramAppointment: async (appointmentId, appointmentData) => {
+    set({ isLoading: true, error: null });
+    const result = await citaService.reprogramAppointment(appointmentId, appointmentData);
+    if (result.success) {
+      await get().fetchUserAppointments();
+      return { success: true, data: result.data };
+    }
+
+    set({ isLoading: false, error: result.error });
+    return { success: false, error: result.error };
+  },
+
   // Reset del estado de citas
   resetCitaState: () => set({
     availableDates: [],

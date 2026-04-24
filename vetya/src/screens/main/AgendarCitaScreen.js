@@ -74,8 +74,11 @@ const Stepper = ({ currentStep }) => {
 
 
 const AgendarCitaScreen = ({ navigation, route }) => {
+  const reschedulingAppointment = route?.params?.reschedulingAppointment || null;
+  const isRescheduling = !!reschedulingAppointment?._id;
+
   // Estado para controlar el paso actual del formulario
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(isRescheduling ? 3 : 1);
 
   // Estados del formulario
   const [selectedPet, setSelectedPet] = useState(null);
@@ -95,6 +98,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
+  const [rescheduleReady, setRescheduleReady] = useState(false);
 
   const getLocationOptionsForService = () => {
     const modalidades = Array.isArray(selectedService?.modalidadAtencion)
@@ -148,6 +152,38 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         const typesResult = await fetchProviderTypes();
         if (typesResult.success) {
           setProviderTypes(typesResult.data);
+
+          if (isRescheduling && reschedulingAppointment) {
+            const providerType =
+              typesResult.data.find((type) => type.name === reschedulingAppointment.prestador?.tipo) ||
+              { id: `reprogram-${reschedulingAppointment.prestador?._id}`, name: reschedulingAppointment.prestador?.tipo || 'Prestador', icon: 'medkit-outline' };
+
+            const mascotaSeleccionada = petsResult.success
+              ? petsResult.data.find((pet) => pet._id === reschedulingAppointment.mascota?._id)
+              : null;
+
+            setSelectedProviderType(providerType);
+            setProviders(reschedulingAppointment.prestador ? [reschedulingAppointment.prestador] : []);
+            setSelectedProvider(reschedulingAppointment.prestador || null);
+            setServices(reschedulingAppointment.servicio ? [reschedulingAppointment.servicio] : []);
+            setSelectedService(reschedulingAppointment.servicio || null);
+            setSelectedPet(mascotaSeleccionada ? { ...mascotaSeleccionada, id: mascotaSeleccionada._id } : null);
+            setReasonForVisit(reschedulingAppointment.motivo || '');
+            setSelectedLocation(
+              reschedulingAppointment.ubicacion
+                ? {
+                    id: reschedulingAppointment.ubicacion.toLowerCase(),
+                    type: reschedulingAppointment.ubicacion,
+                    description: reschedulingAppointment.ubicacion === 'Domicilio' ? 'El profesional te visitarÃ¡' : 'AsistirÃ¡s a la clÃ­nica',
+                    icon: reschedulingAppointment.ubicacion === 'Domicilio' ? 'home-outline' : 'business-outline'
+                  }
+                : null
+            );
+            setSelectedDate(null);
+            setSelectedTime(null);
+            setCurrentStep(3);
+            setRescheduleReady(true);
+          }
         } else {
            Alert.alert('Error', 'No se pudieron cargar los tipos de prestadores');
         }
@@ -230,7 +266,8 @@ const AgendarCitaScreen = ({ navigation, route }) => {
   };
 
   const handlePrevStep = () => {
-    setCurrentStep(prev => prev - 1);
+    const minStep = isRescheduling ? 3 : 1;
+    setCurrentStep(prev => Math.max(minStep, prev - 1));
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
@@ -335,6 +372,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       // Pasar los DATOS para crear la cita después de seleccionar método de pago
       navigation.navigate('CitaConfirmacion', {
         appointmentData: appointmentData,
+        reschedulingAppointment,
         // Pasar datos serializables para mostrar en la UI
         pet: selectedPet,
         provider: selectedProvider,
@@ -692,7 +730,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
           <TouchableOpacity style={newStyles.headerBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={newStyles.headerTitle}>Agendar Cita</Text>
+          <Text style={newStyles.headerTitle}>{isRescheduling ? 'Reprogramar Cita' : 'Agendar Cita'}</Text>
           <View style={newStyles.headerSpacer} />
         </View>
       </View>
@@ -700,10 +738,24 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       <Stepper currentStep={currentStep} />
 
       <ScrollView ref={scrollViewRef} contentContainerStyle={newStyles.content}>
-        {currentStep === 1 && renderProviderSelectionStep()}
-        {currentStep === 2 && renderPetStep()}
-        {currentStep === 3 && renderDateTimeStep()}
-        {currentStep === 4 && renderDetailsStep()}
+        {isRescheduling && (
+          <View style={newStyles.rescheduleBanner}>
+            <Ionicons name="refresh-circle-outline" size={20} color="#E65100" />
+            <Text style={newStyles.rescheduleBannerText}>
+              Estás reprogramando una cita existente. El prestador deberá aprobar nuevamente el nuevo horario.
+            </Text>
+          </View>
+        )}
+        {isRescheduling && !rescheduleReady ? (
+          renderLoader()
+        ) : (
+          <>
+            {currentStep === 1 && renderProviderSelectionStep()}
+            {currentStep === 2 && renderPetStep()}
+            {currentStep === 3 && renderDateTimeStep()}
+            {currentStep === 4 && renderDetailsStep()}
+          </>
+        )}
       </ScrollView>
 
       <View style={newStyles.footer}>
@@ -723,7 +775,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
                     <ActivityIndicator color="#fff" />
                 ) : (
                     <>
-                      <Text style={newStyles.nextButtonText}>Confirmar Cita</Text>
+                      <Text style={newStyles.nextButtonText}>{isRescheduling ? 'Confirmar Reprogramación' : 'Confirmar Cita'}</Text>
                       <Ionicons name="calendar-outline" size={20} color="#fff" />
                     </>
                 )}
@@ -879,6 +931,24 @@ const newStyles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingBottom: 100, // Space for footer
+  },
+  rescheduleBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+    padding: 14,
+    marginBottom: 18,
+  },
+  rescheduleBannerText: {
+    flex: 1,
+    color: '#E65100',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    marginLeft: 10,
   },
   sectionTitle: {
     fontSize: 18,

@@ -19,16 +19,18 @@ import useCitaStore from '../../store/useCitaStore';
 import usePagoStore from '../../store/usePagoStore';
 
 const CitaConfirmacionScreen = ({ navigation, route }) => {
-  const { appointmentData, pet, provider, service, date, time, location, reason } = route.params || {};
+  const { appointmentData, pet, provider, service, date, time, location, reason, reschedulingAppointment } = route.params || {};
+  const isRescheduling = !!reschedulingAppointment?._id;
+  const currentPaymentMethod = reschedulingAppointment?.metodoPago === 'MercadoPago' ? 'MercadoPago' : 'Efectivo';
   
   // Estados para manejar el pago
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('Efectivo');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(isRescheduling ? currentPaymentMethod : 'Efectivo');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [createdAppointment, setCreatedAppointment] = useState(null);
   
   // Stores
   const { crearPreferencia, crearPagoEfectivo } = usePagoStore();
-  const { createAppointment } = useCitaStore();
+  const { createAppointment, reprogramAppointment } = useCitaStore();
   
   // Si no hay datos de appointment, mostrar mensaje de error
   if (!appointmentData) {
@@ -59,6 +61,35 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   };
 
   // Función para confirmar cita con efectivo
+  const handleReschedule = async () => {
+    try {
+      setProcessingPayment(true);
+
+      const result = await reprogramAppointment(reschedulingAppointment._id, {
+        fecha: appointmentData.fecha,
+        horaInicio: appointmentData.horaInicio,
+        motivo: appointmentData.motivo,
+        ubicacion: appointmentData.ubicacion,
+      });
+
+      if (!result.success) {
+        Alert.alert('Error', result.error || 'No se pudo reprogramar la cita');
+        return;
+      }
+
+      Alert.alert(
+        'Cita reprogramada',
+        'La cita fue reprogramada y quedó pendiente para que el prestador vuelva a aprobarla.',
+        [{ text: 'OK', onPress: () => navigation.navigate('MainTabs', { screen: 'Citas' }) }]
+      );
+    } catch (error) {
+      console.error('Error al reprogramar cita:', error);
+      Alert.alert('Error', 'Ocurrió un problema al reprogramar la cita. Intenta nuevamente.');
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
   const handleEfectivoPayment = async () => {
     if (!appointmentData) {
       Alert.alert('Error', 'No se puede reservar la cita sin informacion');
@@ -299,6 +330,15 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               <Text style={styles.reasonText}>{reason}</Text>
             </View>
           )}
+
+          {isRescheduling && (
+            <View style={styles.rescheduleNotice}>
+              <Ionicons name="refresh-circle-outline" size={18} color="#E65100" style={styles.rescheduleNoticeIcon} />
+              <Text style={styles.rescheduleNoticeText}>
+                Esta reprogramación conserva el método de pago actual y volverá a quedar pendiente de aprobación.
+              </Text>
+            </View>
+          )}
           
           <View style={styles.statusContainer}>
             <Text style={styles.statusLabel}>Estado:</Text>
@@ -317,7 +357,8 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                 styles.paymentOption,
                 selectedPaymentMethod === 'Efectivo' && styles.paymentOptionSelected
               ]}
-              onPress={() => setSelectedPaymentMethod('Efectivo')}
+              onPress={() => !isRescheduling && setSelectedPaymentMethod('Efectivo')}
+              disabled={isRescheduling}
             >
               <View style={styles.paymentOptionContent}>
                 <Ionicons 
@@ -345,7 +386,8 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                 styles.paymentOption,
                 selectedPaymentMethod === 'MercadoPago' && styles.paymentOptionSelected
               ]}
-              onPress={() => setSelectedPaymentMethod('MercadoPago')}
+              onPress={() => !isRescheduling && setSelectedPaymentMethod('MercadoPago')}
+              disabled={isRescheduling}
             >
               <View style={styles.paymentOptionContent}>
                 <Ionicons 
@@ -382,7 +424,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                 styles.actionButton, 
                 selectedPaymentMethod === 'MercadoPago' ? styles.mercadoPagoButton : styles.secondaryButton
               ]}
-              onPress={selectedPaymentMethod === 'MercadoPago' ? handleMercadoPagoPayment : handleEfectivoPayment}
+              onPress={isRescheduling ? handleReschedule : (selectedPaymentMethod === 'MercadoPago' ? handleMercadoPagoPayment : handleEfectivoPayment)}
               disabled={processingPayment}
             >
               {processingPayment ? (
@@ -391,7 +433,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                 <Text style={[
                   selectedPaymentMethod === 'MercadoPago' ? styles.mercadoPagoButtonText : styles.secondaryButtonText
                 ]}>
-                  {selectedPaymentMethod === 'MercadoPago' ? 'Pagar con Mercado Pago' : 'Enviar Reserva'}
+                  {isRescheduling ? 'Confirmar Reprogramación' : (selectedPaymentMethod === 'MercadoPago' ? 'Pagar con Mercado Pago' : 'Enviar Reserva')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -500,6 +542,27 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     lineHeight: 22,
+  },
+  rescheduleNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF3E0',
+    borderColor: '#FFE0B2',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  rescheduleNoticeIcon: {
+    marginTop: 2,
+    marginRight: 8,
+  },
+  rescheduleNoticeText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#E65100',
+    lineHeight: 20,
+    fontWeight: '600',
   },
   statusContainer: {
     flexDirection: 'row',

@@ -191,6 +191,7 @@ export const handleNotificationResponse = (response) => {
     case 'cita_confirmada':
     case 'cita_cancelada':
     case 'cita_completada':
+    case 'cita_reprogramada':
       global.pendingNotificationAction = {
         action: 'navigateToAppointments',
         params: {
