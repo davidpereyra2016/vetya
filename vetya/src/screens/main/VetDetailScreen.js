@@ -293,6 +293,13 @@ const VetDetailScreen = ({ route, navigation }) => {
   const vetBio = ensureString(vet.descripcion, 'Sin descripción disponible.');
   const vetAddress = ensureString(vet.ubicacion, 'Sin ubicación especificada');
   const vetPhone = ensureString(vet.telefono, 'No disponible');
+  const vetAddressDisplay = [
+    vet?.direccion?.calle,
+    vet?.direccion?.numero,
+    vet?.direccion?.ciudad,
+    vet?.direccion?.estado
+  ].filter(Boolean).join(', ') || vetAddress;
+  const shouldShowLocationCard = vetTipo !== 'Veterinario';
   const vetEmail = ensureString(vet.email, 'No disponible');
   const vetImage = vet.imagen;
   const vetAvailable = Boolean(vet.disponible); // Convertir a booleano explícitamente
@@ -397,18 +404,20 @@ const VetDetailScreen = ({ route, navigation }) => {
           </View>
 
           {/* UBICACIÓN / DIRECCIÓN */}
-          <View style={styles.locationCard}>
-            <View style={styles.locationIconBox}>
-              <Ionicons name="location" size={20} color="#FFF" />
+          {shouldShowLocationCard && (
+            <View style={styles.locationCard}>
+              <View style={styles.locationIconBox}>
+                <Ionicons name="location" size={20} color="#FFF" />
+              </View>
+              <View style={styles.locationInfo}>
+                <Text style={styles.locationTitle}>{ensureString(vet.clinica || vet.nombreClinica, vetTipo)}</Text>
+                <Text style={styles.locationAddress}>{vetAddressDisplay}</Text>
+              </View>
+              <TouchableOpacity style={styles.navigateBtn} activeOpacity={0.8}>
+                <Ionicons name="navigate" size={16} color="#1E88E5" />
+              </TouchableOpacity>
             </View>
-            <View style={styles.locationInfo}>
-              <Text style={styles.locationTitle}>{ensureString(vet.clinica || vet.nombreClinica, vetTipo)}</Text>
-              <Text style={styles.locationAddress}>{vetAddress}</Text>
-            </View>
-            <TouchableOpacity style={styles.navigateBtn} activeOpacity={0.8}>
-              <Ionicons name="navigate" size={16} color="#1E88E5" />
-            </TouchableOpacity>
-          </View>
+          )}
 
           {/* ESPECIALIDADES */}
           {vetSpecialties.length > 0 && (
