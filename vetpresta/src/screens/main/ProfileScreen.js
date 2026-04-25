@@ -342,7 +342,12 @@ const ProfileScreen = ({ navigation }) => {
           }}>
             <Ionicons name="location" size={16} color={COLORS.grey} />
             <Text style={[globalStyles.captionText, { marginLeft: 5 }]}>
-              {provider?.direccion?.ciudad || 'Ciudad no especificada'}
+              {[
+                provider?.direccion?.calle,
+                provider?.direccion?.numero,
+                provider?.direccion?.ciudad,
+                provider?.direccion?.estado
+              ].filter(Boolean).join(', ') || 'Direccion no especificada'}
             </Text>
           </View>
           
@@ -474,56 +479,56 @@ const ProfileScreen = ({ navigation }) => {
         {/* Opciones del perfil */}
         <View style={globalStyles.sectionContainer}>
           <Text style={globalStyles.sectionTitle}>Opciones</Text>
-          
+          {/* Mis servicios */}
           <ProfileOption 
             icon="list" 
             title="Mis servicios" 
             subtitle="Gestiona los servicios que ofreces"
             onPress={() => navigation.navigate('Services')}
           />
-          
+          {/* Disponibilidad */}
           <ProfileOption 
             icon="time" 
             title="Disponibilidad" 
             subtitle="Configura tus horarios disponibles"
             onPress={() => navigation.navigate('Availability')}
           />
-          
+          {/* Historial de citas */}
           <ProfileOption 
             icon="calendar" 
             title="Historial de citas" 
             subtitle="Revisa tus citas pasadas y futuras"
             onPress={() => navigation.navigate('Citas')}
           />
-          
+          {/* Valoraciones */}
           <ProfileOption 
             icon="star" 
             title="Valoraciones" 
             subtitle="Ver opiniones de tus clientes"
             onPress={() => navigation.navigate('Reviews')}
           />
-          
+          {/* Mis Ganancias */}
           <ProfileOption 
             icon="cash" 
             title="Mis Ganancias" 
             subtitle="Revisa tus ingresos y transacciones"
             onPress={() => navigation.navigate('Earnings')}
           />
-          
+          {/* Editar perfil */}
           <ProfileOption 
             icon="settings" 
             title="Editar perfil" 
             subtitle="Actualiza tu información personal"
             onPress={() => navigation.navigate('EditProfile')}
           />
-          
+          {/* Estado de Validación */}
           <ProfileOption 
             icon="shield-checkmark" 
             title="Estado de Validación" 
             subtitle={estadoValidacion ? `Estado: ${estadoValidacion.replace('_', ' ')}` : "Ver estado de aprobación"}
             onPress={() => navigation.navigate('ValidationDashboard')}
           />
-          
+          {/* Cambiar contraseña */}
           <ProfileOption 
             icon="lock-closed" 
             title="Cambiar contraseña" 

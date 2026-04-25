@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
   TextInput,
   ScrollView,
   ActivityIndicator,
@@ -16,56 +16,92 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
-import { userService } from '../../services/api';
+import { prestadorService, userService } from '../../services/api';
 
 const EditProfileScreen = ({ navigation }) => {
   const user = useAuthStore(state => state.user);
+  const provider = useAuthStore(state => state.provider);
   const updateUser = useAuthStore(state => state.updateUser);
-  
+  const updateProvider = useAuthStore(state => state.updateProvider);
+
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [profileImage, setProfileImage] = useState(null);
+  const [street, setStreet] = useState('');
+  const [streetNumber, setStreetNumber] = useState('');
+  const [city, setCity] = useState('');
+  const [stateRegion, setStateRegion] = useState('');
+  const [postalCode, setPostalCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const syncUserData = (userData) => {
+    setUsername(userData?.username || '');
+    setEmail(userData?.email || '');
+    setProfileImage(userData?.profilePicture || null);
+  };
+
+  const syncProviderAddress = (providerData) => {
+    setStreet(providerData?.direccion?.calle || '');
+    setStreetNumber(providerData?.direccion?.numero || '');
+    setCity(providerData?.direccion?.ciudad || '');
+    setStateRegion(providerData?.direccion?.estado || '');
+    setPostalCode(providerData?.direccion?.codigoPostal || '');
+  };
+
   useEffect(() => {
-    const loadUserProfile = async () => {
+    const loadProfileData = async () => {
       try {
         setIsLoading(true);
-        const result = await userService.getProfile();
-        if (result.success) {
-          updateUser(result.data);
-          setUsername(result.data.username || '');
-          setEmail(result.data.email || '');
-          setProfileImage(result.data.profilePicture || null);
+
+        if (user) {
+          syncUserData(user);
         }
-      } catch (error) {
-        console.log('Error al cargar perfil para edición:', error);
+
+        if (provider) {
+          syncProviderAddress(provider);
+        }
+
+        const profileResult = await userService.getProfile();
+        if (profileResult.success && profileResult.data) {
+          updateUser(profileResult.data);
+          syncUserData(profileResult.data);
+        }
+
+        const userId =
+          user?.id ||
+          user?._id ||
+          profileResult?.data?.id ||
+          profileResult?.data?._id;
+
+        if (userId) {
+          const providerResult = await prestadorService.getByUserId(userId);
+          if (providerResult.success && providerResult.data) {
+            updateProvider(providerResult.data);
+            syncProviderAddress(providerResult.data);
+          }
+        }
+      } catch (loadError) {
+        console.log('Error al cargar perfil para edicion:', loadError);
       } finally {
         setIsLoading(false);
       }
     };
-    
-    if (user) {
-      setUsername(user.username || '');
-      setEmail(user.email || '');
-      setProfileImage(user.profilePicture || null);
-    }
-    
-    loadUserProfile();
+
+    loadProfileData();
   }, []);
 
   const handleSelectImage = async () => {
     try {
       setIsLoading(true);
       const result = await userService.pickImage();
-      
+
       if (result.success) {
         setProfileImage(result.data.uri);
       } else {
         Alert.alert('Error', result.error);
       }
-    } catch (error) {
+    } catch (selectError) {
       Alert.alert('Error', 'No se pudo seleccionar la imagen');
     } finally {
       setIsLoading(false);
@@ -74,18 +110,18 @@ const EditProfileScreen = ({ navigation }) => {
 
   const handleUploadImage = async () => {
     if (!profileImage || profileImage === user?.profilePicture) return null;
-    
+
     try {
       setIsLoading(true);
       const result = await userService.uploadProfilePicture(profileImage);
-      
+
       if (result.success) {
         return result.data.profilePicture;
-      } else {
-        throw new Error(result.error);
       }
-    } catch (error) {
-      throw error;
+
+      throw new Error(result.error);
+    } catch (uploadError) {
+      throw uploadError;
     }
   };
 
@@ -108,31 +144,58 @@ const EditProfileScreen = ({ navigation }) => {
       if (profileImage && profileImage !== user?.profilePicture) {
         try {
           updatedProfilePicture = await handleUploadImage();
-        } catch (error) {
+        } catch (uploadError) {
           Alert.alert('Error', 'No se pudo subir la imagen. Se guardará el resto de la información.');
         }
       }
 
-      const userData = {
-        username,
-        email,
+      const userPayload = {
+        username: username.trim(),
+        email: email.trim(),
         ...(updatedProfilePicture && { profilePicture: updatedProfilePicture })
       };
 
-      const result = await userService.updateProfile(userData);
-      
-      if (result.success) {
-        updateUser(result.data);
-        Alert.alert(
-          '¡Perfil Actualizado!', 
-          'Tu información ha sido guardada exitosamente.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
-      } else {
-        Alert.alert('Error', result.error || 'No se pudo actualizar el perfil');
+      const userResult = await userService.updateProfile(userPayload);
+      if (!userResult.success) {
+        Alert.alert('Error', userResult.error || 'No se pudo actualizar el perfil');
+        return;
       }
-    } catch (error) {
-      Alert.alert('Error', 'Ocurrió un error inesperado. Inténtalo de nuevo.');
+
+      updateUser(userResult.data);
+
+      if (provider?._id) {
+        const providerPayload = {
+          direccion: {
+            ...(provider?.direccion || {}),
+            calle: street.trim(),
+            numero: streetNumber.trim(),
+            ciudad: city.trim(),
+            estado: stateRegion.trim(),
+            codigoPostal: postalCode.trim(),
+            coordenadas: provider?.direccion?.coordenadas
+          }
+        };
+
+        const providerResult = await prestadorService.update(provider._id, providerPayload);
+        if (!providerResult.success) {
+          Alert.alert(
+            'Perfil parcialmente actualizado',
+            providerResult.error || 'Se actualizo el usuario, pero no se pudo guardar la direccion.'
+          );
+          return;
+        }
+
+        updateProvider(providerResult.data);
+      }
+
+      Alert.alert(
+        'Perfil actualizado',
+        'Tu información ha sido guardada exitosamente.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (saveError) {
+      console.log('Error al guardar perfil:', saveError);
+      Alert.alert('Error', 'Ocurrio un error inesperado. Intentalo de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -141,13 +204,12 @@ const EditProfileScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -158,22 +220,18 @@ const EditProfileScreen = ({ navigation }) => {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Foto de perfil */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
               {profileImage ? (
-                <Image 
-                  source={{ uri: profileImage }} 
-                  style={styles.profileImage} 
-                />
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
               ) : (
                 <View style={styles.profileImagePlaceholder}>
                   <Text style={styles.profileImagePlaceholderText}>
-                    {username ? username.charAt(0).toUpperCase() : "U"}
+                    {username ? username.charAt(0).toUpperCase() : 'U'}
                   </Text>
                 </View>
               )}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.cameraButton}
                 onPress={handleSelectImage}
                 disabled={isLoading}
@@ -186,14 +244,12 @@ const EditProfileScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Card principal */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Información Personal</Text>
+            <Text style={styles.cardTitle}>información Personal</Text>
             <Text style={styles.cardDescription}>
-              Actualiza tu nombre de usuario y correo electrónico.
+              Actualiza tu nombre de usuario, correo electronico y direccion del perfil profesional.
             </Text>
 
-            {/* Nombre de usuario */}
             <Text style={styles.inputLabel}>Nombre de usuario</Text>
             <View style={styles.inputContainer}>
               <Ionicons name="person-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
@@ -208,7 +264,6 @@ const EditProfileScreen = ({ navigation }) => {
               />
             </View>
 
-            {/* Correo electrónico */}
             <Text style={styles.inputLabel}>Correo electrónico</Text>
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
@@ -224,9 +279,73 @@ const EditProfileScreen = ({ navigation }) => {
               />
             </View>
 
-            {/* Botón guardar */}
-            <TouchableOpacity 
-              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
+            <Text style={styles.inputLabel}>Dirección</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="location-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Calle"
+                placeholderTextColor="#888"
+                value={street}
+                onChangeText={setStreet}
+                editable={!isLoading}
+              />
+            </View>
+
+            <Text style={styles.inputLabel}>Número</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="home-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Número"
+                placeholderTextColor="#888"
+                value={streetNumber}
+                onChangeText={setStreetNumber}
+                editable={!isLoading}
+              />
+            </View>
+
+            <Text style={styles.inputLabel}>Ciudad</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="business-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Ciudad"
+                placeholderTextColor="#888"
+                value={city}
+                onChangeText={setCity}
+                editable={!isLoading}
+              />
+            </View>
+
+            <Text style={styles.inputLabel}>Provincia / Estado</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="map-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Provincia o estado"
+                placeholderTextColor="#888"
+                value={stateRegion}
+                onChangeText={setStateRegion}
+                editable={!isLoading}
+              />
+            </View>
+
+            <Text style={styles.inputLabel}>Código Postal</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-open-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Código postal"
+                placeholderTextColor="#888"
+                value={postalCode}
+                onChangeText={setPostalCode}
+                editable={!isLoading}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={isLoading}
             >
@@ -241,14 +360,14 @@ const EditProfileScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Info card */}
           <View style={styles.infoCard}>
             <View style={styles.infoHeader}>
               <Ionicons name="information-circle-outline" size={20} color="#1E88E5" />
-              <Text style={styles.infoTitle}>Información</Text>
+              <Text style={styles.infoTitle}>información</Text>
             </View>
             <Text style={styles.infoText}>
-              Al cambiar tu correo electrónico, es posible que necesites verificarlo nuevamente para mantener el acceso a tu cuenta.
+              La dirección se guarda en el perfil del prestador. Esto permite mostrar la ubicación del establecimiento
+              y que pueda editarse desde información personal.
             </Text>
           </View>
         </ScrollView>
