@@ -23,7 +23,7 @@ export const resetTokenExpiredFlag = () => {
 // EXPO_PUBLIC_API_URL permite cambiar el backend de produccion
 // desde Expo/EAS sin volver a editar el codigo.
 // ============================================================
-const DEV_API_URL = 'http://192.168.100.146:3000/api';
+const DEV_API_URL = 'http://192.168.100.32:3000/api';
 const PROD_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.vetya.com/api';
 
 export const API_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
@@ -57,7 +57,13 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (Array.isArray(response.data?.data) && response.data?.pagination) {
+      response.pagination = response.data.pagination;
+      response.data = response.data.data;
+    }
+    return response;
+  },
   async (error) => {
     if (error.response && error.response.status === 401) {
       if (isHandlingExpiredToken) {

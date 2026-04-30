@@ -13,6 +13,10 @@ let isRedirectingToLogin = false;
 // Interceptor para manejar errores globalmente
 axiosInstance.interceptors.response.use(
   response => {
+    if (Array.isArray(response.data?.data) && response.data?.pagination) {
+      response.pagination = response.data.pagination;
+      response.data = response.data.data;
+    }
     // Si la respuesta es exitosa, resetear el flag de redirect
     isRedirectingToLogin = false;
     return response;

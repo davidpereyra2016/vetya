@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../config/axios';
 
 /**
  * Servicios para gestionar las valoraciones y reseñas de los prestadores de servicios

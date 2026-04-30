@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { servicioService } from '../services/apiServicio';
-import axios from 'axios';
 
 // Store para manejar el estado de los servicios que ofrece el prestador
 const useServiceStore = create((set, get) => ({

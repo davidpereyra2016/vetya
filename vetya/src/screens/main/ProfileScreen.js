@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
 import { userService } from '../../services/api';
 import { useEffect } from 'react';
-import axios from 'axios';
+import axios from '../../config/axios';
 
 const ProfileScreen = (props) => {
   // Usar el hook useNavigation para asegurar que siempre tengamos acceso a navigation

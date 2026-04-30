@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../config/axios';
 
 /**
  * Servicios para gestionar las citas y reservas con diferentes prestadores

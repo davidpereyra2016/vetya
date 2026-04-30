@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../config/axios';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';

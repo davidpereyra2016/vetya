@@ -21,6 +21,15 @@ import {
 // Configurar axios globalmente a nivel de módulo (inmediato, sin esperar useEffect)
 axios.defaults.baseURL = API_URL;
 axios.defaults.timeout = 10000; // 10 segundos
+if (!axios.__vetyaPaginationInterceptorId) {
+  axios.__vetyaPaginationInterceptorId = axios.interceptors.response.use((response) => {
+    if (Array.isArray(response.data?.data) && response.data?.pagination) {
+      response.pagination = response.data.pagination;
+      response.data = response.data.data;
+    }
+    return response;
+  });
+}
 console.log('[App.js] baseURL configurada:', API_URL);
 
 // Configurar el handler de notificaciones antes de renderizar

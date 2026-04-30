@@ -29,6 +29,15 @@ import { API_URL } from './src/config/axios';
 // Configurar axios globalmente a nivel de módulo (inmediato, sin esperar useEffect)
 axios.defaults.baseURL = API_URL;
 axios.defaults.timeout = 10000;
+if (!axios.__vetyaPaginationInterceptorId) {
+  axios.__vetyaPaginationInterceptorId = axios.interceptors.response.use((response) => {
+    if (Array.isArray(response.data?.data) && response.data?.pagination) {
+      response.pagination = response.data.pagination;
+      response.data = response.data.data;
+    }
+    return response;
+  });
+}
 console.log('[App.js] baseURL configurada:', API_URL);
 
 export default function App() {

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../config/axios';
 
 /**
  * Servicios para obtener estadísticas de pacientes atendidos por prestadores de servicios

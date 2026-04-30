@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { prestadorService } from '../services/api';
 import prestadorServicePrestador from '../services/apiPrestador';
-import axios from 'axios';
 import * as Location from 'expo-location';
 
 // Log para verificar que prestadorServicePrestador está definido correctamente
