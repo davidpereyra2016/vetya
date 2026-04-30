@@ -47,6 +47,8 @@ const suscripcionSchema = new mongoose.Schema(
 
 suscripcionSchema.index({ anunciante: 1 });
 suscripcionSchema.index({ estado: 1 });
+suscripcionSchema.index({ estado: 1, fechaInicio: 1, fechaFin: 1 });
+suscripcionSchema.index({ campana: 1 }, { sparse: true });
 
 // Virtual: indica si la suscripción está vigente (entre fechaInicio y fechaFin y estado activa)
 suscripcionSchema.virtual("vigente").get(function () {

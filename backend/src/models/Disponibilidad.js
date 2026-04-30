@@ -109,6 +109,7 @@ const disponibilidadSchema = new Schema({
 // Índices para mejorar el rendimiento de las consultas
 disponibilidadSchema.index({ prestador: 1, servicio: 1 });
 disponibilidadSchema.index({ 'reservas.fecha': 1 });
+disponibilidadSchema.index({ prestador: 1, servicio: 1, 'reservas.fecha': 1 });
 
 const Disponibilidad = mongoose.model('Disponibilidad', disponibilidadSchema);
 

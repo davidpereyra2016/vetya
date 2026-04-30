@@ -41,6 +41,8 @@ const anuncianteSchema = new mongoose.Schema(
 );
 
 anuncianteSchema.index({ nombreNegocio: 1 });
+anuncianteSchema.index({ activo: 1, createdAt: -1 });
+anuncianteSchema.index({ email: 1 }, { sparse: true });
 
 const Anunciante = mongoose.model("Anunciante", anuncianteSchema);
 export default Anunciante;

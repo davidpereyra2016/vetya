@@ -2,62 +2,90 @@ import express from "express";
 import Mascota from "../models/Mascota.js";
 import cloudinary from "../lib/cloudinary.js";
 import protectRoute from "../middleware/auth.middleware.js";
+import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
 
 const router = express.Router();
 
-// Obtener todas las mascotas del usuario autenticado
+const PET_LIST_FIELDS = "_id nombre tipo raza edad genero color peso vacunado imagen fechaNacimiento ultimaVisita activo createdAt";
+
+const ownsPetFilter = (id, userId) => ({ _id: id, propietario: userId });
+
 router.get("/", protectRoute, async (req, res) => {
   try {
-    const mascotas = await Mascota.find({ propietario: req.user._id });
-    res.status(200).json(mascotas);
+    const pagination = getPagination(req.query, { defaultLimit: 20, maxLimit: 100 });
+    const filter = { propietario: req.user._id, activo: true };
+
+    const [mascotas, total] = await Promise.all([
+      Mascota.find(filter)
+        .select(PET_LIST_FIELDS)
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .lean(),
+      Mascota.countDocuments(filter),
+    ]);
+
+    res.status(200).json(paginatedResponse(mascotas, total, pagination));
   } catch (error) {
-    console.log(error);
+    if (process.env.NODE_ENV !== "production") console.error(error);
     res.status(500).json({ message: "Error al obtener las mascotas" });
   }
 });
 
-// Obtener una mascota por ID
+router.get("/tipo/:tipo", protectRoute, async (req, res) => {
+  try {
+    const pagination = getPagination(req.query, { defaultLimit: 20, maxLimit: 100 });
+    const filter = { propietario: req.user._id, tipo: req.params.tipo, activo: true };
+
+    const [mascotas, total] = await Promise.all([
+      Mascota.find(filter)
+        .select(PET_LIST_FIELDS)
+        .sort({ createdAt: -1 })
+        .skip(pagination.skip)
+        .limit(pagination.limit)
+        .lean(),
+      Mascota.countDocuments(filter),
+    ]);
+
+    res.status(200).json(paginatedResponse(mascotas, total, pagination));
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.error(error);
+    res.status(500).json({ message: "Error al obtener las mascotas" });
+  }
+});
+
 router.get("/:id", protectRoute, async (req, res) => {
   try {
-    const mascota = await Mascota.findById(req.params.id);
-    
+    const mascota = await Mascota.findOne(ownsPetFilter(req.params.id, req.user._id))
+      .select(`${PET_LIST_FIELDS} necesidadesEspeciales historialMedico proximasVacunas propietario`)
+      .lean();
+
     if (!mascota) {
       return res.status(404).json({ message: "Mascota no encontrada" });
     }
-    
-    // Verificar si el usuario actual es el propietario
-    if (mascota.propietario.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "No autorizado para ver esta mascota" });
-    }
-    
+
     res.status(200).json(mascota);
   } catch (error) {
-    console.log(error);
+    if (process.env.NODE_ENV !== "production") console.error(error);
     res.status(500).json({ message: "Error al obtener la mascota" });
   }
 });
 
-// Crear una nueva mascota
 router.post("/", protectRoute, async (req, res) => {
   try {
     const { nombre, tipo, raza, edad, genero, color, peso, vacunado, necesidadesEspeciales, fechaNacimiento } = req.body;
-    
-    // Validar campos obligatorios
+
     if (!nombre || !tipo || !raza || !edad || !genero) {
       return res.status(400).json({ message: "Por favor completa todos los campos obligatorios" });
     }
-    
-    // Procesar la imagen si se proporciona
+
     let imageUrl = "";
     if (req.body.imagen) {
-      const uploadResponse = await cloudinary.uploader.upload(req.body.imagen, {
-        folder: "mascotas"
-      });
+      const uploadResponse = await cloudinary.uploader.upload(req.body.imagen, { folder: "mascotas" });
       imageUrl = uploadResponse.secure_url;
     }
-    
-    // Crear nueva mascota
-    const nuevaMascota = new Mascota({
+
+    const nuevaMascota = await Mascota.create({
       nombre,
       tipo,
       raza,
@@ -69,140 +97,105 @@ router.post("/", protectRoute, async (req, res) => {
       necesidadesEspeciales: necesidadesEspeciales || "",
       imagen: imageUrl,
       fechaNacimiento: fechaNacimiento || null,
-      propietario: req.user._id
+      propietario: req.user._id,
     });
-    
-    await nuevaMascota.save();
+
     res.status(201).json(nuevaMascota);
   } catch (error) {
-    console.log(error);
+    if (process.env.NODE_ENV !== "production") console.error(error);
     res.status(500).json({ message: "Error al crear la mascota" });
   }
 });
 
-// Actualizar una mascota
 router.put("/:id", protectRoute, async (req, res) => {
   try {
-    const mascota = await Mascota.findById(req.params.id);
-    
+    const mascota = await Mascota.findOne(ownsPetFilter(req.params.id, req.user._id))
+      .select("_id imagen propietario")
+      .lean();
+
     if (!mascota) {
       return res.status(404).json({ message: "Mascota no encontrada" });
     }
-    
-    // Verificar si el usuario actual es el propietario
-    if (mascota.propietario.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "No autorizado para actualizar esta mascota" });
-    }
-    
-    // Procesar la imagen si se proporciona una nueva
-    if (req.body.imagen && req.body.imagen !== mascota.imagen) {
-      // Eliminar imagen anterior de Cloudinary si existe
-      if (mascota.imagen && mascota.imagen.includes('cloudinary')) {
-        const publicId = mascota.imagen.split('/').pop().split('.')[0];
+
+    const updateData = { ...req.body };
+    if (updateData.imagen && updateData.imagen !== mascota.imagen) {
+      if (mascota.imagen?.includes("cloudinary")) {
+        const publicId = mascota.imagen.split("/").pop().split(".")[0];
         await cloudinary.uploader.destroy(`mascotas/${publicId}`);
       }
-      
-      // Subir nueva imagen
-      const uploadResponse = await cloudinary.uploader.upload(req.body.imagen, {
-        folder: "mascotas"
-      });
-      req.body.imagen = uploadResponse.secure_url;
+
+      const uploadResponse = await cloudinary.uploader.upload(updateData.imagen, { folder: "mascotas" });
+      updateData.imagen = uploadResponse.secure_url;
     }
-    
-    // Actualizar mascota
-    const mascotaActualizada = await Mascota.findByIdAndUpdate(
-      req.params.id,
-      { $set: req.body },
-      { new: true }
-    );
-    
+
+    const mascotaActualizada = await Mascota.findOneAndUpdate(
+      ownsPetFilter(req.params.id, req.user._id),
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select(`${PET_LIST_FIELDS} necesidadesEspeciales historialMedico proximasVacunas`).lean();
+
     res.status(200).json(mascotaActualizada);
   } catch (error) {
-    console.log(error);
+    if (process.env.NODE_ENV !== "production") console.error(error);
     res.status(500).json({ message: "Error al actualizar la mascota" });
   }
 });
 
-// Eliminar una mascota
 router.delete("/:id", protectRoute, async (req, res) => {
   try {
-    const mascota = await Mascota.findById(req.params.id);
-    
+    const mascota = await Mascota.findOne(ownsPetFilter(req.params.id, req.user._id))
+      .select("_id imagen")
+      .lean();
+
     if (!mascota) {
       return res.status(404).json({ message: "Mascota no encontrada" });
     }
-    
-    // Verificar si el usuario actual es el propietario
-    if (mascota.propietario.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "No autorizado para eliminar esta mascota" });
-    }
-    
-    // Eliminar imagen de Cloudinary si existe
-    if (mascota.imagen && mascota.imagen.includes('cloudinary')) {
-      const publicId = mascota.imagen.split('/').pop().split('.')[0];
+
+    if (mascota.imagen?.includes("cloudinary")) {
+      const publicId = mascota.imagen.split("/").pop().split(".")[0];
       await cloudinary.uploader.destroy(`mascotas/${publicId}`);
     }
-    
-    await Mascota.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Mascota eliminada con éxito" });
+
+    await Mascota.deleteOne(ownsPetFilter(req.params.id, req.user._id));
+    res.status(200).json({ message: "Mascota eliminada con exito" });
   } catch (error) {
-    console.log(error);
+    if (process.env.NODE_ENV !== "production") console.error(error);
     res.status(500).json({ message: "Error al eliminar la mascota" });
   }
 });
 
-// Agregar entrada al historial médico de una mascota
 router.post("/:id/historial", protectRoute, async (req, res) => {
   try {
     const { fecha, descripcion, veterinario, tipoVisita } = req.body;
-    
-    // Validar campos obligatorios
+
     if (!descripcion || !tipoVisita) {
-      return res.status(400).json({ message: "La descripción y el tipo de visita son obligatorios" });
+      return res.status(400).json({ message: "La descripcion y el tipo de visita son obligatorios" });
     }
-    
-    const mascota = await Mascota.findById(req.params.id);
-    
-    if (!mascota) {
-      return res.status(404).json({ message: "Mascota no encontrada" });
-    }
-    
-    // Verificar si el usuario actual es el propietario
-    if (mascota.propietario.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "No autorizado para modificar esta mascota" });
-    }
-    
-    // Agregar entrada al historial
+
     const nuevaEntrada = {
       fecha: fecha || new Date(),
       descripcion,
       veterinario,
-      tipoVisita
+      tipoVisita,
     };
-    
-    mascota.historialMedico.push(nuevaEntrada);
-    mascota.ultimaVisita = nuevaEntrada.fecha;
-    
-    await mascota.save();
+
+    const mascota = await Mascota.findOneAndUpdate(
+      ownsPetFilter(req.params.id, req.user._id),
+      {
+        $push: { historialMedico: nuevaEntrada },
+        $set: { ultimaVisita: nuevaEntrada.fecha },
+      },
+      { new: true, runValidators: true }
+    ).select(`${PET_LIST_FIELDS} necesidadesEspeciales historialMedico proximasVacunas`).lean();
+
+    if (!mascota) {
+      return res.status(404).json({ message: "Mascota no encontrada" });
+    }
+
     res.status(201).json(mascota);
   } catch (error) {
-    console.log(error);
+    if (process.env.NODE_ENV !== "production") console.error(error);
     res.status(500).json({ message: "Error al agregar entrada al historial" });
-  }
-});
-
-// Obtener todas las mascotas de un tipo específico
-router.get("/tipo/:tipo", protectRoute, async (req, res) => {
-  try {
-    const mascotas = await Mascota.find({ 
-      propietario: req.user._id,
-      tipo: req.params.tipo
-    });
-    
-    res.status(200).json(mascotas);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Error al obtener las mascotas" });
   }
 });
 

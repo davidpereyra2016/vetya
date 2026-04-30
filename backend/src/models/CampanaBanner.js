@@ -65,6 +65,8 @@ const campanaBannerSchema = new mongoose.Schema(
 );
 
 campanaBannerSchema.index({ anunciante: 1 });
+campanaBannerSchema.index({ anunciante: 1, activo: 1 });
+campanaBannerSchema.index({ activo: 1, createdAt: -1 });
 
 const CampanaBanner = mongoose.model("CampanaBanner", campanaBannerSchema);
 export default CampanaBanner;

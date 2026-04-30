@@ -19,7 +19,8 @@ router.get("/veterinario/:veterinarioId", async (req, res) => {
     })
       .populate("usuario", "username profilePicture")
       .populate("mascota", "nombre tipo raza")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     
     console.log(`DEBUG - Valoraciones encontradas: ${valoraciones.length}`);
     res.status(200).json(valoraciones);
@@ -39,7 +40,8 @@ router.get("/prestador/:prestadorId", async (req, res) => {
     })
       .populate("usuario", "username profilePicture")
       .populate("mascota", "nombre tipo raza")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     
     console.log(`DEBUG - Valoraciones encontradas: ${valoraciones.length}`);
     res.status(200).json(valoraciones);
@@ -56,7 +58,8 @@ router.get("/mis-valoraciones", protectRoute, async (req, res) => {
     const valoraciones = await Valoracion.find({ usuario: req.user._id })
       .populate("prestador", "nombre especialidad imagen rating")
       .populate("mascota", "nombre tipo raza")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     
     console.log(`DEBUG - Mis valoraciones encontradas: ${valoraciones.length}`);
     res.status(200).json(valoraciones);
@@ -76,7 +79,7 @@ router.get("/puede-valorar/:veterinarioId", protectRoute, async (req, res) => {
     const valoracionExistente = await Valoracion.findOne({
       usuario: req.user._id,
       prestador: prestadorId
-    });
+    }).select("_id").lean();
     
     if (valoracionExistente) {
       return res.status(200).json({ 
@@ -90,13 +93,13 @@ router.get("/puede-valorar/:veterinarioId", protectRoute, async (req, res) => {
       usuario: req.user._id,
       prestador: prestadorId,
       estado: "Completada"
-    });
+    }).select("_id").lean();
     
     const emergencias = await Emergencia.find({
       usuario: req.user._id,
       prestador: prestadorId,
       estado: "Atendida"
-    });
+    }).select("_id").lean();
     
     const puedeValorar = citas.length > 0 || emergencias.length > 0;
     

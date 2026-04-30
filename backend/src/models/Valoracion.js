@@ -69,28 +69,25 @@ const valoracionSchema = new mongoose.Schema({
 // Un usuario solo puede valorar una vez cada interacción (cita o emergencia)
 valoracionSchema.index({ usuario: 1, prestador: 1, cita: 1 }, { unique: true, sparse: true });
 valoracionSchema.index({ usuario: 1, prestador: 1, emergencia: 1 }, { unique: true, sparse: true });
+valoracionSchema.index({ prestador: 1, visible: 1, createdAt: -1 });
+valoracionSchema.index({ usuario: 1, createdAt: -1 });
 
 // Hook para actualizar el rating promedio del prestador cuando se crea/modifica una valoración
 valoracionSchema.post('save', async function() {
   const Prestador = mongoose.model('Prestador');
   
   // Calcular el nuevo promedio de calificaciones para este prestador
-  const valoraciones = await this.constructor.find({ 
-    prestador: this.prestador,
-    visible: true 
-  });
-  
-  let suma = 0;
-  valoraciones.forEach(val => {
-    suma += val.calificacion;
-  });
-  
-  const nuevoRating = valoraciones.length > 0 ? suma / valoraciones.length : 0;
+  const [stats] = await this.constructor.aggregate([
+    { $match: { prestador: this.prestador, visible: true } },
+    { $group: { _id: '$prestador', promedio: { $avg: '$calificacion' }, total: { $sum: 1 } } }
+  ]);
+
+  const nuevoRating = stats?.promedio || 0;
   
   // Actualizar el rating y número de reseñas del prestador
   await Prestador.findByIdAndUpdate(this.prestador, {
     rating: parseFloat(nuevoRating.toFixed(1)),
-    reviews: valoraciones.length
+    reviews: stats?.total || 0
   });
 });
 

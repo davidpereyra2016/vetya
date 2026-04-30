@@ -63,9 +63,9 @@ vetya_1.0/
 │
 ├── vetya/                        # 📱 App de Clientes (React Native)
 │   ├── src/
-│   │   ├── screens/             # 4 grupos de pantallas
-│   │   ├── store/               # 8 stores de Zustand
-│   │   ├── services/            # 6 servicios de API
+│   │   ├── screens/             # 6 grupos de pantallas
+│   │   ├── store/               # 10 stores de Zustand
+│   │   ├── services/            # 10 servicios de API
 │   │   ├── navigation/          # Sistema de navegación
 │   │   └── components/          # Componentes reutilizables
 │   └── ARQUITECTURA_VETYA.md    # 📙 Documentación detallada

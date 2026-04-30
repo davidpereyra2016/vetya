@@ -104,6 +104,17 @@ const emergenciaSchema = new mongoose.Schema({
       }
     }
   },
+  ubicacionGeo: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      default: undefined
+    }
+  },
   fechaSolicitud: {
     type: Date,
     default: Date.now
@@ -162,10 +173,20 @@ emergenciaSchema.index({ usuario: 1 });
 
 // Índice para búsqueda de emergencias por veterinario
 emergenciaSchema.index({ veterinario: 1 });
+emergenciaSchema.index({ usuario: 1, estado: 1, fechaSolicitud: -1 });
+emergenciaSchema.index({ veterinario: 1, estado: 1, fechaSolicitud: -1 });
+emergenciaSchema.index({ expirada: 1, expiraEn: 1 });
+emergenciaSchema.index({ expiraRespuestaVetEn: 1, estado: 1 });
+emergenciaSchema.index({ ubicacionGeo: '2dsphere' }, { sparse: true });
 
 // Middleware pre-save para manejar estados
 emergenciaSchema.pre('save', function(next) {
   const ahora = new Date();
+  const lat = this.ubicacion?.coordenadas?.lat;
+  const lng = this.ubicacion?.coordenadas?.lng;
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    this.ubicacionGeo = { type: 'Point', coordinates: [lng, lat] };
+  }
 
   // Manejo de fechas y expiraciones según el estado
   if (this.isNew && this.estado === 'Solicitada') {

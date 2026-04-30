@@ -6,6 +6,7 @@ import Prestador from "../models/Prestador.js";
 import cloudinary from "../lib/cloudinary.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import { preferenceClient, paymentClient } from "../lib/mercadopago.js";
+import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
 
 const router = express.Router();
 
@@ -143,9 +144,14 @@ router.get("/", protectRoute, async (req, res) => {
       console.log("🔄 Pagos de citas reconciliados para cliente:", reconciliacion);
     }
 
+    const pagination = getPagination(req.query, { defaultLimit: 20, maxLimit: 100 });
     const pagos = await Pago.find({ usuario: req.user._id })
       .populate("prestador", "nombre especialidades imagen tipo direccion telefono email")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await Pago.countDocuments({ usuario: req.user._id });
     
     // Popular referencias manualmente porque son polimórficas
     for (let pago of pagos) {
@@ -153,12 +159,14 @@ router.get("/", protectRoute, async (req, res) => {
         if (pago.referencia.tipo === 'Cita') {
           const cita = await Cita.findById(pago.referencia.id)
             .populate('mascota', 'nombre tipo raza imagen')
-            .select('mascota tipoServicio motivo fecha horaInicio');
+            .select('mascota tipoServicio motivo fecha horaInicio')
+            .lean();
           pago.referencia.id = cita;
         } else if (pago.referencia.tipo === 'Emergencia') {
           const emergencia = await Emergencia.findById(pago.referencia.id)
             .populate('mascota', 'nombre tipo raza imagen')
-            .select('mascota tipoEmergencia descripcion fechaSolicitud nivelUrgencia');
+            .select('mascota tipoEmergencia descripcion fechaSolicitud nivelUrgencia')
+            .lean();
           pago.referencia.id = emergencia;
         }
       }
@@ -166,7 +174,7 @@ router.get("/", protectRoute, async (req, res) => {
 
     console.log('✅ Pagos del cliente obtenidos:', pagos.length);
     
-    res.status(200).json(pagos);
+    res.status(200).json(paginatedResponse(pagos, total, pagination));
   } catch (error) {
     console.log('❌ Error al obtener pagos del cliente:', error);
     res.status(500).json({ message: "Error al obtener los pagos" });
@@ -177,7 +185,7 @@ router.get("/", protectRoute, async (req, res) => {
 router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
   try {
     // Obtener el prestador asociado al usuario autenticado
-    const prestador = await Prestador.findOne({ usuario: req.user._id });
+    const prestador = await Prestador.findOne({ usuario: req.user._id }).select("_id").lean();
     
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
@@ -191,9 +199,14 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
     }
 
     // Buscar todos los pagos donde el prestador es el destinatario
+    const pagination = getPagination(req.query, { defaultLimit: 20, maxLimit: 100 });
     const pagos = await Pago.find({ prestador: prestador._id })
       .populate("usuario", "nombre email")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(pagination.skip)
+      .limit(pagination.limit)
+      .lean();
+    const total = await Pago.countDocuments({ prestador: prestador._id });
 
     // Popular referencias manualmente porque son polimórficas
     for (let pago of pagos) {
@@ -201,12 +214,14 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
         if (pago.referencia.tipo === 'Cita') {
           const cita = await Cita.findById(pago.referencia.id)
             .populate('mascota', 'nombre tipo raza')
-            .select('mascota tipoServicio motivo');
+            .select('mascota tipoServicio motivo')
+            .lean();
           pago.referencia.id = cita;
         } else if (pago.referencia.tipo === 'Emergencia') {
           const emergencia = await Emergencia.findById(pago.referencia.id)
             .populate('mascota', 'nombre tipo raza')
-            .select('mascota tipoEmergencia descripcion');
+            .select('mascota tipoEmergencia descripcion')
+            .lean();
           pago.referencia.id = emergencia;
         }
       }
@@ -241,7 +256,8 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
 
     res.status(200).json({
       pagos,
-      estadisticas
+      estadisticas,
+      pagination: paginatedResponse([], total, pagination).pagination
     });
   } catch (error) {
     console.error('❌ Error al obtener pagos del prestador:', error);
@@ -253,7 +269,8 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
 router.get("/:id", protectRoute, async (req, res) => {
   try {
     const pago = await Pago.findById(req.params.id)
-      .populate("veterinario", "nombre especialidad imagen ubicacion email telefono");
+      .populate("veterinario", "nombre especialidad imagen ubicacion email telefono")
+      .lean();
     
     if (!pago) {
       return res.status(404).json({ message: "Pago no encontrado" });

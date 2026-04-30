@@ -88,5 +88,9 @@ const mascotaSchema = new mongoose.Schema({
   timestamps: true
 });
 
+mascotaSchema.index({ propietario: 1, activo: 1, createdAt: -1 });
+mascotaSchema.index({ propietario: 1, tipo: 1 });
+mascotaSchema.index({ ultimaVisita: -1 });
+
 const Mascota = mongoose.model("Mascota", mascotaSchema);
 export default Mascota;

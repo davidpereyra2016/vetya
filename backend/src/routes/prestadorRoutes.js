@@ -97,11 +97,12 @@ router.get('/', async (req, res) => {
     // Obtener prestadores con populate del usuario para acceder a profilePicture
     const prestadoresDb = await Prestador.find(filtro)
       .select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia')
-      .populate('usuario', 'profilePicture');
+      .populate('usuario', 'profilePicture')
+      .lean();
     
     // Mapear los resultados para incluir profilePicture como imagen
     const prestadores = prestadoresDb.map(prestador => {
-      const prestadorObj = prestador.toObject();
+      const prestadorObj = { ...prestador };
       
       // Asignar la imagen de perfil del usuario al campo imagen del prestador si existe
       if (prestadorObj.usuario && prestadorObj.usuario.profilePicture) {
@@ -133,11 +134,12 @@ router.get('/tipo/:tipo', async (req, res) => {
       tipo: req.params.tipo,
       activo: true
     }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias')
-      .populate('usuario', 'profilePicture');
+      .populate('usuario', 'profilePicture')
+      .lean();
     
     // Mapear los resultados para incluir profilePicture como imagen
     const prestadores = prestadoresDb.map(prestador => {
-      const prestadorObj = prestador.toObject();
+      const prestadorObj = { ...prestador };
       
       // Asignar la imagen de perfil del usuario al campo imagen del prestador si existe
       if (prestadorObj.usuario && prestadorObj.usuario.profilePicture) {
@@ -165,11 +167,12 @@ router.get('/emergencias', async (req, res) => {
       disponibleEmergencias: true,
       activo: true
     }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia ubicacionActual radio')
-      .populate('usuario', 'profilePicture');
+      .populate('usuario', 'profilePicture')
+      .lean();
     
     // Mapear los resultados para incluir profilePicture como imagen
     const prestadores = prestadoresDb.map(prestador => {
-      const prestadorObj = prestador.toObject();
+      const prestadorObj = { ...prestador };
 
       const coordsActuales = obtenerCoordenadasNormalizadas(prestadorObj.ubicacionActual?.coordenadas);
       if (coordsActuales) {
@@ -231,7 +234,7 @@ router.get('/emergencias/disponibles', protectRoute, async (req, res) => {
       tipo: 'Veterinario',
       disponibleEmergencias: true,
       activo: true
-    }).populate('usuario', 'email username');
+    }).populate('usuario', 'email username').lean();
     
     // Calcular distancias y tiempos
     const prestadoresConDistancia = prestadores.map(prestador => {
@@ -242,7 +245,7 @@ router.get('/emergencias/disponibles', protectRoute, async (req, res) => {
       // Si no hay coordenadas, asignar una distancia muy grande
       if (!prestadorLat || !prestadorLng) {
         return {
-          ...prestador.toObject(),
+          ...prestador,
           distancia: 9999,
           distanciaTexto: 'Desconocida',
           tiempoEstimado: 'Desconocido'
@@ -259,7 +262,7 @@ router.get('/emergencias/disponibles', protectRoute, async (req, res) => {
       const tiempoEstimadoMinutos = Math.ceil(distancia / 30 * 60);
       
       return {
-        ...prestador.toObject(),
+        ...prestador,
         distancia: distancia, // valor numérico para ordenar
         distanciaTexto: `${distancia.toFixed(1)} km`,
         tiempoEstimado: tiempoEstimadoMinutos,
@@ -330,7 +333,7 @@ router.get('/emergencias/ubicacion', async (req, res) => {
     
     const prestadores = await Prestador.find(query).select(
       'nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia radio ubicacionActual'
-    );
+    ).lean();
     
     console.log(`✅ [BACKEND] Prestadores encontrados con coords válidas: ${prestadores.length}`);
     
@@ -359,7 +362,7 @@ router.get('/emergencias/ubicacion', async (req, res) => {
       
       // Calcular distancia y tiempo estimado para cada prestador
       resultado = prestadores.map(prestador => {
-        const prestadorObj = prestador.toObject();
+        const prestadorObj = { ...prestador };
         
         if (prestadorObj.ubicacionActual && prestadorObj.ubicacionActual.coordenadas) {
           // Calcular distancia en km usando la fórmula de Haversine
@@ -442,7 +445,8 @@ router.get('/:id', async (req, res) => {
   try {
     const prestador = await Prestador.findById(req.params.id)
       .populate('usuario', 'nombre email profilePicture')
-      .populate('opiniones.usuario', 'nombre imagen');
+      .populate('opiniones.usuario', 'nombre imagen')
+      .lean();
     
     if (!prestador) {
       return res.status(404).json({ message: 'Prestador no encontrado' });
@@ -544,6 +548,10 @@ router.patch('/:id/ubicacion', protectRoute, async (req, res) => {
       },
       ultimaActualizacion: new Date()
     };
+    prestador.ubicacionActualGeo = {
+      type: 'Point',
+      coordinates: [parseFloat(lng), parseFloat(lat)]
+    };
     
     // Mantener sincronizado el fallback histórico de coordenadas del prestador
     if (!prestador.direccion) {
@@ -553,6 +561,10 @@ router.patch('/:id/ubicacion', protectRoute, async (req, res) => {
     prestador.direccion.coordenadas = {
       lat: parseFloat(lat),
       lng: parseFloat(lng)
+    };
+    prestador.direccionGeo = {
+      type: 'Point',
+      coordinates: [parseFloat(lng), parseFloat(lat)]
     };
     
     await prestador.save();
@@ -803,7 +815,7 @@ router.get('/:id/servicios', async (req, res) => {
     }
     
     // Buscar servicios asociados al prestador
-    const servicios = await Servicio.find({ prestadorId: id });
+    const servicios = await Servicio.find({ prestadorId: id }).lean();
     console.log(`Se encontraron ${servicios.length} servicios para el prestador ${id}`);
     
     res.json(servicios);
@@ -828,7 +840,7 @@ router.get('/:id/servicios/activo', async (req, res) => {
     const servicios = await Servicio.find({ 
       prestadorId: id,
       activo: true
-    });
+    }).lean();
     
     res.json(servicios);
   } catch (error) {
@@ -852,7 +864,7 @@ router.get('/:id/servicios/desactivado', async (req, res) => {
     const servicios = await Servicio.find({ 
       prestadorId: id,
       activo: false
-    });
+    }).lean();
     
     res.json(servicios);
   } catch (error) {
@@ -1155,7 +1167,7 @@ router.get('/:prestadorId/servicios/activo', async (req, res) => {
     const servicios = await Servicio.find({ 
       prestadorId: prestadorId,
       activo: true
-    });
+    }).lean();
     
     console.log(`Se encontraron ${servicios.length} servicios para el prestador`);
     res.json(servicios);
@@ -1187,7 +1199,7 @@ router.get('/:prestadorId/servicios/desactivado', async (req, res) => {
     const servicios = await Servicio.find({ 
       prestadorId: prestadorId,
       activo: false
-    });
+    }).lean();
     
     console.log(`Se encontraron ${servicios.length} servicios desactivados para el prestador`);
     res.json(servicios);
@@ -1218,7 +1230,7 @@ router.get('/:prestadorId/servicios', async (req, res) => {
     // Obtener todos los servicios del prestador sin filtrar por estado
     const servicios = await Servicio.find({ 
       prestadorId: prestadorId
-    });
+    }).lean();
     
     console.log(`Se encontraron ${servicios.length} servicios en total para el prestador`);
     res.json(servicios);

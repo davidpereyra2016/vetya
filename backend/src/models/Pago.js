@@ -159,6 +159,11 @@ pagoSchema.index({ usuario: 1 });
 pagoSchema.index({ 'referencia.tipo': 1, 'referencia.id': 1 });
 pagoSchema.index({ estado: 1 });
 pagoSchema.index({ fechaPago: -1 });
+pagoSchema.index({ usuario: 1, createdAt: -1 });
+pagoSchema.index({ prestador: 1, createdAt: -1 });
+pagoSchema.index({ prestador: 1, estado: 1, createdAt: -1 });
+pagoSchema.index({ 'mercadoPago.preferenceId': 1 }, { sparse: true });
+pagoSchema.index({ 'mercadoPago.paymentId': 1 }, { sparse: true });
 
 const Pago = mongoose.model("Pago", pagoSchema);
 export default Pago;

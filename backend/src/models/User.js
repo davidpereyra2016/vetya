@@ -42,6 +42,17 @@ const userSchema = new mongoose.Schema({
         }
     },
     // Campos para recuperación de contraseña
+    ubicacionActualGeo: {
+        type: {
+            type: String,
+            enum: ["Point"],
+            default: "Point"
+        },
+        coordinates: {
+            type: [Number],
+            default: undefined
+        }
+    },
     resetPasswordToken: {
         type: String,
         default: undefined
@@ -72,6 +83,20 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 // hashear la contraseña despues de guardar en la base de datos
+userSchema.index({ role: 1, createdAt: -1 });
+userSchema.index({ resetPasswordToken: 1, resetPasswordExpires: 1 });
+userSchema.index({ emailVerificationCode: 1, emailVerificationExpires: 1 });
+userSchema.index({ ubicacionActualGeo: "2dsphere" }, { sparse: true });
+
+userSchema.pre("save", function(next) {
+    const lat = this.ubicacionActual?.coordinates?.lat;
+    const lng = this.ubicacionActual?.coordinates?.lng;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        this.ubicacionActualGeo = { type: "Point", coordinates: [lng, lat] };
+    }
+    next();
+});
+
 userSchema.pre("save", async function(next){
     if(!this.isModified("password")){
         return next();

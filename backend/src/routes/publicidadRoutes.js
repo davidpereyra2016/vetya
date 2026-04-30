@@ -46,7 +46,7 @@ router.get("/banners-activos", async (req, res) => {
       estado: "activa",
       fechaInicio: { $lte: hoy },
       fechaFin: { $gte: hoy },
-    }).select("anunciante");
+    }).select("anunciante").lean();
 
     const anunciantesActivos = suscripcionesVigentes.map((s) => s.anunciante);
 
@@ -94,7 +94,7 @@ router.get("/banners-activos", async (req, res) => {
 // Listar anunciantes
 router.get("/anunciantes", protectRoute, async (req, res) => {
   try {
-    const anunciantes = await Anunciante.find().sort({ createdAt: -1 });
+    const anunciantes = await Anunciante.find().sort({ createdAt: -1 }).lean();
     res.json(anunciantes);
   } catch (error) {
     console.error(error);
@@ -105,7 +105,7 @@ router.get("/anunciantes", protectRoute, async (req, res) => {
 // Obtener un anunciante
 router.get("/anunciantes/:id", protectRoute, async (req, res) => {
   try {
-    const anunciante = await Anunciante.findById(req.params.id);
+    const anunciante = await Anunciante.findById(req.params.id).lean();
     if (!anunciante)
       return res.status(404).json({ message: "Anunciante no encontrado" });
     res.json(anunciante);
@@ -196,7 +196,8 @@ router.get("/campanas", protectRoute, async (req, res) => {
     if (req.query.anunciante) filter.anunciante = req.query.anunciante;
     const campanas = await CampanaBanner.find(filter)
       .populate("anunciante", "nombre apellido nombreNegocio")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(campanas);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener campañas" });
@@ -208,7 +209,7 @@ router.get("/campanas/:id", protectRoute, async (req, res) => {
   try {
     const campana = await CampanaBanner.findById(req.params.id).populate(
       "anunciante"
-    );
+    ).lean();
     if (!campana)
       return res.status(404).json({ message: "Campaña no encontrada" });
     res.json(campana);
@@ -372,7 +373,8 @@ router.get("/suscripciones", protectRoute, async (req, res) => {
     const suscripciones = await Suscripcion.find(filter)
       .populate("anunciante", "nombre apellido nombreNegocio")
       .populate("campana", "titulo limiteBanners")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(suscripciones);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener suscripciones" });
@@ -384,7 +386,8 @@ router.get("/suscripciones/:id", protectRoute, async (req, res) => {
   try {
     const s = await Suscripcion.findById(req.params.id)
       .populate("anunciante")
-      .populate("campana");
+      .populate("campana")
+      .lean();
     if (!s) return res.status(404).json({ message: "No encontrada" });
     res.json(s);
   } catch (error) {

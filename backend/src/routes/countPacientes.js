@@ -1,56 +1,53 @@
 import express from "express";
+import mongoose from "mongoose";
 import Cita from "../models/Cita.js";
 import Emergencia from "../models/Emergencia.js";
-import protectRoute from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 /**
- * Endpoint para contar pacientes únicos (usuarios) atendidos por un prestador de servicio
- * Considera tanto citas como emergencias, sin duplicar usuarios que aparecen en ambos
+ * Cuenta pacientes unicos atendidos por un prestador.
+ * Usa aggregation para deduplicar en MongoDB y evitar cargar historiales completos en memoria.
  */
 router.get("/prestador/:prestadorId", async (req, res) => {
   try {
     const { prestadorId } = req.params;
-    console.log(`DEBUG - Contando pacientes únicos para el prestador: ${prestadorId}`);
+    if (!mongoose.Types.ObjectId.isValid(prestadorId)) {
+      return res.status(400).json({ message: "ID de prestador invalido" });
+    }
+    const prestadorObjectId = new mongoose.Types.ObjectId(prestadorId);
 
-    // Buscar todas las citas completadas del prestador
-    const citasCompletadas = await Cita.find({
-      prestador: prestadorId,
-      estado: "Completada"
-    }).select("usuario");
+    const [citasStats, emergenciasStats] = await Promise.all([
+      Cita.aggregate([
+        { $match: { prestador: prestadorObjectId, estado: "Completada" } },
+        { $group: { _id: "$usuario" } },
+        { $group: { _id: null, total: { $sum: 1 }, usuarios: { $addToSet: "$_id" } } },
+      ]),
+      Emergencia.aggregate([
+        { $match: { veterinario: prestadorObjectId, estado: "Atendida" } },
+        { $group: { _id: "$usuario" } },
+        { $group: { _id: null, total: { $sum: 1 }, usuarios: { $addToSet: "$_id" } } },
+      ]),
+    ]);
 
-    // Buscar todas las emergencias atendidas del prestador (campo veterinario)
-    const emergenciasAtendidas = await Emergencia.find({
-      veterinario: prestadorId,
-      estado: "Atendida"
-    }).select("usuario");
+    const usuariosUnicos = new Set([
+      ...(citasStats[0]?.usuarios || []).map(String),
+      ...(emergenciasStats[0]?.usuarios || []).map(String),
+    ]);
 
-    // Extraer los IDs de usuario únicos de citas
-    const usuariosCitas = citasCompletadas.map(cita => cita.usuario.toString());
-    
-    // Extraer los IDs de usuario únicos de emergencias
-    const usuariosEmergencias = emergenciasAtendidas.map(emergencia => emergencia.usuario.toString());
-    
-    // Combinar ambos arrays y eliminar duplicados usando un Set
-    const todosUsuarios = [...usuariosCitas, ...usuariosEmergencias];
-    const usuariosUnicos = [...new Set(todosUsuarios)];
-    
-    const totalPacientes = usuariosUnicos.length;
-    
-    console.log(`DEBUG - Total pacientes únicos atendidos: ${totalPacientes}`);
-    
     res.status(200).json({
-      totalPacientes,
+      totalPacientes: usuariosUnicos.size,
       desglose: {
-        citas: usuariosCitas.length,
-        emergencias: usuariosEmergencias.length
-      }
+        citas: citasStats[0]?.total || 0,
+        emergencias: emergenciasStats[0]?.total || 0,
+      },
     });
   } catch (error) {
-    console.error("ERROR al contar pacientes:", error);
-    res.status(500).json({ 
-      message: "Error al obtener el conteo de pacientes" 
+    if (process.env.NODE_ENV !== "production") {
+      console.error("ERROR al contar pacientes:", error);
+    }
+    res.status(500).json({
+      message: "Error al obtener el conteo de pacientes",
     });
   }
 });

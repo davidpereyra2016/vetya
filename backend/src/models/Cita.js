@@ -87,6 +87,14 @@ citaSchema.index({ fecha: 1, prestador: 1 });
 
 // Índice para buscar citas por usuario
 citaSchema.index({ usuario: 1 });
+citaSchema.index({ usuario: 1, estado: 1, fecha: 1 });
+citaSchema.index({ prestador: 1, estado: 1, fecha: 1, horaInicio: 1 });
+citaSchema.index({ servicio: 1 });
+citaSchema.index({ disponibilidad: 1 });
+citaSchema.index(
+  { prestador: 1, fecha: 1, horaInicio: 1 },
+  { partialFilterExpression: { estado: { $in: ["Pendiente", "Confirmada"] } } }
+);
 
 
 const Cita = mongoose.model("Cita", citaSchema);

@@ -93,6 +93,9 @@ notificacionSchema.index({ prestador: 1, leida: 1 });
 
 // Índice para ordenar por fecha
 notificacionSchema.index({ fechaEnvio: -1 });
+notificacionSchema.index({ usuario: 1, fechaEnvio: -1 });
+notificacionSchema.index({ prestador: 1, fechaEnvio: -1 });
+notificacionSchema.index({ activa: 1, prioridad: 1 });
 
 const Notificacion = mongoose.model("Notificacion", notificacionSchema);
 export default Notificacion;

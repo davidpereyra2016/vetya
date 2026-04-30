@@ -90,11 +90,12 @@ router.get("/", protectRoute, async (req, res) => {
       .populate("mascota", "nombre tipo raza imagen edad genero color peso")
       .populate("veterinario", "nombre especialidades imagen rating")
       .select("+otroAnimal")
-      .sort({ fechaSolicitud: -1 });
+      .sort({ fechaSolicitud: -1 })
+      .lean();
     
     // Agregar mascotaInfo a cada emergencia
     const emergenciasConMascotaInfo = emergencias.map(emergencia => {
-      const emergenciaObj = emergencia.toObject();
+      const emergenciaObj = { ...emergencia };
       
       let mascotaInfo = null;
       if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) {
@@ -148,11 +149,12 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
       .populate("mascota", "nombre tipo raza imagen edad genero color peso")
       .populate("veterinario", "nombre especialidades imagen rating")
       .select("+otroAnimal")
-      .sort({ fechaSolicitud: -1 });
+      .sort({ fechaSolicitud: -1 })
+      .lean();
     
     // Agregar mascotaInfo a cada emergencia
     const emergenciasConMascotaInfo = emergencias.map(emergencia => {
-      const emergenciaObj = emergencia.toObject();
+      const emergenciaObj = { ...emergencia };
       
       let mascotaInfo = null;
       if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) {
@@ -202,11 +204,12 @@ router.get("/activas", protectRoute, async (req, res) => {
     })
       .populate("mascota", "nombre tipo raza imagen edad genero color peso")
       .populate("veterinario", "nombre especialidades imagen rating")
-      .select("+otroAnimal");
+      .select("+otroAnimal")
+      .lean();
     
     // Agregar mascotaInfo a cada emergencia
     const emergenciasConMascotaInfo = emergencias.map(emergencia => {
-      const emergenciaObj = emergencia.toObject();
+      const emergenciaObj = { ...emergencia };
       
       let mascotaInfo = null;
       if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) {
@@ -295,7 +298,7 @@ router.get("/asignadas", protectRoute, async (req, res) => {
     
     // Agregar mascotaInfo y calcular distancia para cada emergencia
     const emergenciasConMascotaInfo = emergencias.map(emergencia => {
-      const emergenciaObj = emergencia.toObject();
+      const emergenciaObj = { ...emergencia };
       
       // Preparar información de la mascota
       let mascotaInfo = null;
@@ -1318,7 +1321,8 @@ router.post("/cercanas", protectRoute, async (req, res) => {
       }
     })
       .populate("mascota", "nombre tipo raza imagen")
-      .sort({ fechaSolicitud: -1 });
+      .sort({ fechaSolicitud: -1 })
+      .lean();
     
     res.status(200).json(emergencias);
   } catch (error) {
@@ -1361,11 +1365,12 @@ router.get("/cercanas/disponibles", protectRoute, async (req, res) => {
       .populate("mascota", "nombre tipo raza imagen")
       .populate("usuario", "nombre telefono")
       .sort({ fechaSolicitud: -1 })
-      .limit(10); // Limitar a 10 emergencias para no sobrecargar
+      .limit(10)
+      .lean(); // Limitar a 10 emergencias para no sobrecargar
     
     // Añadir información de distancia para cada emergencia
     const emergenciasConDistancia = emergencias.map(emergencia => {
-      const emergenciaObj = emergencia.toObject();
+      const emergenciaObj = { ...emergencia };
       const distancia = calcularDistancia(
         lat,
         lng,

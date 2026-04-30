@@ -5,6 +5,7 @@ import Servicio from '../models/Servicio.js';
 import protectRoute from '../middleware/auth.middleware.js';
 
 const router = express.Router();
+const duracionServicio = 30;
 
 router.get('/', async (req, res) => {
   try {
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
     const prestadoresDisponibles = await Prestador.find({
       tipo: 'Veterinario',
       disponibleEmergencias: true
-    }).select('nombre especialidad rating precioEmergencia imagen ubicacion experiencia');
+    }).select('nombre especialidad rating precioEmergencia imagen ubicacion experiencia').lean();
     
     console.log(`Se encontraron ${prestadoresDisponibles.length} prestadores disponibles para emergencias`);
     
@@ -53,7 +54,9 @@ router.get('/:prestadorId', async (req, res) => {
   try {
     const { prestadorId } = req.params;
     
-    const prestador = await Prestador.findById(prestadorId);
+    const prestador = await Prestador.findById(prestadorId)
+      .select("disponibleEmergencias precioEmergencia")
+      .lean();
     
     if (!prestador) {
       return res.status(404).json({ message: 'Prestador no encontrado' });
@@ -79,7 +82,7 @@ router.get('/prestador/:prestadorId', protectRoute, async (req, res) => {
     const { prestadorId } = req.params;
     
     // Verificar que el prestador exista
-    const prestador = await Prestador.findById(prestadorId);
+    const prestador = await Prestador.findById(prestadorId).lean();
     if (!prestador) {
       return res.status(404).json({ message: 'Prestador no encontrado' });
     }

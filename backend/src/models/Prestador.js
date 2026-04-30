@@ -52,6 +52,17 @@ const prestadorSchema = new Schema({
       lng: Number
     }
   },
+  direccionGeo: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      default: undefined
+    }
+  },
   horarios: [{
     dia: {
       type: Number, // 0 = Domingo, 1 = Lunes, ... 6 = Sábado
@@ -145,6 +156,17 @@ const prestadorSchema = new Schema({
       default: Date.now
     }
   },
+  ubicacionActualGeo: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      default: undefined
+    }
+  },
   activo: {
     type: Boolean,
     default: true
@@ -168,7 +190,30 @@ const prestadorSchema = new Schema({
 });
 
 // Índice geoespacial para búsquedas por ubicación
-prestadorSchema.index({ 'direccion.coordenadas': '2dsphere' });
+prestadorSchema.index({ direccionGeo: '2dsphere' }, { sparse: true });
+prestadorSchema.index({ ubicacionActualGeo: '2dsphere' }, { sparse: true });
+prestadorSchema.index({ usuario: 1 }, { unique: true });
+prestadorSchema.index({ tipo: 1, activo: 1, verificado: 1 });
+prestadorSchema.index({ disponibleEmergencias: 1, activo: 1 });
+prestadorSchema.index({ estadoValidacion: 1, activo: 1 });
+prestadorSchema.index({ rating: -1 });
+prestadorSchema.index({ fechaRegistro: -1 });
+
+prestadorSchema.pre('save', function(next) {
+  const dirLat = this.direccion?.coordenadas?.lat;
+  const dirLng = this.direccion?.coordenadas?.lng;
+  if (Number.isFinite(dirLat) && Number.isFinite(dirLng)) {
+    this.direccionGeo = { type: 'Point', coordinates: [dirLng, dirLat] };
+  }
+
+  const actualLat = this.ubicacionActual?.coordenadas?.lat;
+  const actualLng = this.ubicacionActual?.coordenadas?.lng;
+  if (Number.isFinite(actualLat) && Number.isFinite(actualLng)) {
+    this.ubicacionActualGeo = { type: 'Point', coordinates: [actualLng, actualLat] };
+  }
+
+  next();
+});
 
 /**
  * Middleware para eliminación en cascada

@@ -75,6 +75,9 @@ consejoDeSaludSchema.index({ categoria: 1 });
 
 // Índice para búsqueda por tipo de mascota
 consejoDeSaludSchema.index({ paraTipos: 1 });
+consejoDeSaludSchema.index({ activo: 1, destacado: -1, fechaPublicacion: -1 });
+consejoDeSaludSchema.index({ categoria: 1, activo: 1, fechaPublicacion: -1 });
+consejoDeSaludSchema.index({ paraTipos: 1, activo: 1, fechaPublicacion: -1 });
 
 // Índice para búsqueda de texto completo
 consejoDeSaludSchema.index({ 

@@ -4,7 +4,9 @@ import Prestador from "../models/Prestador.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { generateVerificationCode, sendVerificationEmail, sendPasswordResetEmail } from "../utils/emailService.js";
+import { authLimiter, normalizeEmail } from "../utils/routePerformance.js";
 const router = express.Router();
+router.use(authLimiter);
 
 /**
  * Genera un token JWT para un usuario
@@ -15,14 +17,11 @@ const generateToken = (userId) => {
     return jwt.sign({userId}, process.env.JWT_SECRET, {expiresIn: "15d"});
 };
 
-const normalizeEmail = (email = "") => email.trim().toLowerCase();
 const normalizeUsername = (username = "") => username.trim().replace(/\s+/g, " ");
-const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const findUserByEmail = (email) => {
     const normalizedEmail = normalizeEmail(email);
-    return User.findOne({
-        email: { $regex: `^${escapeRegex(normalizedEmail)}$`, $options: "i" }
-    });
+    return User.findOne({ email: normalizedEmail })
+        .collation({ locale: "en", strength: 2 });
 };
 
 /**
@@ -54,7 +53,7 @@ router.post("/register/client", async (req, res) => {
         if(existingEmail){
             return res.status(400).json({message: "El correo ya está registrado"});
         }
-        const existingUsername = await User.findOne({username});
+        const existingUsername = await User.findOne({ username }).select("_id").lean();
         if(existingUsername){
             return res.status(400).json({message: "El nombre de usuario ya está registrado"});
         }
@@ -135,7 +134,7 @@ router.post("/register/provider", async (req, res) => {
         if(existingEmail){
             return res.status(400).json({message: "El correo ya está registrado"});
         }
-        const existingUsername = await User.findOne({username});
+        const existingUsername = await User.findOne({ username }).select("_id").lean();
         if(existingUsername){
             return res.status(400).json({message: "El nombre de usuario ya está registrado"});
         }
@@ -222,7 +221,7 @@ router.post("/register", async (req, res) => {
         if(existingEmail){
             return res.status(400).json({message: "El correo ya está registrado"});
         }
-        const existingUsername = await User.findOne({username});
+        const existingUsername = await User.findOne({ username }).select("_id").lean();
         if(existingUsername){
             return res.status(400).json({message: "El nombre de usuario ya está registrado"});
         }
@@ -334,7 +333,9 @@ router.post("/login", async (req, res) => {
         
         // Si es un prestador, obtener datos adicionales
         if (user.role === 'provider') {
-            const prestador = await Prestador.findOne({ usuario: user._id });
+            const prestador = await Prestador.findOne({ usuario: user._id })
+                .select("_id nombre especialidad especialidades disponibleEmergencias")
+                .lean();
             if (prestador) {
                 return res.status(200).json({
                     token, 
@@ -504,7 +505,9 @@ router.post("/verify-email", async (req, res) => {
         
         // Si es prestador, incluir datos del prestador
         if (user.role === 'provider') {
-            const prestador = await Prestador.findOne({ usuario: user._id });
+            const prestador = await Prestador.findOne({ usuario: user._id })
+                .select("_id nombre especialidad especialidades")
+                .lean();
             if (prestador) {
                 return res.status(200).json({
                     message: "Email verificado exitosamente",

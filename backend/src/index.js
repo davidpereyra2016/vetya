@@ -9,6 +9,11 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+if (process.env.NODE_ENV === 'production') {
+    console.log = () => {};
+    console.debug = () => {};
+}
+
 // Configurar __dirname en ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +22,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -46,6 +52,16 @@ app.get("/api/health", (req, res) => {
 
 // Ruta para el panel administrativo
 app.use("/admin", adminRouter);
+
+// Manejador centralizado para errores async no capturados en rutas.
+app.use((err, req, res, _next) => {
+    if (process.env.NODE_ENV !== 'production') {
+        console.error('Error no controlado:', err);
+    }
+    res.status(err.status || 500).json({
+        message: err.message || 'Error interno del servidor'
+    });
+});
 
 // Conectar a la base de datos
 connectDB();

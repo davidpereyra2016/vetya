@@ -1,4 +1,10 @@
 import express from "express";
+import {
+  cacheReads,
+  generalApiLimiter,
+  invalidateCacheOnMutation,
+  sanitizeRequest,
+} from "../utils/routePerformance.js";
 import authRoutes from "./authRoutes.js";
 import userRoutes from "./userRoutes.js";
 import mascotaRoutes from "./mascotaRoutes.js";
@@ -18,6 +24,12 @@ import validacionRoutes from "./validacionRoutes.js"; // Importar rutas para val
 import publicidadRoutes from "./publicidadRoutes.js"; // Rutas para anunciantes, campañas y suscripciones
 
 const router = express.Router();
+
+// Capa transversal de rendimiento/seguridad para todas las rutas API.
+router.use(sanitizeRequest);
+router.use(generalApiLimiter);
+router.use(cacheReads({ ttl: 60 }));
+router.use(invalidateCacheOnMutation);
 
 // Configuración de todas las rutas de la API
 router.use("/auth", authRoutes);

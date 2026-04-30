@@ -4,85 +4,76 @@ import { protectRoute, checkRole } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-/**
- * Endpoint para actualizar la ubicación del cliente
- * Requiere autenticación y rol de cliente
- */
-router.patch('/:id/ubicacion', protectRoute, checkRole(['client']), async (req, res) => {
+router.patch("/:id/ubicacion", protectRoute, checkRole(["client"]), async (req, res) => {
   try {
     const clientId = req.params.id;
-    const { lat, lng } = req.body;
-    
-    // Verificar que sea el propio usuario
+    const lat = Number(req.body.lat);
+    const lng = Number(req.body.lng);
+
     if (req.user.id.toString() !== clientId) {
-      return res.status(403).json({ message: 'No autorizado para actualizar este usuario' });
+      return res.status(403).json({ message: "No autorizado para actualizar este usuario" });
     }
-    
-    // Validar coordenadas
-    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-      return res.status(400).json({ message: 'Coordenadas inválidas' });
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ message: "Coordenadas invalidas" });
     }
-    
-    // Actualizar ubicación
+
     const updatedUser = await User.findByIdAndUpdate(
       clientId,
       {
-        ubicacionActual: {
-          coordinates: { lat, lng },
-          lastUpdated: new Date()
-        }
+        $set: {
+          ubicacionActual: {
+            coordinates: { lat, lng },
+            lastUpdated: new Date(),
+          },
+          ubicacionActualGeo: {
+            type: "Point",
+            coordinates: [lng, lat],
+          },
+        },
       },
-      { new: true }
-    );
-    
+      { new: true, runValidators: true }
+    ).select("_id ubicacionActual").lean();
+
     if (!updatedUser) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
+      return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    
+
     res.status(200).json({
       success: true,
-      message: 'Ubicación actualizada con éxito',
-      data: {
-        ubicacion: updatedUser.ubicacionActual
-      }
+      message: "Ubicacion actualizada con exito",
+      data: { ubicacion: updatedUser.ubicacionActual },
     });
   } catch (error) {
-    console.error('Error al actualizar ubicación:', error);
-    res.status(500).json({ message: 'Error al actualizar la ubicación' });
+    if (process.env.NODE_ENV !== "production") console.error("Error al actualizar ubicacion:", error);
+    res.status(500).json({ message: "Error al actualizar la ubicacion" });
   }
 });
 
-/**
- * Obtener la ubicación actual del cliente
- */
-router.get('/:id/ubicacion', protectRoute, async (req, res) => {
+router.get("/:id/ubicacion", protectRoute, async (req, res) => {
   try {
     const clientId = req.params.id;
-    
-    // Verificar permisos (solo el propio usuario o un prestador pueden ver la ubicación)
-    if (req.user.id.toString() !== clientId && req.user.role !== 'provider') {
-      return res.status(403).json({ message: 'No autorizado para ver esta ubicación' });
+
+    if (req.user.id.toString() !== clientId && req.user.role !== "provider") {
+      return res.status(403).json({ message: "No autorizado para ver esta ubicacion" });
     }
-    
-    const user = await User.findById(clientId).select('ubicacionActual');
-    
+
+    const user = await User.findById(clientId).select("_id ubicacionActual").lean();
     if (!user) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
+      return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    
-    if (!user.ubicacionActual || !user.ubicacionActual.coordinates) {
-      return res.status(404).json({ message: 'El usuario no tiene ubicación registrada' });
+
+    if (!user.ubicacionActual?.coordinates) {
+      return res.status(404).json({ message: "El usuario no tiene ubicacion registrada" });
     }
-    
+
     res.status(200).json({
       success: true,
-      data: {
-        ubicacion: user.ubicacionActual
-      }
+      data: { ubicacion: user.ubicacionActual },
     });
   } catch (error) {
-    console.error('Error al obtener ubicación:', error);
-    res.status(500).json({ message: 'Error al obtener la ubicación' });
+    if (process.env.NODE_ENV !== "production") console.error("Error al obtener ubicacion:", error);
+    res.status(500).json({ message: "Error al obtener la ubicacion" });
   }
 });
 

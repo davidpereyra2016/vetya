@@ -43,7 +43,9 @@ async function autoCancelarCitasVencidas(prestadorId = null) {
     }
     
     // Buscar citas vencidas
-    const citasVencidas = await Cita.find(filtroBase);
+    const citasVencidas = await Cita.find(filtroBase)
+      .select("_id notas fecha horaInicio")
+      .lean();
     
     if (citasVencidas.length > 0) {
       const citasIds = citasVencidas.map(cita => cita._id);
@@ -566,7 +568,7 @@ router.get("/", protectRoute, async (req, res) => {
       usuario: req.user._id,
       estado: 'Pendiente',
       fecha: { $lt: ahora }
-    });
+    }).select("_id").lean();
     
     if (citasVencidasUsuario.length > 0) {
       const citasIds = citasVencidasUsuario.map(cita => cita._id);
@@ -590,7 +592,8 @@ router.get("/", protectRoute, async (req, res) => {
         populate: { path: "usuario", select: "profilePicture username" }
       })
       .populate("servicio", "nombre icono color")
-      .sort({ fecha: 1 });
+      .sort({ fecha: 1 })
+      .lean();
     
     res.status(200).json(citas);
   } catch (error) {
@@ -699,7 +702,7 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
       usuario: req.user._id,
       estado: 'Pendiente',
       fecha: { $lt: ahora }
-    });
+    }).select("_id").lean();
     
     if (citasVencidasUsuario.length > 0) {
       const citasIds = citasVencidasUsuario.map(cita => cita._id);
@@ -722,7 +725,8 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
       .populate("mascota", "nombre tipo raza imagen")
       .populate("prestador", "nombre especialidades imagen rating")
       .populate("servicio", "nombre icono color")
-      .sort({ fecha: 1 });
+      .sort({ fecha: 1 })
+      .lean();
     
     res.status(200).json(citas);
   } catch (error) {

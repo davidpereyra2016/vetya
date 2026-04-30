@@ -92,6 +92,10 @@ const servicioSchema = new mongoose.Schema({
 
 // Crear un índice compuesto para evitar que un prestador tenga servicios duplicados
 servicioSchema.index({ nombre: 1, prestadorId: 1 }, { unique: true, sparse: true });
+servicioSchema.index({ tipoPrestador: 1, esServicioPredefinido: 1, activo: 1 });
+servicioSchema.index({ prestadorId: 1, activo: 1 });
+servicioSchema.index({ categoria: 1, activo: 1 });
+servicioSchema.index({ disponibleParaTipos: 1, activo: 1 });
 
 const Servicio = mongoose.model("Servicio", servicioSchema);
 export default Servicio;
