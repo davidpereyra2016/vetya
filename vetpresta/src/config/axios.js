@@ -23,7 +23,7 @@ export const resetTokenExpiredFlag = () => {
 // desde Expo/EAS sin volver a editar el codigo.
 // ============================================================
 const DEV_API_URL = 'http://192.168.100.32:3000/api';
-const PROD_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.vetya.com/api';
+const PROD_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://vetya-backend.onrender.com/api';
 
 export const API_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
 const baseURL = API_URL;

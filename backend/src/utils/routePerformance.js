@@ -1,10 +1,11 @@
 import crypto from "crypto";
 
 const CACHE_NAMESPACE = process.env.CACHE_NAMESPACE || "vetya:api";
-const REDIS_URL = process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_URL = process.env.REDIS_URL || process.env.UPSTASH_REDIS_URL;
 const DEFAULT_TTL_SECONDS = Number(process.env.API_CACHE_TTL_SECONDS || 60);
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 let redisClientPromise;
+let redisDisabledUntil = 0;
 const memoryCounters = new Map();
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
@@ -77,6 +78,7 @@ const hash = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
 export const getRedisClient = async () => {
   if (!REDIS_URL) return null;
+  if (Date.now() < redisDisabledUntil) return null;
 
   if (!redisClientPromise) {
     redisClientPromise = import("ioredis")
@@ -85,6 +87,8 @@ export const getRedisClient = async () => {
           maxRetriesPerRequest: 1,
           enableReadyCheck: false,
           lazyConnect: true,
+          connectTimeout: Number(process.env.REDIS_CONNECT_TIMEOUT_MS || 500),
+          commandTimeout: Number(process.env.REDIS_COMMAND_TIMEOUT_MS || 500),
         });
 
         client.on("error", (error) => safeLog.warn("Redis no disponible:", error.message));
@@ -93,6 +97,7 @@ export const getRedisClient = async () => {
       .catch((error) => {
         safeLog.warn("Redis deshabilitado:", error.message);
         redisClientPromise = null;
+        redisDisabledUntil = Date.now() + Number(process.env.REDIS_RETRY_AFTER_MS || 30000);
         return null;
       });
   }
