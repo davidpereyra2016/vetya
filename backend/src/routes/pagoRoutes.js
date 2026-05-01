@@ -5,13 +5,45 @@ import Emergencia from "../models/Emergencia.js";
 import Prestador from "../models/Prestador.js";
 import cloudinary from "../lib/cloudinary.js";
 import protectRoute from "../middleware/auth.middleware.js";
-import { preferenceClient, paymentClient } from "../lib/mercadopago.js";
+import {
+  createMarketplacePreference,
+  exchangeMercadoPagoCode,
+  getMercadoPagoAuthorizationUrl,
+  paymentClient,
+} from "../lib/mercadopago.js";
 import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
 
 const router = express.Router();
 
 const ESTADOS_PAGO_POSITIVOS = new Set(["Pendiente", "Procesando", "Pagado", "Capturado", "Completado"]);
 const ESTADOS_PAGO_NEGATIVOS = new Set(["Fallido", "Reembolsado", "Cancelado", "Expirado"]);
+const MARKETPLACE_PERCENTAGE = 0.3;
+
+function buildMercadoPagoBackUrls() {
+  return {
+    success: "vetya://pago-exitoso",
+    failure: "vetya://pago-fallido",
+    pending: "vetya://pago-pendiente",
+  };
+}
+
+function buildMercadoPagoNotificationUrl() {
+  const backendUrl = process.env.BACKEND_URL || "http://192.168.100.32:3000";
+  return `${backendUrl.replace(/\/$/, "")}/api/pagos/mercadopago/webhook`;
+}
+
+function buildMercadoPagoExternalReference(referencia, usuarioId) {
+  return `${referencia.tipo}_${referencia.id}_${usuarioId}`;
+}
+
+function parseMercadoPagoExternalReference(externalReference = "") {
+  const [tipo, id, usuarioId] = externalReference.split("_");
+  return { tipo, id, usuarioId };
+}
+
+function getPrestadorMercadoPagoAccessToken(prestador) {
+  return prestador?.mercadoPago?.accessToken;
+}
 
 function normalizarMetodoPagoDesdeCita(metodoPago) {
   switch (metodoPago) {
@@ -266,8 +298,12 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
 });
 
 // Obtener un pago por ID
-router.get("/:id", protectRoute, async (req, res) => {
+router.get("/:id", protectRoute, async (req, res, next) => {
   try {
+    if (!/^[0-9a-fA-F]{24}$/.test(req.params.id)) {
+      return next();
+    }
+
     const pago = await Pago.findById(req.params.id)
       .populate("veterinario", "nombre especialidad imagen ubicacion email telefono")
       .lean();
@@ -514,6 +550,116 @@ router.get("/referencia/:tipo/:id", protectRoute, async (req, res) => {
  * Crear preferencia de pago en Mercado Pago
  * Se ejecuta cuando el PRESTADOR ACEPTA una emergencia/cita
  */
+router.get("/mercadopago/connect-status", protectRoute, async (req, res) => {
+  try {
+    const prestador = await Prestador.findOne({ usuario: req.user._id })
+      .select("_id nombre mercadoPago.conectado mercadoPago.userId mercadoPago.connectedAt mercadoPago.expiresAt")
+      .lean();
+
+    if (!prestador) {
+      return res.status(404).json({ message: "Prestador no encontrado" });
+    }
+
+    res.status(200).json({
+      prestadorId: prestador._id,
+      conectado: Boolean(prestador.mercadoPago?.conectado),
+      mercadoPago: {
+        userId: prestador.mercadoPago?.userId,
+        connectedAt: prestador.mercadoPago?.connectedAt,
+        expiresAt: prestador.mercadoPago?.expiresAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error al consultar conexion de Mercado Pago:", error);
+    res.status(500).json({
+      message: "Error al consultar la conexion de Mercado Pago",
+      error: error.message,
+    });
+  }
+});
+
+router.get("/mercadopago/connect-url", protectRoute, async (req, res) => {
+  try {
+    const prestador = await Prestador.findOne({ usuario: req.user._id }).select("_id nombre");
+
+    if (!prestador) {
+      return res.status(404).json({ message: "Prestador no encontrado" });
+    }
+
+    const authorizationUrl = getMercadoPagoAuthorizationUrl({ prestadorId: prestador._id });
+
+    res.status(200).json({
+      authorizationUrl,
+      prestadorId: prestador._id,
+    });
+  } catch (error) {
+    console.error("Error al crear URL de conexion de Mercado Pago:", error);
+    res.status(500).json({
+      message: "Error al crear la URL de conexion de Mercado Pago",
+      error: error.message,
+    });
+  }
+});
+
+router.get("/mercadopago/connect", async (req, res) => {
+  try {
+    const { code, state } = req.query;
+
+    if (!code) {
+      return res.status(400).json({ message: "Falta el codigo de autorizacion de Mercado Pago" });
+    }
+
+    if (!state) {
+      return res.status(400).json({ message: "Falta el prestador asociado a la conexion" });
+    }
+
+    const credentials = await exchangeMercadoPagoCode(code);
+    const expiresAt = credentials.expires_in
+      ? new Date(Date.now() + Number(credentials.expires_in) * 1000)
+      : undefined;
+
+    const prestador = await Prestador.findByIdAndUpdate(
+      state,
+      {
+        $set: {
+          "mercadoPago.conectado": true,
+          "mercadoPago.accessToken": credentials.access_token,
+          "mercadoPago.refreshToken": credentials.refresh_token,
+          "mercadoPago.publicKey": credentials.public_key,
+          "mercadoPago.userId": credentials.user_id?.toString(),
+          "mercadoPago.tokenType": credentials.token_type,
+          "mercadoPago.scope": credentials.scope,
+          "mercadoPago.liveMode": credentials.live_mode,
+          "mercadoPago.expiresIn": credentials.expires_in,
+          "mercadoPago.expiresAt": expiresAt,
+          "mercadoPago.connectedAt": new Date(),
+        },
+      },
+      { new: true }
+    ).select("_id nombre mercadoPago.conectado");
+
+    if (!prestador) {
+      return res.status(404).json({ message: "Prestador no encontrado para guardar Mercado Pago" });
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || process.env.APP_URL;
+    if (frontendUrl) {
+      return res.redirect(`${frontendUrl.replace(/\/$/, "")}/mercadopago/conectado`);
+    }
+
+    res.status(200).json({
+      message: "Mercado Pago conectado correctamente",
+      prestadorId: prestador._id,
+    });
+  } catch (error) {
+    console.error("Error al conectar Mercado Pago:", error);
+    res.status(500).json({
+      message: "Error al conectar Mercado Pago",
+      error: error.message,
+    });
+  }
+});
+
 router.post("/mercadopago/create-preference", protectRoute, async (req, res) => {
   try {
     const { emergenciaId, citaId, monto, descripcion } = req.body;
@@ -600,9 +746,16 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
     }
 
     // Obtener información del prestador
-    const prestador = await Prestador.findById(prestadorId);
+    const prestador = await Prestador.findById(prestadorId).select("+mercadoPago.accessToken +mercadoPago.refreshToken");
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
+    }
+
+    if (!prestador.mercadoPago?.conectado || !getPrestadorMercadoPagoAccessToken(prestador)) {
+      return res.status(409).json({
+        message: "El prestador debe conectar su cuenta de Mercado Pago antes de recibir pagos con Mercado Pago",
+        code: "MERCADOPAGO_SELLER_NOT_CONNECTED",
+      });
     }
 
     console.log('=== CREAR PREFERENCIA MERCADO PAGO ===');
@@ -612,13 +765,8 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
     console.log('Referencia:', referencia);
 
     // URLs para Mercado Pago: usar deep links del app para volver al flujo móvil
-    const backUrls = {
-      success: 'vetya://pago-exitoso',
-      failure: 'vetya://pago-fallido',
-      pending: 'vetya://pago-pendiente'
-    };
-    
-    const notificationUrl = `${process.env.BACKEND_URL || 'http://192.168.100.32:3000'}/api/pagos/mercadopago/webhook`;
+    const backUrls = buildMercadoPagoBackUrls();
+    const notificationUrl = buildMercadoPagoNotificationUrl();
     
     console.log('🔗 URLs configuradas para MP:', { backUrls, notificationUrl });
 
@@ -643,22 +791,29 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
       },
       back_urls: backUrls,
       auto_return: 'approved',
-      external_reference: `${referencia.tipo}_${referencia.id}_${req.user._id}`,
+      external_reference: buildMercadoPagoExternalReference(referencia, req.user._id),
       notification_url: notificationUrl,
       statement_descriptor: 'Vetya',
       metadata: {
         usuario_id: req.user._id.toString(),
         prestador_id: prestadorId.toString(),
         referencia_tipo: referencia.tipo,
-        referencia_id: referencia.id.toString()
+        referencia_id: referencia.id.toString(),
+        marketplace_role: "vetya",
+        seller_role: "vetpresta",
+        buyer_role: "vetya_cliente"
       }
     };
 
     console.log('📦 Datos de preferencia a enviar a MP:', JSON.stringify(preferenceData, null, 2));
 
-    // Crear preferencia en Mercado Pago
-    // NOTA: El SDK de MP requiere el objeto dentro de un wrapper 'body'
-    const preference = await preferenceClient.create({ body: preferenceData });
+    // Crear preferencia en nombre del prestador conectado.
+    // Mercado Pago envia el 70% al vetpresta y retiene el 30% como marketplace_fee para Vetya.
+    const { preference, split } = await createMarketplacePreference({
+      sellerAccessToken: getPrestadorMercadoPagoAccessToken(prestador),
+      preferenceData,
+      marketplacePercentage: MARKETPLACE_PERCENTAGE,
+    });
 
     console.log('✅ Preferencia creada:', preference.id);
     console.log('Init Point:', preference.init_point);
@@ -677,7 +832,15 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
         initPoint: preference.init_point,
         status: 'pending',
         captured: false,
-        metadata: preferenceData.metadata
+        metadata: {
+          ...preferenceData.metadata,
+          marketplace_fee: split.marketplaceFee,
+          seller_net_amount: split.netAmount,
+          marketplace_percentage: split.marketplacePercentage,
+        },
+        marketplaceFee: split.marketplaceFee,
+        sellerNetAmount: split.netAmount,
+        marketplacePercentage: split.marketplacePercentage,
       }
     });
 
@@ -689,7 +852,12 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
       message: 'Preferencia de pago creada exitosamente',
       pago: nuevoPago,
       preferenceId: preference.id,
-      initPoint: preference.init_point
+      initPoint: preference.init_point,
+      split: {
+        marketplaceFee: split.marketplaceFee,
+        prestadorRecibe: split.netAmount,
+        marketplacePercentage: split.marketplacePercentage,
+      }
     });
 
   } catch (error) {
@@ -728,11 +896,13 @@ router.post("/mercadopago/webhook", async (req, res) => {
       console.log('Estado del pago:', payment.status);
       console.log('External reference:', payment.external_reference);
 
+      const parsedReference = parseMercadoPagoExternalReference(payment.external_reference);
+
       // Buscar el pago en nuestra BD por external_reference o preferenceId
       const pago = await Pago.findOne({
         $or: [
           { 'mercadoPago.preferenceId': payment.preference_id },
-          { 'referencia.id': payment.external_reference?.split('_')[1] }
+          { 'referencia.id': parsedReference.id }
         ]
       });
 
@@ -747,6 +917,7 @@ router.post("/mercadopago/webhook", async (req, res) => {
       pago.mercadoPago.paymentId = paymentId.toString();
       pago.mercadoPago.status = payment.status;
       pago.mercadoPago.statusDetail = payment.status_detail;
+      pago.mercadoPago.marketplaceFee = payment.marketplace_fee ?? pago.mercadoPago.marketplaceFee;
 
       // Actualizar estado según el status de MP
       if (payment.status === 'approved') {

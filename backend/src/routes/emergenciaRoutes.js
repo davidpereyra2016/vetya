@@ -9,9 +9,10 @@ import Pago from "../models/Pago.js";
 import cloudinary from "../lib/cloudinary.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import { enviarNotificacionPush, esTokenValido } from "../utils/notificacionesUtils.js";
-import { preferenceClient } from "../lib/mercadopago.js";
+import { createMarketplacePreference } from "../lib/mercadopago.js";
 
 const router = express.Router();
+const MARKETPLACE_PERCENTAGE = 0.3;
 
 function obtenerCoordenadasNormalizadas(coordenadas) {
   if (!coordenadas) return null;
@@ -1715,7 +1716,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
     
     // 💰 CREAR REGISTRO DE PAGO SEGÚN MÉTODO
     let preferenciaMP = null;
-    const prestador = await Prestador.findById(emergencia.veterinario);
+    const prestador = await Prestador.findById(emergencia.veterinario).select("+mercadoPago.accessToken +mercadoPago.refreshToken");
     const monto = prestador.precioEmergencia || 5000;
     
     if (emergencia.metodoPago === 'Efectivo') {
@@ -1787,31 +1788,44 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
         
         console.log(' URLs configuradas para MP:', { backUrls, notificationUrl });
         
-        // Crear preferencia en Mercado Pago
-        const preference = await preferenceClient.create({
-          body: {
-            items: [{
-              id: emergencia._id.toString(),
-              title: descripcion,
-              description: emergencia.descripcion,
-              quantity: 1,
-              unit_price: monto,
-              currency_id: 'ARS'
-            }],
-            payer: {
-              name: usuarioData?.nombre || usuarioData?.username,
-              email: usuarioData?.email
-            },
-            back_urls: backUrls,
-            auto_return: 'approved',
-            external_reference: emergencia._id.toString(),
-            notification_url: notificationUrl,
-            metadata: {
-              tipo: 'emergencia',
-              emergenciaId: emergencia._id.toString(),
-              prestadorId: prestador._id.toString()
-            }
+        if (!prestador.mercadoPago?.conectado || !prestador.mercadoPago?.accessToken) {
+          throw new Error("El prestador debe conectar su cuenta de Mercado Pago antes de recibir pagos con Mercado Pago");
+        }
+
+        const preferenceData = {
+          items: [{
+            id: `emergencia_${emergencia._id}`,
+            title: descripcion,
+            description: emergencia.descripcion,
+            quantity: 1,
+            unit_price: monto,
+            currency_id: 'ARS'
+          }],
+          payer: {
+            name: usuarioData?.nombre || usuarioData?.username,
+            email: usuarioData?.email
+          },
+          back_urls: backUrls,
+          auto_return: 'approved',
+          external_reference: `Emergencia_${emergencia._id}_${emergencia.usuario}`,
+          notification_url: notificationUrl,
+          statement_descriptor: 'Vetya',
+          metadata: {
+            tipo: 'emergencia',
+            referencia_tipo: 'Emergencia',
+            referencia_id: emergencia._id.toString(),
+            usuario_id: emergencia.usuario.toString(),
+            prestador_id: prestador._id.toString(),
+            marketplace_role: 'vetya',
+            seller_role: 'vetpresta',
+            buyer_role: 'vetya_cliente'
           }
+        };
+
+        const { preference, split } = await createMarketplacePreference({
+          sellerAccessToken: prestador.mercadoPago.accessToken,
+          preferenceData,
+          marketplacePercentage: MARKETPLACE_PERCENTAGE,
         });
         
         preferenciaMP = preference;
@@ -1833,8 +1847,14 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
             initPoint: preference.init_point,
             metadata: {
               emergenciaId: emergencia._id.toString(),
-              prestadorId: prestador._id.toString()
-            }
+              prestadorId: prestador._id.toString(),
+              marketplace_fee: split.marketplaceFee,
+              seller_net_amount: split.netAmount,
+              marketplace_percentage: split.marketplacePercentage
+            },
+            marketplaceFee: split.marketplaceFee,
+            sellerNetAmount: split.netAmount,
+            marketplacePercentage: split.marketplacePercentage
           }
         });
         

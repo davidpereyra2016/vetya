@@ -101,6 +101,21 @@ const pagoSchema = new mongoose.Schema({
     metadata: {
       type: mongoose.Schema.Types.Mixed
       // Metadata adicional del pago de MP
+    },
+    marketplaceFee: {
+      type: Number,
+      default: 0
+      // Comision que retiene Vetya como marketplace
+    },
+    sellerNetAmount: {
+      type: Number,
+      default: 0
+      // Neto estimado para el prestador
+    },
+    marketplacePercentage: {
+      type: Number,
+      default: 0.3
+      // Porcentaje aplicado para calcular la comision
     }
   },
   comprobante: {

@@ -138,6 +138,32 @@ const prestadorSchema = new Schema({
     type: Boolean,
     default: false
   },
+  mercadoPago: {
+    conectado: {
+      type: Boolean,
+      default: false
+    },
+    accessToken: {
+      type: String,
+      select: false
+    },
+    refreshToken: {
+      type: String,
+      select: false
+    },
+    publicKey: {
+      type: String,
+      select: false
+    },
+    userId: String,
+    tokenType: String,
+    scope: String,
+    liveMode: Boolean,
+    expiresIn: Number,
+    expiresAt: Date,
+    connectedAt: Date,
+    lastRefreshAt: Date
+  },
   precioEmergencia: {
     type: Number,
     default: 0
