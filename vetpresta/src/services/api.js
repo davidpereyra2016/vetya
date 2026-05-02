@@ -1273,6 +1273,42 @@ export const validacionService = {
 // ============================================
 export const pagoService = {
   /**
+   * Consultar si el prestador tiene Mercado Pago conectado.
+   */
+  obtenerEstadoMercadoPago: async () => {
+    try {
+      const response = await axios.get('/pagos/mercadopago/connect-status');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al consultar el estado de Mercado Pago'
+      };
+    }
+  },
+
+  /**
+   * Obtener URL de autorizacion para vincular Mercado Pago.
+   */
+  obtenerUrlConexionMercadoPago: async () => {
+    try {
+      const response = await axios.get('/pagos/mercadopago/connect-url');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al iniciar la conexion con Mercado Pago'
+      };
+    }
+  },
+
+  /**
    * Consultar estado de un pago
    * Los prestadores pueden ver el estado de pagos asociados a sus servicios
    */

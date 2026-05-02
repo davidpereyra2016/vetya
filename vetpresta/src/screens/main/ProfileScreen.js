@@ -8,7 +8,8 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -17,7 +18,7 @@ import useAuthStore from '../../store/useAuthStore';
 import useValidacionStore from '../../store/useValidacionStore';
 import useValoracionStore from '../../store/useValoracionStore';
 import useCitaStore from '../../store/useCitaStore';
-import { prestadorService } from '../../services/api';
+import { pagoService, prestadorService } from '../../services/api';
 import globalStyles, { COLORS, SIZES } from '../../styles/globalStyles';
 
 const ProfileScreen = ({ navigation }) => {
@@ -37,6 +38,8 @@ const ProfileScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [availableForEmergencies, setAvailableForEmergencies] = useState(false);
+  const [mercadoPagoConnected, setMercadoPagoConnected] = useState(Boolean(provider?.mercadoPago?.conectado));
+  const [isConnectingMercadoPago, setIsConnectingMercadoPago] = useState(false);
   const [providerStats, setProviderStats] = useState({
     valoraciones: 0,
     emergenciasAtendidas: 0,
@@ -58,6 +61,10 @@ const ProfileScreen = ({ navigation }) => {
       setAvailableForEmergencies(provider.disponibleEmergencias);
     }
   }, [provider?.disponibleEmergencias]);
+
+  useEffect(() => {
+    setMercadoPagoConnected(Boolean(provider?.mercadoPago?.conectado));
+  }, [provider?.mercadoPago?.conectado]);
   
   // Actualizar estadísticas cuando cambien las citas o valoraciones
   useEffect(() => {
@@ -107,6 +114,19 @@ const ProfileScreen = ({ navigation }) => {
         fetchProviderCitas(provider._id),
         fetchEstadoValidacion()
       ]);
+
+      const mercadoPagoResult = await pagoService.obtenerEstadoMercadoPago();
+      if (mercadoPagoResult.success) {
+        const connected = Boolean(mercadoPagoResult.data?.conectado);
+        setMercadoPagoConnected(connected);
+        useAuthStore.getState().updateProvider({
+          mercadoPago: {
+            ...(provider?.mercadoPago || {}),
+            ...(mercadoPagoResult.data?.mercadoPago || {}),
+            conectado: connected
+          }
+        });
+      }
       
       // Calcular estadísticas
       const emergenciasAtendidas = provider.cantidadEmergenciasAtendidas || 0;
@@ -152,6 +172,31 @@ const ProfileScreen = ({ navigation }) => {
     setIsRefreshing(true);
     await loadProviderData();
     setIsRefreshing(false);
+  };
+
+  const handleConnectMercadoPago = async () => {
+    try {
+      setIsConnectingMercadoPago(true);
+      const result = await pagoService.obtenerUrlConexionMercadoPago();
+
+      if (!result.success || !result.data?.authorizationUrl) {
+        Alert.alert('Mercado Pago', result.error || 'No pudimos iniciar la conexion con Mercado Pago');
+        return;
+      }
+
+      const canOpen = await Linking.canOpenURL(result.data.authorizationUrl);
+      if (!canOpen) {
+        Alert.alert('Mercado Pago', 'No se pudo abrir Mercado Pago en este dispositivo');
+        return;
+      }
+
+      await Linking.openURL(result.data.authorizationUrl);
+    } catch (error) {
+      console.log('Error al conectar Mercado Pago:', error);
+      Alert.alert('Mercado Pago', 'Ocurrio un problema al abrir Mercado Pago');
+    } finally {
+      setIsConnectingMercadoPago(false);
+    }
   };
 
   // Función para actualizar disponibilidad para emergencias
@@ -409,6 +454,77 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={globalStyles.primaryButtonText}>Editar Perfil</Text>
           </TouchableOpacity>
         </View>
+
+        {!mercadoPagoConnected && (
+          <View style={{
+            marginHorizontal: 20,
+            marginTop: 15,
+            backgroundColor: '#FFF8E1',
+            borderWidth: 1,
+            borderColor: COLORS.warning + '55',
+            borderRadius: 10,
+            padding: 15
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                backgroundColor: COLORS.warning + '20',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 12
+              }}>
+                <Ionicons name="wallet-outline" size={22} color={COLORS.warning} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '700',
+                  color: COLORS.dark,
+                  marginBottom: 4
+                }}>
+                  Activa Mercado Pago
+                </Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: COLORS.grey,
+                  lineHeight: 19
+                }}>
+                  Tus clientes no podran pagarte con Mercado Pago hasta que vincules tu cuenta.
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={{
+                marginTop: 14,
+                backgroundColor: COLORS.primary,
+                borderRadius: 8,
+                height: 46,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                opacity: isConnectingMercadoPago ? 0.7 : 1
+              }}
+              onPress={handleConnectMercadoPago}
+              disabled={isConnectingMercadoPago}
+            >
+              {isConnectingMercadoPago ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Ionicons name="open-outline" size={18} color="#FFF" />
+              )}
+              <Text style={{
+                color: '#FFF',
+                fontWeight: '700',
+                marginLeft: 8
+              }}>
+                {isConnectingMercadoPago ? 'Abriendo Mercado Pago...' : 'Vincular Mercado Pago'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
         {/* Estadísticas */}
         <View style={globalStyles.sectionContainer}>
@@ -511,7 +627,7 @@ const ProfileScreen = ({ navigation }) => {
           <ProfileOption 
             icon="cash" 
             title="Mis Ganancias" 
-            subtitle="Revisa tus ingresos y transacciones"
+            subtitle={mercadoPagoConnected ? "Revisa tus ingresos y transacciones" : "Vincula Mercado Pago para cobrar online"}
             onPress={() => navigation.navigate('Earnings')}
           />
           {/* Editar perfil */}

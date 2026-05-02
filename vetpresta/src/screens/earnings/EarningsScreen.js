@@ -17,6 +17,42 @@ import { COLORS, SIZES, SHADOWS } from "../../styles/globalStyles";
 import useAuthStore from "../../store/useAuthStore";
 import usePagoStore from "../../store/usePagoStore";
 
+const DEFAULT_VETYA_COMMISSION_PERCENTAGE = 0.3;
+
+const toNumber = (value, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const getCommissionPercentage = (pago) => {
+  return toNumber(
+    pago?.mercadoPago?.marketplacePercentage,
+    pago?.metodoPago === "MercadoPago" ? DEFAULT_VETYA_COMMISSION_PERCENTAGE : 0
+  );
+};
+
+const getCommissionAmount = (pago) => {
+  const amount = toNumber(pago?.monto);
+  const backendFee = pago?.mercadoPago?.marketplaceFee;
+
+  if (backendFee !== undefined && backendFee !== null) {
+    return toNumber(backendFee);
+  }
+
+  return amount * getCommissionPercentage(pago);
+};
+
+const getNetAmount = (pago) => {
+  const amount = toNumber(pago?.monto);
+  const backendNetAmount = pago?.mercadoPago?.sellerNetAmount;
+
+  if (backendNetAmount !== undefined && backendNetAmount !== null) {
+    return toNumber(backendNetAmount, amount);
+  }
+
+  return Math.max(amount - getCommissionAmount(pago), 0);
+};
+
 const EarningsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -93,27 +129,44 @@ const EarningsScreen = ({ navigation }) => {
             .toString()
             .padStart(2, "0")}/${fecha.getFullYear()}`;
 
+          const comision = getCommissionAmount(pago);
+          const porcentajeComision = getCommissionPercentage(pago);
+          const montoNeto = getNetAmount(pago);
+
           return {
             id: pago._id,
             cliente: clienteNombre,
             mascota: mascota,
             servicio: servicio,
-            monto: pago.monto,
+            monto: toNumber(pago.monto),
             fecha: fechaFormateada,
             estado: estadoUI,
             referencia: `#${pago._id.slice(-8).toUpperCase()}`,
             metodoPago: pago.metodoPago || "No especificado",
-            // En una implementación real, calcularíamos la comisión
-            comision: 0,
-            montoNeto: pago.monto,
+            comision,
+            porcentajeComision,
+            montoNeto,
           };
         });
 
         // Establecer estadísticas
+        const netStats = earningsData.reduce(
+          (acc, transaction) => {
+            if (transaction.estado === "completado") {
+              acc.completado += transaction.montoNeto;
+            } else {
+              acc.pendiente += transaction.montoNeto;
+            }
+            acc.total += transaction.montoNeto;
+            return acc;
+          },
+          { total: 0, pendiente: 0, completado: 0 }
+        );
+
         setTotalEarnings({
-          total: estadisticas.completado,
-          pendiente: estadisticas.pendiente,
-          completado: estadisticas.completado,
+          total: netStats.completado,
+          pendiente: netStats.pendiente,
+          completado: netStats.completado,
         });
 
         setTransactions(earningsData);
@@ -161,7 +214,14 @@ const EarningsScreen = ({ navigation }) => {
 
   // Función para formatear montos en pesos argentinos
   const formatCurrency = (amount) => {
-    return `$${amount.toLocaleString("es-AR")}`;
+    return `$${toNumber(amount).toLocaleString("es-AR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const formatPercentage = (percentage) => {
+    return `${Math.round(toNumber(percentage) * 100)}%`;
   };
 
   // Función para parsear fecha en formato dd/mm/yyyy
@@ -248,8 +308,9 @@ Fecha: ${transaction.fecha}
 Método de pago: ${transaction.metodoPago}
 
 Monto bruto: ${formatCurrency(transaction.monto)}
-Comisión VetYa (10%): ${formatCurrency(transaction.comision)}
-Monto neto: ${formatCurrency(transaction.montoNeto)}
+Comisión VetYa (${formatPercentage(transaction.porcentajeComision)}): ${formatCurrency(transaction.comision)}
+Retención VetYa en pesos: ${formatCurrency(transaction.comision)}
+Monto neto para el prestador: ${formatCurrency(transaction.montoNeto)}
 
 Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
       `,
