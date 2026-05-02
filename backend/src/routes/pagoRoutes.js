@@ -11,6 +11,7 @@ import {
   getMercadoPagoAuthorizationUrl,
   getMercadoPagoRedirectUri,
   paymentClient,
+  resolveMercadoPagoOAuthState,
 } from "../lib/mercadopago.js";
 import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
 
@@ -646,6 +647,10 @@ router.get("/mercadopago/connect-url", protectRoute, async (req, res) => {
   }
 });
 
+router.get("/mercadopago/success", (_req, res) => {
+  res.status(200).send(renderMercadoPagoConnectedPage());
+});
+
 router.get("/mercadopago/connect", async (req, res) => {
   try {
     const { code, state } = req.query;
@@ -658,13 +663,14 @@ router.get("/mercadopago/connect", async (req, res) => {
       return res.status(400).json({ message: "Falta el prestador asociado a la conexion" });
     }
 
-    const credentials = await exchangeMercadoPagoCode(code);
+    const { prestadorId, codeVerifier } = resolveMercadoPagoOAuthState(state);
+    const credentials = await exchangeMercadoPagoCode(code, codeVerifier);
     const expiresAt = credentials.expires_in
       ? new Date(Date.now() + Number(credentials.expires_in) * 1000)
       : undefined;
 
     const prestador = await Prestador.findByIdAndUpdate(
-      state,
+      prestadorId,
       {
         $set: {
           "mercadoPago.conectado": true,
