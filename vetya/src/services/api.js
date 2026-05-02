@@ -4,6 +4,22 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 
+const getApiErrorMessage = (error, fallback) => {
+  if (error.response?.status === 429) {
+    return error.response?.data?.message || 'Demasiados intentos. Espera unos minutos e intentalo nuevamente.';
+  }
+
+  if (error.code === 'ECONNABORTED') {
+    return 'El servidor tardo demasiado en responder. Intentalo nuevamente en unos segundos.';
+  }
+
+  if (!error.response) {
+    return 'No se pudo conectar con el servidor. Verifica tu conexion e intentalo nuevamente.';
+  }
+
+  return error.response?.data?.message || fallback;
+};
+
 /**
  * Servicio para manejar todas las llamadas a la API del backend
  * Cada función devuelve un objeto con { success, data, error }
@@ -40,9 +56,11 @@ export const authService = {
   // Registrar usuario
   register: async (username, email, password, confirmPassword) => {
     try {
+      const normalizedUsername = username?.trim().replace(/\s+/g, ' ');
+      const normalizedEmail = email?.trim().toLowerCase();
       const response = await axios.post('/auth/register/client', {
-        username,
-        email,
+        username: normalizedUsername,
+        email: normalizedEmail,
         password,
         confirmPassword
       });
@@ -53,9 +71,11 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al registrar usuario',
+        error: getApiErrorMessage(error, 'Error al registrar usuario'),
         requiresVerification: error.response?.data?.requiresVerification || false,
-        email: error.response?.data?.email
+        email: error.response?.data?.email,
+        code: error.response?.data?.code,
+        canRecoverPassword: error.response?.data?.canRecoverPassword || false
       };
     }
   },

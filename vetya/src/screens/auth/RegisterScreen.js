@@ -31,8 +31,10 @@ const RegisterScreen = ({ navigation }) => {
 
   const handleRegister = async () => {
     clearError(); // Limpiar errores anteriores
+    const normalizedName = name.trim().replace(/\s+/g, ' ');
+    const normalizedEmail = email.trim().toLowerCase();
     
-    if (!name || !email || !password || !confirmPassword) {
+    if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
       Alert.alert('Error', 'Por favor complete todos los campos');
       return;
     }
@@ -42,15 +44,27 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
     
-    const result = await register(name, email, password, confirmPassword);
+    const result = await register(normalizedName, normalizedEmail, password, confirmPassword);
     
     if (result.success && result.requiresVerification) {
       navigation.navigate('EmailVerification', {
-        email: result.email || email.trim().toLowerCase(),
+        email: result.email || normalizedEmail,
         emailDeliveryFailed: result.emailSent === false,
         initialMessage: result.message || '',
       });
     } else if (!result.success) {
+      if (result.canRecoverPassword) {
+        Alert.alert(
+          'Correo ya registrado',
+          result.error || 'Este correo ya esta registrado. Podes iniciar sesión o recuperar tu contraseña.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Recuperar', onPress: () => navigation.navigate('ForgotPassword', { email: result.email || normalizedEmail }) },
+            { text: 'Iniciar sesion', onPress: () => navigation.navigate('Login') }
+          ]
+        );
+        return;
+      }
       Alert.alert('Error de registro', result.error || 'No se pudo completar el registro');
     }
   };

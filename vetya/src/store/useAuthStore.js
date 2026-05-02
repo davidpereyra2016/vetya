@@ -66,7 +66,14 @@ const useAuthStore = create(
           return { success: true };
         } else {
           set({ isLoading: false, error: result.error });
-          return { success: false, error: result.error };
+          return {
+            success: false,
+            error: result.error,
+            requiresVerification: result.requiresVerification,
+            email: result.email,
+            code: result.code,
+            canRecoverPassword: result.canRecoverPassword
+          };
         }
       },
 

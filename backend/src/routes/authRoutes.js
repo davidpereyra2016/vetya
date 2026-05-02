@@ -22,6 +22,48 @@ const findUserByEmail = (email) => {
     return User.findOne({ email: normalizedEmail })
         .collation({ locale: "en", strength: 2 });
 };
+const escapeRegExp = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const createUniqueClientUsername = async (username) => {
+    const normalizedUsername = normalizeUsername(username);
+    const existingUser = await User.findOne({ username: normalizedUsername }).select("_id").lean();
+
+    if (!existingUser) return normalizedUsername;
+
+    const similarUsernames = await User.find({
+        username: new RegExp(`^${escapeRegExp(normalizedUsername)}( [0-9]{4})?$`, "i")
+    }).select("username").lean();
+    const usedUsernames = new Set(similarUsernames.map(user => user.username.toLowerCase()));
+
+    for (let index = 1; index <= 9999; index += 1) {
+        const candidate = `${normalizedUsername} ${String(index).padStart(4, "0")}`;
+        if (!usedUsernames.has(candidate.toLowerCase())) return candidate;
+    }
+
+    return `${normalizedUsername} ${Date.now()}`;
+};
+
+const createPendingVerificationResponse = async (res, user, displayName) => {
+    const verificationCode = generateVerificationCode();
+    user.emailVerificationCode = verificationCode;
+    user.emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000);
+    user.emailVerified = false;
+    await user.save();
+
+    const emailResult = await sendVerificationEmail(user.email, verificationCode, displayName || user.username);
+    if (!emailResult.success) {
+        console.error('Error al enviar email de verificacion:', emailResult.error);
+    }
+
+    return res.status(200).json({
+        message: emailResult.success
+            ? "Ya tenias un registro pendiente. Te enviamos un nuevo codigo de verificacion a tu correo."
+            : "Ya tenias un registro pendiente, pero no pudimos enviar el codigo. Intenta reenviarlo desde la siguiente pantalla.",
+        requiresVerification: true,
+        email: user.email,
+        emailSent: emailResult.success
+    });
+};
 
 /**
  * Ruta para registrar clientes
@@ -47,23 +89,36 @@ router.post("/register/client", authLimiter, async (req, res) => {
             return res.status(400).json({message: "El nombre de usuario debe tener al menos 3 caracteres"});
         }
         
-        // Verificar email y username únicos
+        // Verificar email; el nombre visible puede repetirse entre clientes.
         const existingEmail = await findUserByEmail(email);
         if(existingEmail){
-            return res.status(400).json({message: "El correo ya está registrado"});
+            if (existingEmail.role === "client" && !existingEmail.emailVerified) {
+                return createPendingVerificationResponse(res, existingEmail, username);
+            }
+
+            if (existingEmail.role !== "client") {
+                return res.status(409).json({
+                    message: "Este correo ya esta registrado en otra aplicacion de VetYa.",
+                    code: "EMAIL_REGISTERED_WITH_DIFFERENT_ROLE"
+                });
+            }
+
+            return res.status(409).json({
+                message: "Este correo ya esta registrado. Inicia sesion o usa 'Olvide mi contrasena'.",
+                code: "EMAIL_ALREADY_REGISTERED",
+                canRecoverPassword: true,
+                email: existingEmail.email
+            });
         }
-        const existingUsername = await User.findOne({ username }).select("_id").lean();
-        if(existingUsername){
-            return res.status(400).json({message: "El nombre de usuario ya está registrado"});
-        }
+        const uniqueUsername = await createUniqueClientUsername(username);
         
         // Crear foto de perfil aleatoria
-        const profilePicture = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
+        const profilePicture = `https://api.dicebear.com/7.x/avataaars/svg?seed=${uniqueUsername}`;
         
         // Crear usuario con role=client
         const newUser = new User({
             email, 
-            username, 
+            username: uniqueUsername,
             password, 
             profilePicture,
             role: 'client' // Asignar rol de cliente

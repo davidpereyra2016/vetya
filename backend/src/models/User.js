@@ -45,8 +45,7 @@ const userSchema = new mongoose.Schema({
     ubicacionActualGeo: {
         type: {
             type: String,
-            enum: ["Point"],
-            default: "Point"
+            enum: ["Point"]
         },
         coordinates: {
             type: [Number],
@@ -93,6 +92,8 @@ userSchema.pre("save", function(next) {
     const lng = this.ubicacionActual?.coordinates?.lng;
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
         this.ubicacionActualGeo = { type: "Point", coordinates: [lng, lat] };
+    } else {
+        this.ubicacionActualGeo = undefined;
     }
     next();
 });
