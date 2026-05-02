@@ -229,6 +229,13 @@ export const authLimiter = redisRateLimit({
   scope: "auth-sensitive",
 });
 
+export const authRecoveryLimiter = redisRateLimit({
+  windowSeconds: 15 * 60,
+  max: Number(process.env.RATE_LIMIT_AUTH_RECOVERY_MAX || 30),
+  scope: "auth-recovery",
+  message: "Demasiadas solicitudes de recuperacion. Intenta nuevamente mas tarde.",
+});
+
 export const userWriteLimiter = redisRateLimit({
   windowSeconds: 60,
   max: Number(process.env.RATE_LIMIT_USER_WRITE_MAX || 60),

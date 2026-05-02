@@ -8,6 +8,22 @@ import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
  * Cada función devuelve un objeto con { success, data, error }
  */
 
+const getApiErrorMessage = (error, fallback) => {
+  if (error.response?.status === 429) {
+    return error.response?.data?.message || 'Demasiados intentos. Espera unos minutos e inténtalo nuevamente.';
+  }
+
+  if (error.code === 'ECONNABORTED') {
+    return 'El servidor tardó demasiado en responder. Inténtalo nuevamente en unos segundos.';
+  }
+
+  if (!error.response) {
+    return 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo nuevamente.';
+  }
+
+  return error.response?.data?.message || fallback;
+};
+
 // Servicios de autenticación
 export const authService = {
   // Iniciar sesión
@@ -21,7 +37,7 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al iniciar sesión',
+        error: getApiErrorMessage(error, 'Error al iniciar sesión'),
         requiresVerification: error.response?.data?.requiresVerification || false,
         email: error.response?.data?.email
       };
@@ -44,7 +60,7 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al registrar usuario'
+        error: getApiErrorMessage(error, 'Error al registrar usuario')
       };
     }
   },
@@ -53,6 +69,13 @@ export const authService = {
   forgotPassword: async (email) => {
     try {
       const response = await axios.post('/auth/forgot-password', { email });
+      if (response.data?.emailSent === false) {
+        return {
+          success: false,
+          error: response.data.message || 'No se pudo enviar el correo de recuperación',
+          data: response.data
+        };
+      }
       return {
         success: true,
         data: response.data
@@ -60,7 +83,7 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al solicitar recuperación de contraseña'
+        error: getApiErrorMessage(error, 'Error al solicitar recuperación de contraseña')
       };
     }
   },
@@ -80,7 +103,7 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al restablecer contraseña'
+        error: getApiErrorMessage(error, 'Error al restablecer contraseña')
       };
     }
   },
@@ -104,7 +127,7 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al registrar prestador de servicios'
+        error: getApiErrorMessage(error, 'Error al registrar prestador de servicios')
       };
     }
   },
@@ -120,7 +143,7 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al verificar el código'
+        error: getApiErrorMessage(error, 'Error al verificar el código')
       };
     }
   },
@@ -129,6 +152,13 @@ export const authService = {
   resendVerification: async (email) => {
     try {
       const response = await axios.post('/auth/resend-verification', { email });
+      if (response.data?.emailSent === false) {
+        return {
+          success: false,
+          error: response.data.message || 'No se pudo reenviar el código',
+          data: response.data
+        };
+      }
       return {
         success: true,
         data: response.data
@@ -136,7 +166,7 @@ export const authService = {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Error al reenviar el código'
+        error: getApiErrorMessage(error, 'Error al reenviar el código')
       };
     }
   }

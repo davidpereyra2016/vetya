@@ -4,9 +4,8 @@ import Prestador from "../models/Prestador.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { generateVerificationCode, sendVerificationEmail, sendPasswordResetEmail } from "../utils/emailService.js";
-import { authLimiter, normalizeEmail } from "../utils/routePerformance.js";
+import { authLimiter, authRecoveryLimiter, normalizeEmail } from "../utils/routePerformance.js";
 const router = express.Router();
-router.use(authLimiter);
 
 /**
  * Genera un token JWT para un usuario
@@ -28,7 +27,7 @@ const findUserByEmail = (email) => {
  * Ruta para registrar clientes
  * Solo crea usuarios con role="client"
  */
-router.post("/register/client", async (req, res) => {
+router.post("/register/client", authLimiter, async (req, res) => {
     try {
         const {password, confirmPassword} = req.body;
         const email = normalizeEmail(req.body.email);
@@ -102,7 +101,7 @@ router.post("/register/client", async (req, res) => {
  * Ruta para registrar prestadores de servicios
  * Crea usuario con role="provider" y su documento asociado en la colección Prestador
  */
-router.post("/register/provider", async (req, res) => {
+router.post("/register/provider", authLimiter, async (req, res) => {
     try {
         const {
             password, 
@@ -196,7 +195,7 @@ router.post("/register/provider", async (req, res) => {
 /**
  * Mantener la ruta original para compatibilidad, pero registrando como cliente
  */
-router.post("/register", async (req, res) => {
+router.post("/register", authLimiter, async (req, res) => {
     try {
         const {password, confirmPassword} = req.body;
         const email = normalizeEmail(req.body.email);
@@ -270,7 +269,7 @@ router.post("/register", async (req, res) => {
  * Ruta de login compartida que verifica el tipo de aplicación
  * y asegura que solo los usuarios del rol correcto puedan iniciar sesión
  */
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
     try {
         const {password, appType} = req.body;
         const email = normalizeEmail(req.body.email);
@@ -363,7 +362,7 @@ router.post("/login", async (req, res) => {
  * Ruta para solicitar recuperación de contraseña
  * Genera un token de recuperación y envía email
  */
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", authRecoveryLimiter, async (req, res) => {
     try {
         const email = normalizeEmail(req.body.email);
         
@@ -391,8 +390,11 @@ router.post("/forgot-password", async (req, res) => {
             console.error('Error al enviar email de recuperación:', emailResult.error);
         }
         
-        res.status(200).json({ 
-            message: "Se ha enviado un código de recuperación a tu correo electrónico"
+        res.status(200).json({
+            message: emailResult.success
+                ? "Se ha enviado un código de recuperación a tu correo electrónico"
+                : "No pudimos enviar el código de recuperación en este momento. Inténtalo nuevamente en unos minutos.",
+            emailSent: emailResult.success
         });
         
     } catch (error) {
@@ -404,7 +406,7 @@ router.post("/forgot-password", async (req, res) => {
 /**
  * Ruta para restablecer contraseña con token
  */
-router.post("/reset-password", async (req, res) => {
+router.post("/reset-password", authRecoveryLimiter, async (req, res) => {
     try {
         const { code, newPassword } = req.body;
         const email = normalizeEmail(req.body.email);
@@ -453,7 +455,7 @@ router.post("/reset-password", async (req, res) => {
 /**
  * Ruta para verificar el código de email
  */
-router.post("/verify-email", async (req, res) => {
+router.post("/verify-email", authRecoveryLimiter, async (req, res) => {
     try {
         const { code } = req.body;
         const email = normalizeEmail(req.body.email);
@@ -537,7 +539,7 @@ router.post("/verify-email", async (req, res) => {
 /**
  * Ruta para reenviar código de verificación
  */
-router.post("/resend-verification", async (req, res) => {
+router.post("/resend-verification", authRecoveryLimiter, async (req, res) => {
     try {
         const email = normalizeEmail(req.body.email);
         
