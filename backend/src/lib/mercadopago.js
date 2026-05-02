@@ -43,10 +43,23 @@ export function getMercadoPagoClientSecret() {
 }
 
 export function getMercadoPagoRedirectUri() {
+  const configuredRedirectUri = process.env.MP_REDIRECT_URI?.trim();
   const backendUrl = process.env.BACKEND_URL || process.env.APP_URL;
 
-  if (!backendUrl) {
-    throw new Error('Falta configurar BACKEND_URL o APP_URL para OAuth de Mercado Pago');
+  if (!configuredRedirectUri && !backendUrl) {
+    throw new Error('Falta configurar MP_REDIRECT_URI, BACKEND_URL o APP_URL para OAuth de Mercado Pago');
+  }
+
+  if (configuredRedirectUri) {
+    if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(configuredRedirectUri)) {
+      throw new Error('Mercado Pago OAuth requiere una URL publica. MP_REDIRECT_URI no puede apuntar a localhost.');
+    }
+
+    return configuredRedirectUri;
+  }
+
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(backendUrl)) {
+    throw new Error('Mercado Pago OAuth requiere una URL publica. Configura MP_REDIRECT_URI con la URL registrada en Mercado Pago.');
   }
 
   return `${backendUrl.replace(/\/$/, '')}/api/pagos/mercadopago/connect`;

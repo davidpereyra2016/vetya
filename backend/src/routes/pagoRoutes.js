@@ -9,6 +9,7 @@ import {
   createMarketplacePreference,
   exchangeMercadoPagoCode,
   getMercadoPagoAuthorizationUrl,
+  getMercadoPagoRedirectUri,
   paymentClient,
 } from "../lib/mercadopago.js";
 import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
@@ -17,6 +18,48 @@ const router = express.Router();
 
 const ESTADOS_PAGO_POSITIVOS = new Set(["Pendiente", "Procesando", "Pagado", "Capturado", "Completado"]);
 const ESTADOS_PAGO_NEGATIVOS = new Set(["Fallido", "Reembolsado", "Cancelado", "Expirado"]);
+
+function renderMercadoPagoConnectedPage() {
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mercado Pago conectado</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: Arial, sans-serif;
+        background: #f7faf8;
+        color: #1f2933;
+      }
+      main {
+        width: min(88vw, 420px);
+        text-align: center;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 0 0 12px;
+      }
+      p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.45;
+        color: #52606d;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Mercado Pago conectado</h1>
+      <p>Ya podés volver a VetPresta. Tus clientes podrán pagarte online cuando aceptes una cita o emergencia.</p>
+    </main>
+  </body>
+</html>`;
+}
 const MARKETPLACE_PERCENTAGE = 0.3;
 
 function buildMercadoPagoBackUrls() {
@@ -586,10 +629,12 @@ router.get("/mercadopago/connect-url", protectRoute, async (req, res) => {
       return res.status(404).json({ message: "Prestador no encontrado" });
     }
 
+    const redirectUri = getMercadoPagoRedirectUri();
     const authorizationUrl = getMercadoPagoAuthorizationUrl({ prestadorId: prestador._id });
 
     res.status(200).json({
       authorizationUrl,
+      redirectUri,
       prestadorId: prestador._id,
     });
   } catch (error) {
@@ -642,15 +687,15 @@ router.get("/mercadopago/connect", async (req, res) => {
       return res.status(404).json({ message: "Prestador no encontrado para guardar Mercado Pago" });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || process.env.APP_URL;
-    if (frontendUrl) {
-      return res.redirect(`${frontendUrl.replace(/\/$/, "")}/mercadopago/conectado`);
+    if (process.env.MP_SUCCESS_REDIRECT_URI && /^https?:\/\//i.test(process.env.MP_SUCCESS_REDIRECT_URI)) {
+      return res.redirect(process.env.MP_SUCCESS_REDIRECT_URI);
     }
 
-    res.status(200).json({
-      message: "Mercado Pago conectado correctamente",
-      prestadorId: prestador._id,
-    });
+    if (process.env.FRONTEND_URL && /^https?:\/\//i.test(process.env.FRONTEND_URL)) {
+      return res.redirect(`${process.env.FRONTEND_URL.replace(/\/$/, "")}/mercadopago/conectado`);
+    }
+
+    res.status(200).send(renderMercadoPagoConnectedPage());
   } catch (error) {
     console.error("Error al conectar Mercado Pago:", error);
     res.status(500).json({
