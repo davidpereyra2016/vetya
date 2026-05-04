@@ -11,9 +11,8 @@ App móvil para que los **clientes/usuarios** puedan:
 - **Agendar citas** con veterinarios y centros veterinarios
 - **Gestionar mascotas** (perfiles, historial médico)
 - **Buscar prestadores** por ubicación, especialidad, valoraciones
-- **Ver consejos de salud** para mascotas
+- **Ver consejos de salud** para tus mascotas
 - **Valorar servicios** recibidos
-- **Realizar consultas generales** (chat o llamada)
 - **Ver historial** de emergencias y citas
 - **Recibir notificaciones** de estado de servicios
 

@@ -2,7 +2,7 @@
 
 ## 📋 Descripción General del Sistema
 
-**Vetya** es una plataforma completa tipo "Uber" para servicios veterinarios que conecta clientes/dueños de mascotas con prestadores de servicios veterinarios (veterinarios individuales y centros veterinarios) para emergencias en tiempo real y citas programadas.
+**Vetya** es una plataforma completa para servicios veterinarios que conecta clientes/dueños de mascotas con prestadores de servicios veterinarios (veterinarios individuales y centros veterinarios) para emergencias en tiempo real y citas programadas.
 
 ---
 
