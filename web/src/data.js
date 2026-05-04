@@ -26,12 +26,12 @@ export const vetyaFeatures = [
   {
     icon: AlertTriangle,
     title: 'Emergencias 24/7',
-    text: 'Solicitud inmediata con ubicacion GPS, prioridad por gravedad y seguimiento del caso.',
+    text: 'Solicitud inmediata con ubicación GPS, prioridad por gravedad y seguimiento del caso.',
   },
   {
     icon: CalendarCheck,
     title: 'Citas programadas',
-    text: 'Busqueda por especialidad, disponibilidad, cercania y valoraciones de otros usuarios.',
+    text: 'Búsqueda por especialidad, disponibilidad, cercanía y valoraciones de otros usuarios.',
   },
   {
     icon: PawPrint,

@@ -204,7 +204,7 @@ function AboutSection() {
       <SectionTitle
         align="center"
         title="Un ecosistema para cuidar mejor"
-        text="VetYa nace como puente entre familias, mascotas y profesionales. El sistema une dos aplicaciones móviles con un backend común para que cada solicitud tenga trazabilidad."
+        text="VetYa nace como puente entre familias, mascotas y profesionales. El sistema une dos aplicaciones móviles para que cada solicitud tenga trazabilidad segura y confiable."
       />
       <div className="stats-grid">
         {sharedStats.map((stat) => {
