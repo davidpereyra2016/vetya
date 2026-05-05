@@ -98,14 +98,26 @@ function SectionTitle({ title, text, align = 'left' }) {
   );
 }
 
+function StoreLaunchNotice() {
+  return (
+    <div className="store-launch">
+      <p>Muy pronto podrás descargar VetYa en las principales plataformas.</p>
+      <div className="store-badges" aria-label="Plataformas de lanzamiento">
+        <img src="/assets/google-play-badge.svg" alt="Disponible próximamente en Google Play" />
+        <img src="/assets/app-store-badge.svg" alt="Disponible próximamente en App Store" />
+      </div>
+    </div>
+  );
+}
+
 function Hero() {
   return (
     <section id="inicio" className="hero section">
       <Reveal className="hero-copy" direction="left">
         <h1 className="hero-title">El veterinario de tu mascota, al instante y en tu celular.</h1>
         <p>
-          Una plataforma móvil pensada para pedir emergencias, reservar turnos, gestionar mascotas y dar a los
-          profesionales una herramienta clara para responder, organizar su agenda y validar sus servicios.
+        Una plataforma móvil pensada para resolver urgencias, reservar turnos, gestionar la información de mascotas
+          y dar a los profesionales una herramienta clara para responder, organizar su agenda y validar sus servicios.
         </p>
         <div className="hero-actions">
           <button type="button" onClick={() => scrollToSection('vetya')}>
@@ -115,6 +127,7 @@ function Hero() {
             Ver Vetpresta
           </button>
         </div>
+        <StoreLaunchNotice />
       </Reveal>
       <div className="hero-preview" aria-label="Vista previa de las aplicaciones">
         <div className="hero-phone-stage hero-phone-stage-left">

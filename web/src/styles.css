@@ -21,11 +21,13 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top left, rgba(11, 116, 209, 0.12), transparent 34rem),
     linear-gradient(180deg, #ffffff 0%, var(--page) 58%, #ffffff 100%);
@@ -174,6 +176,35 @@ button {
   color: var(--blue);
   border: 1px solid var(--line);
   box-shadow: none;
+}
+
+.store-launch {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.store-launch p {
+  max-width: 540px;
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 760;
+  line-height: 1.45;
+}
+
+.store-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.store-badges img {
+  display: block;
+  width: auto;
+  height: 44px;
+  max-width: 164px;
+  filter: drop-shadow(0 12px 22px rgba(16, 32, 51, 0.12));
 }
 
 .hero-domain {
@@ -1105,6 +1136,8 @@ footer p {
   .hero-preview {
     justify-content: flex-start;
     min-height: 520px;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .hero-phone-stage-left {
@@ -1149,6 +1182,15 @@ footer p {
 
   .hero-actions button {
     width: 100%;
+  }
+
+  .store-launch {
+    margin-top: 18px;
+  }
+
+  .store-badges img {
+    height: 42px;
+    max-width: min(47vw, 156px);
   }
 
   .hero-phone-stage-right {
