@@ -894,6 +894,34 @@ button {
   font-weight: 780;
 }
 
+.form-status {
+  padding: 13px 14px;
+  border-radius: 14px;
+  font-weight: 760;
+  line-height: 1.45;
+}
+
+.form-status.success {
+  border: 1px solid #bcf2dc;
+  background: var(--green-soft);
+  color: #087254;
+}
+
+.form-status.error {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #b42318;
+}
+
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .contact-form input,
 .contact-form textarea {
   width: 100%;

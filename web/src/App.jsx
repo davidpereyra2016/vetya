@@ -233,6 +233,8 @@ function AboutSection() {
 }
 
 function ContactSection() {
+  const messageStatus = new URLSearchParams(window.location.search).get('mensaje');
+
   return (
     <section id="contacto" className="section contact-section">
       <Reveal direction="left">
@@ -252,20 +254,27 @@ function ContactSection() {
           </span>
         </div>
       </Reveal>
-      <Reveal as="form" className="contact-form" direction="right" delay={100}>
+      <Reveal as="form" className="contact-form" direction="right" delay={100} method="post" action="/contact.php">
+        {messageStatus === 'enviado' && (
+          <div className="form-status success">Mensaje enviado correctamente. Te responderemos pronto.</div>
+        )}
+        {messageStatus === 'error' && (
+          <div className="form-status error">No se pudo enviar el mensaje. Revisá los datos e intentá nuevamente.</div>
+        )}
+        <input className="honeypot" type="text" name="website" tabIndex="-1" autoComplete="off" />
         <label>
           Nombre
-          <input type="text" placeholder="Tu nombre" />
+          <input type="text" name="name" placeholder="Tu nombre" required />
         </label>
         <label>
           Email
-          <input type="email" placeholder="tu@email.com" />
+          <input type="email" name="email" placeholder="tu@email.com" required />
         </label>
         <label>
           Mensaje
-          <textarea rows="4" placeholder="Contanos en qué podemos ayudarte" />
+          <textarea rows="4" name="message" placeholder="Contanos en qué podemos ayudarte" required />
         </label>
-        <button type="button">Enviar mensaje</button>
+        <button type="submit">Enviar mensaje</button>
       </Reveal>
     </section>
   );
