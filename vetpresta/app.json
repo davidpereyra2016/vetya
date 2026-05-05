@@ -30,6 +30,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
+      "versionCode": 1,
       "package": "com.vetya.vetpresta",
       "permissions": [
         "CAMERA",

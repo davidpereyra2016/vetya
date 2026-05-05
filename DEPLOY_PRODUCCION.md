@@ -1,6 +1,6 @@
 # Deploy de Produccion
 
-Esta guia resume como desplegar backend y generar nuevos APK de `vetya` y `vetpresta` usando Render, Resend y Expo.
+Esta guia resume como desplegar backend y generar nuevos APK/AAB de `vetya` y `vetpresta` usando Render, Resend y Expo.
 
 ## 1. Backend en Render
 
@@ -73,7 +73,21 @@ Para ver el estado:
 npx eas-cli@latest build:list --platform android --limit 5
 ```
 
-## 4. Generar un nuevo APK de vetpresta
+## 4. Generar un nuevo AAB de vetya para Play Store
+
+Desde `vetya/`:
+
+```powershell
+npx eas-cli@latest build --platform android --profile android-store
+```
+
+Notas:
+
+- No hace falta ejecutar nuevamente `eas build:configure` si `eas.json` ya existe.
+- El perfil `android-store` genera un Android App Bundle (`.aab`), que es el formato esperado por Google Play.
+- El perfil `android-production` se mantiene para generar APK instalables manualmente.
+
+## 5. Generar un nuevo APK de vetpresta
 
 Desde `vetpresta/`:
 
@@ -91,7 +105,21 @@ Para ver el estado:
 npx eas-cli@latest build:list --platform android --limit 5
 ```
 
-## 5. Cuando hay cambios solo en backend
+## 6. Generar un nuevo AAB de vetpresta para Play Store
+
+Desde `vetpresta/`:
+
+```powershell
+npx eas-cli@latest build --platform android --profile android-store
+```
+
+Notas:
+
+- No hace falta ejecutar nuevamente `eas build:configure` si `eas.json` ya existe.
+- El perfil `android-store` genera un Android App Bundle (`.aab`), que es el formato esperado por Google Play.
+- El perfil `android-production` se mantiene para generar APK instalables manualmente.
+
+## 7. Cuando hay cambios solo en backend
 
 Si modificas archivos dentro de `backend/`:
 
@@ -100,16 +128,16 @@ Si modificas archivos dentro de `backend/`:
 3. Render redeploya automaticamente.
 4. No hace falta regenerar APK salvo que la app tambien haya cambiado.
 
-## 6. Cuando hay cambios en una app
+## 8. Cuando hay cambios en una app
 
 Si modificas `vetya/` o `vetpresta/`:
 
 1. Commit.
 2. Push a `main`.
 3. Ejecutar un nuevo build EAS de la app modificada.
-4. Descargar el APK desde Expo cuando termine.
+4. Descargar el APK o AAB desde Expo cuando termine.
 
-## 7. Verificaciones recomendadas
+## 9. Verificaciones recomendadas
 
 - Backend: abrir `https://TU_BACKEND/api/health`
 - Expo: revisar el build en `expo.dev`

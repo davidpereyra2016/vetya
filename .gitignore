@@ -76,3 +76,8 @@ agent-reviewer/.env
 agent-reviewer/review-report.json
 agent-reviewer
 .playwright-cli/
+
+# Generated APKs and AABs
+*.apk
+*.aab
+.buildApks/

@@ -25,6 +25,7 @@
         "foregroundImage": "./assets/icons/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "versionCode": 1,
       "package": "com.vetya.app",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
