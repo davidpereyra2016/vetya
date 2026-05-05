@@ -242,7 +242,7 @@ function VetprestaScreen({ active, available, onToggle }) {
   );
 }
 
-export default function PhoneMockup({ type = 'vetya', compact = false }) {
+export default function PhoneMockup({ type = 'vetya', compact = false, className = '' }) {
   const isVetpresta = type === 'vetpresta';
   const screens = isVetpresta ? vetprestaScreens : vetyaScreens;
   const [active, setActive] = useState(screens[0].id);
@@ -250,7 +250,7 @@ export default function PhoneMockup({ type = 'vetya', compact = false }) {
   const current = useMemo(() => screens.find((screen) => screen.id === active), [active, screens]);
 
   return (
-    <div className={`phone-shell ${compact ? 'phone-shell-compact' : ''}`}>
+    <div className={`phone-shell ${compact ? 'phone-shell-compact' : ''} ${className}`.trim()}>
       <div className="phone-notch" />
       <PhoneHeader
         logo={isVetpresta ? '/assets/vetpresta-logo.png' : '/assets/vetya-logo.png'}

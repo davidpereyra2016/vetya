@@ -6,10 +6,10 @@ import {
   MapPin,
   Menu,
   Phone,
-  ShieldCheck,
   X,
 } from 'lucide-react';
 import PhoneMockup from './components/PhoneMockup.jsx';
+import Reveal from './components/Reveal.jsx';
 import {
   navItems,
   populationProblems,
@@ -101,8 +101,8 @@ function SectionTitle({ title, text, align = 'left' }) {
 function Hero() {
   return (
     <section id="inicio" className="hero section">
-      <div className="hero-copy">
-        <h1>VetYa conecta familias y prestadores veterinarios cuando el tiempo importa.</h1>
+      <Reveal className="hero-copy" direction="left">
+        <h1 className="hero-title">El veterinario de tu mascota, al instante y en tu celular.</h1>
         <p>
           Una plataforma móvil pensada para pedir emergencias, reservar turnos, gestionar mascotas y dar a los
           profesionales una herramienta clara para responder, organizar su agenda y validar sus servicios.
@@ -115,14 +115,14 @@ function Hero() {
             Ver Vetpresta
           </button>
         </div>
-        <div className="hero-domain">
-          <ShieldCheck size={18} />
-          Sitio preparado para publicar en www.vetya.com.ar
-        </div>
-      </div>
+      </Reveal>
       <div className="hero-preview" aria-label="Vista previa de las aplicaciones">
-        <PhoneMockup type="vetya" compact />
-        <PhoneMockup type="vetpresta" compact />
+        <div className="hero-phone-stage hero-phone-stage-left">
+          <PhoneMockup type="vetya" compact />
+        </div>
+        <div className="hero-phone-stage hero-phone-stage-right">
+          <PhoneMockup type="vetpresta" compact />
+        </div>
       </div>
     </section>
   );
@@ -131,19 +131,19 @@ function Hero() {
 function ProblemSection() {
   return (
     <section className="problem-band">
-      <div className="problem-copy">
+      <Reveal className="problem-copy" direction="left">
         <h2>Que resuelve para la población</h2>
         <p>
           VetYa ayuda a que la atención veterinaria sea más rápida, ordenada y transparente, especialmente cuando
           una mascota necesita asistencia urgente o cuando una familia no sabe qué prestador elegir.
         </p>
-      </div>
+      </Reveal>
       <div className="problem-list">
-        {populationProblems.map((item) => (
-          <div key={item}>
+        {populationProblems.map((item, index) => (
+          <Reveal as="div" direction="up" delay={index * 90} key={item}>
             <CheckCircle2 size={20} />
             <span>{item}</span>
-          </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -155,20 +155,24 @@ function VetYaSection() {
     <section id="vetya" className="section app-section">
       <div className="section-grid">
         <div>
-          <img className="app-logo" src="/assets/vetya-logo.png" alt="Logo VetYa" />
-          <SectionTitle
-            title="VetYa para usuarios"
-            text="La app para personas que necesitan solicitar servicios veterinarios, buscar prestadores, agendar citas y mantener el historial de sus mascotas."
-          />
+          <Reveal direction="left">
+            <img className="app-logo" src="/assets/vetya-logo.png" alt="Logo VetYa" />
+            <SectionTitle
+              title="VetYa para usuarios"
+              text="La app para personas que necesitan solicitar servicios veterinarios, buscar prestadores, agendar citas y mantener el historial de sus mascotas."
+            />
+          </Reveal>
           <div className="feature-grid">
-            {vetyaFeatures.map((feature) => (
-              <FeatureCard key={feature.title} feature={feature} />
+            {vetyaFeatures.map((feature, index) => (
+              <Reveal key={feature.title} direction="up" delay={index * 80}>
+                <FeatureCard feature={feature} />
+              </Reveal>
             ))}
           </div>
         </div>
-        <div className="mockup-column">
+        <Reveal className="mockup-column" direction="right" delay={120}>
           <PhoneMockup type="vetya" />
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -178,18 +182,22 @@ function VetprestaSection() {
   return (
     <section id="vetpresta" className="section app-section provider-section">
       <div className="section-grid reverse">
-        <div className="mockup-column">
+        <Reveal className="mockup-column" direction="left">
           <PhoneMockup type="vetpresta" />
-        </div>
+        </Reveal>
         <div>
-          <img className="app-logo provider-logo" src="/assets/vetpresta-logo.png" alt="Logo Vetpresta" />
-          <SectionTitle
-            title="Vetpresta para prestadores"
-            text="La app operativa para veterinarios y centros: recibe emergencias, confirma citas, configura horarios, valida documentación y administra servicios."
-          />
+          <Reveal direction="right">
+            <img className="app-logo provider-logo" src="/assets/vetpresta-logo.png" alt="Logo Vetpresta" />
+            <SectionTitle
+              title="Vetpresta para prestadores"
+              text="La app operativa para veterinarios y centros: recibe emergencias, confirma citas, configura horarios, valida documentación y administra servicios."
+            />
+          </Reveal>
           <div className="feature-grid">
-            {vetprestaFeatures.map((feature) => (
-              <FeatureCard key={feature.title} feature={feature} />
+            {vetprestaFeatures.map((feature, index) => (
+              <Reveal key={feature.title} direction="up" delay={index * 80}>
+                <FeatureCard feature={feature} />
+              </Reveal>
             ))}
           </div>
         </div>
@@ -201,20 +209,22 @@ function VetprestaSection() {
 function AboutSection() {
   return (
     <section id="nosotros" className="section about-section">
-      <SectionTitle
-        align="center"
-        title="Un ecosistema para cuidar mejor"
-        text="VetYa nace como puente entre familias, mascotas y profesionales. El sistema une dos aplicaciones móviles para que cada solicitud tenga trazabilidad segura y confiable."
-      />
+      <Reveal direction="up">
+        <SectionTitle
+          align="center"
+          title="Un ecosistema para cuidar mejor"
+          text="VetYa nace como puente entre familias, mascotas y profesionales. El sistema une dos aplicaciones móviles para que cada solicitud tenga trazabilidad segura y confiable."
+        />
+      </Reveal>
       <div className="stats-grid">
-        {sharedStats.map((stat) => {
+        {sharedStats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <article key={stat.label}>
+            <Reveal as="article" key={stat.label} direction="up" delay={index * 110}>
               <Icon size={24} />
               <strong>{stat.value}</strong>
               <span>{stat.label}</span>
-            </article>
+            </Reveal>
           );
         })}
       </div>
@@ -225,7 +235,7 @@ function AboutSection() {
 function ContactSection() {
   return (
     <section id="contacto" className="section contact-section">
-      <div>
+      <Reveal direction="left">
         <SectionTitle
           title="Contacto"
           text="Espacio preparado para convertir esta web en la puerta de entrada pública del proyecto."
@@ -241,8 +251,8 @@ function ContactSection() {
             <MapPin size={20} /> Argentina
           </span>
         </div>
-      </div>
-      <form className="contact-form">
+      </Reveal>
+      <Reveal as="form" className="contact-form" direction="right" delay={100}>
         <label>
           Nombre
           <input type="text" placeholder="Tu nombre" />
@@ -256,7 +266,7 @@ function ContactSection() {
           <textarea rows="4" placeholder="Contanos en qué podemos ayudarte" />
         </label>
         <button type="button">Enviar mensaje</button>
-      </form>
+      </Reveal>
     </section>
   );
 }
