@@ -13,6 +13,13 @@ import {
   paymentClient,
   resolveMercadoPagoOAuthState,
 } from "../lib/mercadopago.js";
+import {
+  beginIdempotency,
+  completeIdempotency,
+  failIdempotency,
+  replayIdempotencyResult,
+  requireIdempotencyKey,
+} from "../utils/idempotency.js";
 import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
 
 const router = express.Router();
@@ -78,6 +85,27 @@ function buildMercadoPagoNotificationUrl() {
 
 function buildMercadoPagoExternalReference(referencia, usuarioId) {
   return `${referencia.tipo}_${referencia.id}_${usuarioId}`;
+}
+
+function buildCreatePreferenceResponse({ pago, preferenceId, initPoint, split, message = "Preferencia de pago creada exitosamente" }) {
+  return {
+    message,
+    pago,
+    preferenceId,
+    initPoint,
+    split: split ? {
+      marketplaceFee: split.marketplaceFee,
+      prestadorRecibe: split.netAmount,
+      marketplacePercentage: split.marketplacePercentage,
+    } : undefined,
+  };
+}
+
+function buildEfectivoResponse({ pago, message = "Pago en efectivo registrado exitosamente" }) {
+  return {
+    message,
+    pago,
+  };
 }
 
 function parseMercadoPagoExternalReference(externalReference = "") {
@@ -712,7 +740,10 @@ router.get("/mercadopago/connect", async (req, res) => {
 });
 
 router.post("/mercadopago/create-preference", protectRoute, async (req, res) => {
+  let idempotencyRecord = null;
+
   try {
+    requireIdempotencyKey(req);
     const { emergenciaId, citaId, monto, descripcion } = req.body;
 
     // Validar que se proporcione una referencia
@@ -782,6 +813,13 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
       descripcionCompleta = descripcion || cita.motivo || 'Servicio veterinario';
     }
 
+    const idempotency = await beginIdempotency(req, "pagos:mercadopago:create-preference");
+    idempotencyRecord = idempotency.record;
+
+    if (!idempotency.isNew) {
+      return replayIdempotencyResult(res, idempotency.record);
+    }
+
     // Verificar si ya existe un pago para esta referencia
     const pagoExistente = await Pago.findOne({
       'referencia.tipo': referencia.tipo,
@@ -790,10 +828,20 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
     });
 
     if (pagoExistente) {
-      return res.status(400).json({ 
+      const responseBody = buildCreatePreferenceResponse({
+        pago: pagoExistente,
+        preferenceId: pagoExistente.mercadoPago?.preferenceId,
+        initPoint: pagoExistente.mercadoPago?.initPoint,
         message: "Ya existe un pago activo para este servicio",
-        pago: pagoExistente
       });
+
+      await completeIdempotency(idempotencyRecord, {
+        statusCode: 200,
+        body: responseBody,
+        pago: pagoExistente._id,
+      });
+
+      return res.status(200).json(responseBody);
     }
 
     // Obtener información del prestador
@@ -878,6 +926,7 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
       monto: monto,
       metodoPago: 'MercadoPago',
       estado: 'Pendiente',
+      idempotencyKey: idempotency.key,
       mercadoPago: {
         preferenceId: preference.id,
         initPoint: preference.init_point,
@@ -899,21 +948,30 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
 
     console.log('💾 Pago registrado en BD:', nuevoPago._id);
 
-    res.status(201).json({
+    const responseBody = buildCreatePreferenceResponse({
       message: 'Preferencia de pago creada exitosamente',
       pago: nuevoPago,
       preferenceId: preference.id,
       initPoint: preference.init_point,
-      split: {
-        marketplaceFee: split.marketplaceFee,
-        prestadorRecibe: split.netAmount,
-        marketplacePercentage: split.marketplacePercentage,
-      }
+      split,
     });
+
+    await completeIdempotency(idempotencyRecord, {
+      statusCode: 201,
+      body: responseBody,
+      pago: nuevoPago._id,
+    });
+
+    res.status(201).json(responseBody);
 
   } catch (error) {
     console.error('❌ Error al crear preferencia:', error);
-    res.status(500).json({ 
+    if (idempotencyRecord) {
+      const { statusCode, body } = await failIdempotency(idempotencyRecord, error, "Error al crear la preferencia de pago");
+      return res.status(statusCode).json(body);
+    }
+
+    res.status(error.status || 500).json({ 
       message: "Error al crear la preferencia de pago",
       error: error.message 
     });
@@ -1212,7 +1270,10 @@ router.post("/mercadopago/cancel-payment", protectRoute, async (req, res) => {
  * El pago queda en estado "Pendiente" hasta que se completa el servicio.
  */
 router.post("/efectivo", protectRoute, async (req, res) => {
+  let idempotencyRecord = null;
+
   try {
+    requireIdempotencyKey(req);
     const { emergenciaId, citaId, monto, descripcion } = req.body;
 
     if (!emergenciaId && !citaId) {
@@ -1265,6 +1326,13 @@ router.post("/efectivo", protectRoute, async (req, res) => {
         .json({ message: "No se pudo determinar el prestador asociado" });
     }
 
+    const idempotency = await beginIdempotency(req, "pagos:efectivo");
+    idempotencyRecord = idempotency.record;
+
+    if (!idempotency.isNew) {
+      return replayIdempotencyResult(res, idempotency.record);
+    }
+
     // Evitar duplicados: si ya hay un pago activo para esta referencia, lo devolvemos
     const pagoExistente = await Pago.findOne({
       "referencia.tipo": referencia.tipo,
@@ -1273,10 +1341,18 @@ router.post("/efectivo", protectRoute, async (req, res) => {
     });
 
     if (pagoExistente) {
-      return res.status(200).json({
+      const responseBody = buildEfectivoResponse({
         message: "Ya existe un pago activo para este servicio",
         pago: pagoExistente,
       });
+
+      await completeIdempotency(idempotencyRecord, {
+        statusCode: 200,
+        body: responseBody,
+        pago: pagoExistente._id,
+      });
+
+      return res.status(200).json(responseBody);
     }
 
     const nuevoPago = new Pago({
@@ -1287,6 +1363,7 @@ router.post("/efectivo", protectRoute, async (req, res) => {
       monto,
       metodoPago: "Efectivo",
       estado: "Pendiente",
+      idempotencyKey: idempotency.key,
       notasAdicionales: descripcion || undefined,
     });
 
@@ -1294,13 +1371,26 @@ router.post("/efectivo", protectRoute, async (req, res) => {
 
     console.log("💵 Pago en efectivo registrado:", nuevoPago._id);
 
-    res.status(201).json({
+    const responseBody = buildEfectivoResponse({
       message: "Pago en efectivo registrado exitosamente",
       pago: nuevoPago,
     });
+
+    await completeIdempotency(idempotencyRecord, {
+      statusCode: 201,
+      body: responseBody,
+      pago: nuevoPago._id,
+    });
+
+    res.status(201).json(responseBody);
   } catch (error) {
     console.error("❌ Error al registrar pago en efectivo:", error);
-    res.status(500).json({
+    if (idempotencyRecord) {
+      const { statusCode, body } = await failIdempotency(idempotencyRecord, error, "Error al registrar el pago en efectivo");
+      return res.status(statusCode).json(body);
+    }
+
+    res.status(error.status || 500).json({
       message: "Error al registrar el pago en efectivo",
       error: error.message,
     });

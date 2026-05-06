@@ -22,7 +22,7 @@ const usePagoStore = create((set, get) => ({
    * Crear preferencia de pago en Mercado Pago
    * Se llama cuando el cliente quiere pagar una emergencia/cita
    */
-  crearPreferencia: async (emergenciaId, citaId, monto, descripcion) => {
+  crearPreferencia: async (emergenciaId, citaId, monto, descripcion, idempotencyKey) => {
     set({ isLoading: true, error: null });
     
     try {
@@ -32,12 +32,10 @@ const usePagoStore = create((set, get) => ({
       //   monto
       // });
 
-      const result = await pagoService.crearPreferencia(
-        emergenciaId,
-        citaId,
-        monto,
-        descripcion
-      );
+      const args = [emergenciaId, citaId, monto, descripcion];
+      if (idempotencyKey) args.push(idempotencyKey);
+
+      const result = await pagoService.crearPreferencia(...args);
       
       if (result.success) {
         // console.log('✅ Store: Preferencia creada exitosamente', result.data);
@@ -69,16 +67,14 @@ const usePagoStore = create((set, get) => ({
    * Registrar un pago en efectivo (cita o emergencia).
    * Crea un Pago en estado "Pendiente" hasta que se complete el servicio.
    */
-  crearPagoEfectivo: async (emergenciaId, citaId, monto, descripcion) => {
+  crearPagoEfectivo: async (emergenciaId, citaId, monto, descripcion, idempotencyKey) => {
     set({ isLoading: true, error: null });
 
     try {
-      const result = await pagoService.crearPagoEfectivo(
-        emergenciaId,
-        citaId,
-        monto,
-        descripcion
-      );
+      const args = [emergenciaId, citaId, monto, descripcion];
+      if (idempotencyKey) args.push(idempotencyKey);
+
+      const result = await pagoService.crearPagoEfectivo(...args);
 
       if (result.success) {
         set({

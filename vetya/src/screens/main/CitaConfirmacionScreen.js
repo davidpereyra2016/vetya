@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import useCitaStore from '../../store/useCitaStore';
 import usePagoStore from '../../store/usePagoStore';
+import { createIdempotencyKey } from '../../utils/idempotency';
 
 const CitaConfirmacionScreen = ({ navigation, route }) => {
   const { appointmentData, pet, provider, service, date, time, location, reason, reschedulingAppointment } = route.params || {};
@@ -27,6 +28,8 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(isRescheduling ? currentPaymentMethod : 'Efectivo');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [createdAppointment, setCreatedAppointment] = useState(null);
+  const [paymentIdempotencyKey] = useState(() => createIdempotencyKey());
+  const paymentSubmissionRef = useRef(false);
   
   // Stores
   const { crearPreferencia, crearPagoEfectivo } = usePagoStore();
@@ -62,6 +65,9 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
 
   // Función para confirmar cita con efectivo
   const handleReschedule = async () => {
+    if (paymentSubmissionRef.current) return;
+    paymentSubmissionRef.current = true;
+
     try {
       setProcessingPayment(true);
 
@@ -86,33 +92,45 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       console.error('Error al reprogramar cita:', error);
       Alert.alert('Error', 'Ocurrió un problema al reprogramar la cita. Intenta nuevamente.');
     } finally {
+      paymentSubmissionRef.current = false;
       setProcessingPayment(false);
     }
   };
 
   const handleEfectivoPayment = async () => {
+    if (paymentSubmissionRef.current) return;
+
     if (!appointmentData) {
+      paymentSubmissionRef.current = false;
       Alert.alert('Error', 'No se puede reservar la cita sin informacion');
       return;
     }
+
+    paymentSubmissionRef.current = true;
 
     try {
       setProcessingPayment(true);
 
       console.log('Creando cita pendiente con pago en efectivo...');
 
-      const citaResult = await createAppointment({
-        ...appointmentData,
-        metodoPago: 'Efectivo',
-        estado: 'Pendiente',
-      });
+      let nuevaCita = createdAppointment;
 
-      if (!citaResult.success) {
-        Alert.alert('Error', citaResult.error || 'No se pudo crear la cita');
-        return;
+      if (!nuevaCita) {
+        const citaResult = await createAppointment({
+          ...appointmentData,
+          metodoPago: 'Efectivo',
+          estado: 'Pendiente',
+        });
+
+        if (!citaResult.success) {
+          Alert.alert('Error', citaResult.error || 'No se pudo crear la cita');
+          return;
+        }
+
+        nuevaCita = citaResult.data;
+        setCreatedAppointment(nuevaCita);
       }
 
-      const nuevaCita = citaResult.data;
       console.log('Cita creada:', nuevaCita._id);
 
       // Registrar el pago en efectivo (estado "Pendiente" hasta que se complete el servicio)
@@ -127,7 +145,8 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
           null,
           nuevaCita._id,
           montoPago,
-          `Cita veterinaria - ${nuevaCita.servicio?.nombre || service?.nombre || 'Consulta general'}`
+          `Cita veterinaria - ${nuevaCita.servicio?.nombre || service?.nombre || 'Consulta general'}`,
+          paymentIdempotencyKey
         );
 
         if (!pagoResult.success) {
@@ -151,12 +170,16 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       console.error('Error al crear cita con efectivo:', error);
       Alert.alert('Error', 'Ocurrio un problema al enviar la reserva. Intenta nuevamente.');
     } finally {
+      paymentSubmissionRef.current = false;
       setProcessingPayment(false);
     }
   };
 
   const handleMercadoPagoPayment = async () => {
+    if (paymentSubmissionRef.current) return;
+    paymentSubmissionRef.current = true;
     if (!appointmentData) {
+      paymentSubmissionRef.current = false;
       Alert.alert('Error', 'No se puede procesar el pago sin información de la cita');
       return;
     }
@@ -188,7 +211,8 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         null, // emergenciaId
         nuevaCita._id, // citaId
         nuevaCita.servicio?.precio || service?.precio || 5000, // monto
-        `Cita veterinaria - ${nuevaCita.servicio?.nombre || service?.nombre || 'Consulta general'}`
+        `Cita veterinaria - ${nuevaCita.servicio?.nombre || service?.nombre || 'Consulta general'}`,
+        paymentIdempotencyKey
       );
       
       console.log('📦 Resultado de crearPreferencia:', result);
@@ -244,6 +268,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       console.error('❌ Error al procesar pago con Mercado Pago:', error);
       Alert.alert('Error', 'Ocurrió un problema al procesar el pago. Intenta nuevamente.');
     } finally {
+      paymentSubmissionRef.current = false;
       setProcessingPayment(false);
     }
   };

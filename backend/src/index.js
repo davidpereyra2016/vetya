@@ -31,7 +31,7 @@ app.use(cookieParser());
 app.use(cors({
   origin: '*',  // Permite cualquier origen
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key']
 }));
 
 // Configurar vistas EJS para el panel administrativo

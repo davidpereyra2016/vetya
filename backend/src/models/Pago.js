@@ -67,6 +67,11 @@ const pagoSchema = new mongoose.Schema({
     type: String
     // ID de transacción generado por la pasarela de pago
   },
+  idempotencyKey: {
+    type: String,
+    trim: true
+    // Llave enviada por el cliente para evitar cobros duplicados
+  },
   // Campos específicos de Mercado Pago
   mercadoPago: {
     preferenceId: {
@@ -179,6 +184,7 @@ pagoSchema.index({ prestador: 1, createdAt: -1 });
 pagoSchema.index({ prestador: 1, estado: 1, createdAt: -1 });
 pagoSchema.index({ 'mercadoPago.preferenceId': 1 }, { sparse: true });
 pagoSchema.index({ 'mercadoPago.paymentId': 1 }, { sparse: true });
+pagoSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
 const Pago = mongoose.model("Pago", pagoSchema);
 export default Pago;

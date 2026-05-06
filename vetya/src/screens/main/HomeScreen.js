@@ -29,6 +29,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { emergenciaService } from '../../services/api';
+import { createIdempotencyKey } from '../../utils/idempotency';
 
 const HomeScreen = ({ navigation }) => {
   // Estados para manejar la carga
@@ -46,6 +47,16 @@ const HomeScreen = ({ navigation }) => {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [updatingLocation, setUpdatingLocation] = useState(false);
   const [emergencyStatus, setEmergencyStatus] = useState('Solicitada');
+  const arrivalSubmissionRef = useRef({});
+  const arrivalIdempotencyKeysRef = useRef({});
+
+  useEffect(() => {
+    const emergencyId = activeEmergencyVet?.emergencyId;
+
+    if (emergencyId && !arrivalIdempotencyKeysRef.current[emergencyId]) {
+      arrivalIdempotencyKeysRef.current[emergencyId] = createIdempotencyKey();
+    }
+  }, [activeEmergencyVet?.emergencyId]);
   
   // Referencia al temporizador para actualización de ubicación
   const locationUpdateTimerRef = useRef(null);
@@ -679,10 +690,17 @@ const HomeScreen = ({ navigation }) => {
   
   // Función para confirmar la llegada del veterinario
   const handleConfirmVetArrival = async (emergencyId) => {
+    if (arrivalSubmissionRef.current[emergencyId]) return;
+
+    if (!arrivalIdempotencyKeysRef.current[emergencyId]) {
+      arrivalIdempotencyKeysRef.current[emergencyId] = createIdempotencyKey();
+    }
+
+    arrivalSubmissionRef.current[emergencyId] = true;
     setIsLoading(true);
     try {
       // Llamar al store para confirmar la llegada
-      const result = await confirmVetArrival(emergencyId);
+      const result = await confirmVetArrival(emergencyId, arrivalIdempotencyKeysRef.current[emergencyId]);
       
       if (result.success) {
         // Actualizar el estado local
@@ -745,6 +763,7 @@ const HomeScreen = ({ navigation }) => {
         "No se pudo confirmar la llegada del veterinario. Intenta nuevamente."
       );
     } finally {
+      arrivalSubmissionRef.current[emergencyId] = false;
       setIsLoading(false);
     }
   };
@@ -1028,10 +1047,15 @@ const HomeScreen = ({ navigation }) => {
             {/* Botón para confirmar llegada del veterinario - solo visible cuando está en camino */}
             {activeEmergencyVet.status === 'En camino' && (
               <TouchableOpacity 
-                style={[styles.emergencyButton, styles.confirmButton]}
+                style={[styles.emergencyButton, styles.confirmButton, isLoading && styles.emergencyButtonDisabled]}
                 onPress={() => handleConfirmVetArrival(activeEmergencyVet.emergencyId)}
+                disabled={isLoading}
               >
-                <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                )}
                 <Text style={styles.emergencyButtonText}>Confirmar que el veterinario llegó</Text>
               </TouchableOpacity>
             )}

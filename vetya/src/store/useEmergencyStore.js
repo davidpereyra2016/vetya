@@ -453,12 +453,15 @@ const useEmergencyStore = create((set, get) => ({
   },
   
   // Confirmar la llegada del veterinario (por parte del cliente)
-  confirmVetArrival: async (emergencyId) => {
+  confirmVetArrival: async (emergencyId, idempotencyKey) => {
     set({ isLoading: true, error: null });
     
     try {
       console.log(`📦 [STORE] Confirmando llegada del veterinario a emergencia: ${emergencyId}`);
-      const result = await emergenciaService.confirmVetArrival(emergencyId);
+      const args = [emergencyId];
+      if (idempotencyKey) args.push(idempotencyKey);
+
+      const result = await emergenciaService.confirmVetArrival(...args);
       
       if (result.success) {
         console.log('✅ [STORE] Llegada del veterinario confirmada');

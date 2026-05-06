@@ -10,6 +10,13 @@ import cloudinary from "../lib/cloudinary.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import { enviarNotificacionPush, esTokenValido } from "../utils/notificacionesUtils.js";
 import { createMarketplacePreference } from "../lib/mercadopago.js";
+import {
+  beginIdempotency,
+  completeIdempotency,
+  failIdempotency,
+  replayIdempotencyResult,
+  requireIdempotencyKey,
+} from "../utils/idempotency.js";
 
 const router = express.Router();
 const MARKETPLACE_PERCENTAGE = 0.3;
@@ -1670,7 +1677,10 @@ router.post("/:id/rechazar", protectRoute, async (req, res) => {
 // Confirmar servicio de emergencia
 // Confirmar llegada del veterinario (ruta para clientes)
 router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
+  let idempotencyRecord = null;
+
   try {
+    requireIdempotencyKey(req);
     // Validación de ID
     if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: "ID de emergencia inválido" });
@@ -1687,6 +1697,13 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
     // Verificar que el usuario es el dueño de la emergencia
     if (emergencia.usuario.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "No tienes permiso para confirmar esta emergencia" });
+    }
+
+    const idempotency = await beginIdempotency(req, "emergencias:confirmar-llegada");
+    idempotencyRecord = idempotency.record;
+
+    if (!idempotency.isNew) {
+      return replayIdempotencyResult(res, idempotency.record);
     }
     
     // Verificar que la emergencia está en estado "En camino"
@@ -1716,6 +1733,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
     
     // 💰 CREAR REGISTRO DE PAGO SEGÚN MÉTODO
     let preferenciaMP = null;
+    let pagoCreado = null;
     const prestador = await Prestador.findById(emergencia.veterinario).select("+mercadoPago.accessToken +mercadoPago.refreshToken");
     const monto = prestador.precioEmergencia || 5000;
     
@@ -1735,10 +1753,12 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
           monto: monto,
           metodoPago: 'Efectivo',
           estado: 'Pendiente', // Se completa automáticamente cuando el veterinario marca la emergencia como Atendida
+          idempotencyKey: idempotency.key,
           fechaPago: null // Se actualizará cuando se complete el pago
         });
         
         await nuevoPago.save();
+        pagoCreado = nuevoPago;
         
         console.log('✅ [CONFIRMAR LLEGADA] Pago en efectivo registrado:', {
           pagoId: nuevoPago._id,
@@ -1842,6 +1862,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
           monto: monto,
           metodoPago: 'MercadoPago',
           estado: 'Pendiente',
+          idempotencyKey: idempotency.key,
           mercadoPago: {
             preferenceId: preference.id,
             initPoint: preference.init_point,
@@ -1859,6 +1880,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
         });
         
         await nuevoPago.save();
+        pagoCreado = nuevoPago;
         
         console.log('✅ [CONFIRMAR LLEGADA] Preferencia MP creada:', {
           preferenceId: preference.id,
@@ -1965,11 +1987,23 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
       estado: emergenciaActualizada.estado,
       tienePreferenciaMP: !!preferenciaMP
     });
+
+    await completeIdempotency(idempotencyRecord, {
+      statusCode: 200,
+      body: response,
+      pago: pagoCreado?._id || null,
+    });
     
     res.status(200).json(response);
   } catch (error) {
     console.error(`Error al confirmar llegada: ${error.message}`, error);
-    res.status(500).json({ message: "Error al confirmar la llegada del veterinario" });
+
+    if (idempotencyRecord) {
+      const { statusCode, body } = await failIdempotency(idempotencyRecord, error, "Error al confirmar la llegada del veterinario");
+      return res.status(statusCode).json(body);
+    }
+
+    res.status(error.status || 500).json({ message: "Error al confirmar la llegada del veterinario" });
   }
 });
 

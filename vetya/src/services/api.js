@@ -556,10 +556,18 @@ export const emergenciaService = {
   },
 
   // Confirmar la llegada del veterinario (por parte del cliente)
-  confirmVetArrival: async (emergencyId) => {
+  confirmVetArrival: async (emergencyId, idempotencyKey) => {
     try {
       console.log('🚀 [CLIENTE] Confirmando llegada del veterinario:', emergencyId);
-      const response = await axios.patch(`/emergencias/${emergencyId}/confirmar-llegada`);
+      const response = await axios.patch(
+        `/emergencias/${emergencyId}/confirmar-llegada`,
+        undefined,
+        idempotencyKey ? {
+          headers: {
+            'Idempotency-Key': idempotencyKey,
+          },
+        } : undefined
+      );
       console.log('✅ [CLIENTE] Llegada confirmada:', {
         estado: response.data?.emergencia?.estado,
         tienePreferenciaMP: !!response.data?.preferenciaMP,
@@ -1004,14 +1012,18 @@ export const pagoService = {
    * Crear preferencia de pago de Mercado Pago
    * Se ejecuta cuando el prestador acepta la emergencia
    */
-  crearPreferencia: async (emergenciaId, citaId, monto, descripcion) => {
+  crearPreferencia: async (emergenciaId, citaId, monto, descripcion, idempotencyKey) => {
     try {
       const response = await axios.post('/pagos/mercadopago/create-preference', {
         emergenciaId,
         citaId,
         monto,
         descripcion
-      });
+      }, idempotencyKey ? {
+        headers: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      } : undefined);
       return {
         success: true,
         data: response.data
@@ -1122,14 +1134,18 @@ export const pagoService = {
   /**
    * Registrar un pago en efectivo para una cita o emergencia
    */
-  crearPagoEfectivo: async (emergenciaId, citaId, monto, descripcion) => {
+  crearPagoEfectivo: async (emergenciaId, citaId, monto, descripcion, idempotencyKey) => {
     try {
       const response = await axios.post('/pagos/efectivo', {
         emergenciaId,
         citaId,
         monto,
         descripcion,
-      });
+      }, idempotencyKey ? {
+        headers: {
+          'Idempotency-Key': idempotencyKey,
+        },
+      } : undefined);
       return {
         success: true,
         data: response.data,
