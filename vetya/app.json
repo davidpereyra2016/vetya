@@ -3,7 +3,7 @@
     "name": "vetya",
     "slug": "vetya",
     "scheme": "vetya",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "jsEngine": "jsc",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -25,7 +25,7 @@
         "foregroundImage": "./assets/icons/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "versionCode": 15,
+      "versionCode": 16,
       "package": "com.vetya.app",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",

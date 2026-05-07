@@ -32,6 +32,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "../buildApks/vetya-495422-9b87623e37b2.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }
