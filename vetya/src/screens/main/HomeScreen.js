@@ -76,7 +76,14 @@ const HomeScreen = ({ navigation }) => {
   const statusBannerAnim = useRef(new Animated.Value(-50)).current;
   
   // Obtener veterinarios disponibles del store (solo para emergencias)
-  const { availableVets, loadAvailableVets, activeEmergencies, loadActiveEmergencies, checkEmergencyExpiration, confirmVetArrival } = useEmergencyStore();
+  const {
+    availableVets,
+    loadAvailableVets,
+    activeEmergencies,
+    loadActiveEmergencies,
+    checkEmergencyExpiration,
+    confirmVetArrival
+  } = useEmergencyStore();
   
   // Obtener citas del usuario del store
   const { upcomingAppointments, fetchUserAppointments, userAppointments } = useCitaStore();
@@ -126,21 +133,6 @@ const HomeScreen = ({ navigation }) => {
   const [estadisticasPrestadores, setEstadisticasPrestadores] = useState({});
   const [countPacientes, setCountPacientes] = useState({});
 
-  useEffect(() => {
-    if (activeEmergencies && activeEmergencies.length > 0) {
-      const hasActiveEmergency = activeEmergencies.some(
-        (emergency) =>
-          emergency.estado === 'Solicitada' ||
-          emergency.estado === 'Asignada' ||
-          emergency.estado === 'En camino'
-          // emergency.estado === 'Confirmada' //añadir confirmada si se desea
-      );
-      setIsEmergencyInProgress(hasActiveEmergency);
-    } else {
-      setIsEmergencyInProgress(false);
-    }
-  }, [activeEmergencies]);
-  
   // NOTA: La carga de estadísticas se hace en cargarEstadisticasYPacientesEnParalelo
   // llamado desde loadInitialData para evitar duplicación de requests
 
@@ -238,8 +230,13 @@ const HomeScreen = ({ navigation }) => {
       setCurrentDistance(activeEmergency.distancia?.texto || '--');
       setEstimatedArrivalTime(activeEmergency.tiempoEstimado?.texto || '--');
 
-      // Iniciar actualizaciones periódicas
-      startLocationUpdates(activeEmergency);
+      const shouldTrackVetLocation = ['En camino', 'En atención'].includes(activeEmergency.estado);
+      if (shouldTrackVetLocation) {
+        startLocationUpdates(activeEmergency);
+      } else if (locationUpdateTimerRef.current) {
+        clearInterval(locationUpdateTimerRef.current);
+        locationUpdateTimerRef.current = null;
+      }
     } else {
       // Si no hay veterinario asignado, mostrar un estado pendiente
       setActiveEmergencyVet({
@@ -338,7 +335,12 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  useEffect(() => {
+    processActiveEmergencies(activeEmergencies || []);
+  }, [activeEmergencies, processActiveEmergencies]);
+
   // Nueva función para cargar estadísticas y pacientes en paralelo (evita el problema N+1)
+
   const cargarEstadisticasYPacientesEnParalelo = useCallback(async (prestadoresList) => {
     if (!prestadoresList || prestadoresList.length === 0) return;
     

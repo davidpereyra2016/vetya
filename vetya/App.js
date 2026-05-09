@@ -17,6 +17,13 @@ import {
   handleNotificationReceived,
   handleNotificationResponse
 } from './src/services/pushNotificationService';
+import useAuthStore from './src/store/useAuthStore';
+import useEmergencyStore from './src/store/useEmergencyStore';
+import {
+  connectEmergencySocket,
+  disconnectEmergencySocket,
+  onEmergencyUpdated
+} from './src/services/socketService';
 
 // Configurar axios globalmente a nivel de módulo (inmediato, sin esperar useEffect)
 axios.defaults.baseURL = API_URL;
@@ -38,6 +45,42 @@ configurePushNotifications();
 export default function App() {
   const notificationListener = useRef();
   const responseListener = useRef();
+  const token = useAuthStore(state => state.token);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    let isMounted = true;
+
+    if (!token) {
+      disconnectEmergencySocket();
+      return () => {};
+    }
+
+    const setupEmergencyRealtime = async () => {
+      const socket = await connectEmergencySocket();
+      if (!isMounted || !socket) return;
+
+      unsubscribe = onEmergencyUpdated((payload) => {
+        const updatedEmergency = payload?.emergencia;
+        if (!updatedEmergency) return;
+
+        console.log('[App] Emergencia actualizada por socket:', {
+          emergenciaId: payload?.emergenciaId || updatedEmergency?._id,
+          eventType: payload?.eventType,
+          estado: updatedEmergency?.estado,
+        });
+
+        useEmergencyStore.getState().applySocketEmergencyUpdate(updatedEmergency);
+      });
+    };
+
+    setupEmergencyRealtime();
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [token]);
 
   useEffect(() => {
     // Listener para notificaciones recibidas en primer plano

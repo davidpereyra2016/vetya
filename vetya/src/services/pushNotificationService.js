@@ -3,6 +3,30 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import notificacionService from './apiNotificacion';
+import useEmergencyStore from '../store/useEmergencyStore';
+
+const applyEmergencyNotificationUpdate = (data = {}) => {
+  const emergenciaId = data.emergenciaId || data.enlaceId || data.datos?.emergenciaId;
+  const estado = data.datos?.estado || data.estado;
+
+  if (!emergenciaId || !estado) return;
+
+  const veterinarioNombre = data.datos?.veterinarioNombre || data.veterinarioNombre;
+  const veterinarioRating = data.datos?.veterinarioRating ?? data.veterinarioRating;
+  const emergencyUpdate = {
+    _id: emergenciaId,
+    estado,
+  };
+
+  if (veterinarioNombre) {
+    emergencyUpdate.veterinario = {
+      nombre: veterinarioNombre,
+      rating: veterinarioRating || 0,
+    };
+  }
+
+  useEmergencyStore.getState().applySocketEmergencyUpdate(emergencyUpdate);
+};
 
 /**
  * Configuración de las notificaciones usando Expo Notifications
@@ -111,6 +135,17 @@ export const registerForPushNotifications = async () => {
 export const handleNotificationReceived = (notification) => {
   const data = notification.request.content.data;
   console.log('🔔 Notificación recibida en primer plano:', data);
+
+  if ([
+    'Emergencia',
+    'emergencia_asignada',
+    'emergencia_confirmada',
+    'emergencia_en_camino',
+    'emergencia_atendida',
+    'emergencia_cancelada'
+  ].includes(data?.tipo)) {
+    applyEmergencyNotificationUpdate(data);
+  }
 };
 
 /**

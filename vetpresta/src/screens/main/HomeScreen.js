@@ -26,6 +26,11 @@ import usePrestadorStore from '../../store/usePrestadorStore';
 import useCitaStore from '../../store/useCitaStore';
 import useValoracionStore from '../../store/useValoracionStore';
 import ValidationStatusBanner from '../../components/ValidationStatusBanner';
+import {
+  connectEmergencySocket,
+  onEmergencyListUpdated,
+  onEmergencyUpdated
+} from '../../services/socketService';
 
 const { width } = Dimensions.get('window');
 
@@ -685,6 +690,39 @@ const HomeScreen = ({ navigation }) => {
   // Eliminamos la función loadNearbyEmergencies redundante, ya que loadAssignedEmergencies hace lo mismo
   
   // Función para manejar la aceptación de una emergencia
+  useEffect(() => {
+    let unsubscribeUpdates = () => {};
+    let unsubscribeList = () => {};
+    let isMounted = true;
+
+    if (!isVeterinarian || !provider?._id) {
+      return () => {};
+    }
+
+    const setupSocket = async () => {
+      const socket = await connectEmergencySocket();
+      if (!isMounted || !socket) return;
+
+      const refreshEmergencies = async (payload) => {
+        if (payload?.emergencia) {
+          useEmergencyStore.getState().applySocketEmergencyUpdate(payload.emergencia);
+        }
+        await loadAssignedEmergencies();
+      };
+
+      unsubscribeUpdates = onEmergencyUpdated(refreshEmergencies);
+      unsubscribeList = onEmergencyListUpdated(refreshEmergencies);
+    };
+
+    setupSocket();
+
+    return () => {
+      isMounted = false;
+      unsubscribeUpdates();
+      unsubscribeList();
+    };
+  }, [isVeterinarian, provider?._id]);
+
   const handleAcceptEmergency = async (emergency) => {
     Alert.alert(
       'Aceptar Emergencia',

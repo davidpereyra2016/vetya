@@ -8,6 +8,8 @@ import adminRouter from './admin/index.js';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
+import { initializeSocket } from './services/socketService.js';
 
 if (process.env.NODE_ENV === 'production') {
     console.log = () => {};
@@ -19,6 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -65,9 +68,10 @@ app.use((err, req, res, _next) => {
 
 // Conectar a la base de datos
 connectDB();
+initializeSocket(server);
 
 // Iniciar servidor
-app.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
     console.log(`Panel administrativo disponible en http://localhost:${PORT}/admin`);
     console.log('Para acceder desde dispositivos en la misma red, usa tu IP local');

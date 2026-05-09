@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -13,6 +13,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import useEmergencyStore from '../../store/useEmergencyStore';
+import {
+  connectEmergencySocket,
+  onEmergencyListUpdated,
+  onEmergencyUpdated
+} from '../../services/socketService';
 
 const EmergencyListScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('active');
@@ -39,6 +44,35 @@ const EmergencyListScreen = ({ navigation }) => {
       loadEmergencias();
     }, [loadEmergencias])
   );
+
+  useEffect(() => {
+    let unsubscribeUpdates = () => {};
+    let unsubscribeList = () => {};
+    let isMounted = true;
+
+    const setupSocket = async () => {
+      const socket = await connectEmergencySocket();
+      if (!isMounted || !socket) return;
+
+      const refresh = async (payload) => {
+        if (payload?.emergencia) {
+          useEmergencyStore.getState().applySocketEmergencyUpdate(payload.emergencia);
+        }
+        await loadEmergencias();
+      };
+
+      unsubscribeUpdates = onEmergencyUpdated(refresh);
+      unsubscribeList = onEmergencyListUpdated(refresh);
+    };
+
+    setupSocket();
+
+    return () => {
+      isMounted = false;
+      unsubscribeUpdates();
+      unsubscribeList();
+    };
+  }, [loadEmergencias]);
 
   // Procesar las emergencias para separarlas en activas e historial
   const processEmergencies = (emergenciesData) => {

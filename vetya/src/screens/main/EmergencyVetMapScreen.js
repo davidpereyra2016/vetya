@@ -463,29 +463,17 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
       let finalEmergencyId;
       
       if (emergencyId) {
-        const { assignVetToEmergency } = useEmergencyStore.getState();
-        const result = await assignVetToEmergency(emergencyId, selectedVet.id);
-        if (result.success) finalEmergencyId = emergencyId;
-        else throw new Error(result.error || 'No se pudo asignar el veterinario');
+        finalEmergencyId = emergencyId;
       }
       else if (emergencyData) {
-        const { createEmergency } = useEmergencyStore.getState();
-        const createResult = await createEmergency(emergencyData);
-        if (createResult.success && createResult.data?._id) {
-          const newEmergencyId = createResult.data._id;
-          const { assignVetToEmergency } = useEmergencyStore.getState();
-          const assignResult = await assignVetToEmergency(newEmergencyId, selectedVet.id);
-          if (assignResult.success) finalEmergencyId = newEmergencyId;
-          else throw new Error('No se pudo asignar el veterinario');
-        } else {
-          throw new Error(createResult.error || 'No se pudo crear la emergencia');
-        }
+        finalEmergencyId = null;
       } else {
         throw new Error('No hay datos de emergencia disponibles');
       }
       
       navigation.replace('EmergencyConfirmation', {
         emergencyId: finalEmergencyId,
+        emergencyData,
         vetInfo: selectedVet,
         petInfo: esOtroAnimal ? null : petInfo,
         otroAnimalInfo: esOtroAnimal ? otroAnimalInfo : null,

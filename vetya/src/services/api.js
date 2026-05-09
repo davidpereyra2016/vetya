@@ -365,10 +365,11 @@ export const emergenciaService = {
   },
   
   // Confirmar y aceptar el servicio de emergencia (pago)
-  confirmEmergencyService: async (emergencyId, paymentMethod) => {
+  confirmEmergencyService: async (emergencyId, paymentMethod, veterinarianId) => {
     try {
       const response = await axios.patch(`/emergencias/${emergencyId}/confirmar`, {
-        metodoPago: paymentMethod
+        metodoPago: paymentMethod,
+        veterinarioId: veterinarianId
       });
       return {
         success: true,

@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import useEmergencyStore from '../../store/useEmergencyStore';
 import usePagoStore from '../../store/usePagoStore';
+import { connectEmergencySocket, onEmergencyUpdated } from '../../services/socketService';
 
 const EmergencyDetailScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('active');
@@ -40,6 +41,30 @@ const EmergencyDetailScreen = ({ navigation }) => {
   // Cargar emergencias al montar el componente
   useEffect(() => {
     loadEmergencias();
+  }, []);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    let isMounted = true;
+
+    const setupSocket = async () => {
+      const socket = await connectEmergencySocket();
+      if (!isMounted || !socket) return;
+
+      unsubscribe = onEmergencyUpdated(async (payload) => {
+        if (payload?.emergencia) {
+          useEmergencyStore.getState().applySocketEmergencyUpdate(payload.emergencia);
+        }
+        await loadEmergencias();
+      });
+    };
+
+    setupSocket();
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   // Función para cargar las emergencias (activas + historial)

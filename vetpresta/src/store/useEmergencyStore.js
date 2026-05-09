@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { emergenciaService } from '../services/api';
 
+const getEmergencyId = (emergency) => emergency?._id || emergency?.id;
+
 /**
  * Store para gestionar el estado de las emergencias para prestadores veterinarios
  * Solo los prestadores de tipo 'Veterinario' pueden ver y gestionar emergencias
@@ -295,6 +297,30 @@ const useEmergencyStore = create((set, get) => ({
   // Limpiar el estado
   clearCurrentEmergency: () => {
     set({ currentEmergency: null });
+  },
+
+  applySocketEmergencyUpdate: (emergency) => {
+    if (!emergency) return;
+
+    const emergencyId = getEmergencyId(emergency);
+    if (!emergencyId) return;
+
+    set(state => {
+      const mergeList = (items) => {
+        const exists = items.some(item => getEmergencyId(item) === emergencyId);
+        return exists
+          ? items.map(item => getEmergencyId(item) === emergencyId ? { ...item, ...emergency } : item)
+          : [emergency, ...items];
+      };
+
+      return {
+        emergencies: mergeList(state.emergencies),
+        activeEmergencies: mergeList(state.activeEmergencies),
+        currentEmergency: getEmergencyId(state.currentEmergency) === emergencyId
+          ? { ...state.currentEmergency, ...emergency }
+          : state.currentEmergency,
+      };
+    });
   },
 
   // Limpiar error

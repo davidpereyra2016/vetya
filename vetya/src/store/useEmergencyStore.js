@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { emergenciaService, veterinarioService } from '../services/api';
 
+const ACTIVE_EMERGENCY_STATES = ['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'En atención'];
+
+const getEmergencyId = (emergency) => emergency?._id || emergency?.id;
+
 /**
  * Store para manejar el estado de emergencias y veterinarios disponibles
  */
@@ -402,6 +406,39 @@ const useEmergencyStore = create((set, get) => ({
   // Seleccionar una emergencia específica
   setSelectedEmergency: (emergency) => {
     set({ selectedEmergency: emergency });
+  },
+
+  applySocketEmergencyUpdate: (emergency) => {
+    if (!emergency) return get().activeEmergencies;
+
+    const emergencyId = getEmergencyId(emergency);
+    if (!emergencyId) return get().activeEmergencies;
+
+    let nextActiveEmergencies = [];
+
+    set(state => {
+      const shouldRemainActive = ACTIVE_EMERGENCY_STATES.includes(emergency.estado);
+      const exists = state.activeEmergencies.some(item => getEmergencyId(item) === emergencyId);
+
+      if (shouldRemainActive) {
+        nextActiveEmergencies = exists
+          ? state.activeEmergencies.map(item =>
+              getEmergencyId(item) === emergencyId ? { ...item, ...emergency } : item
+            )
+          : [emergency, ...state.activeEmergencies];
+      } else {
+        nextActiveEmergencies = state.activeEmergencies.filter(item => getEmergencyId(item) !== emergencyId);
+      }
+
+      return {
+        activeEmergencies: nextActiveEmergencies,
+        selectedEmergency: getEmergencyId(state.selectedEmergency) === emergencyId
+          ? { ...state.selectedEmergency, ...emergency }
+          : state.selectedEmergency,
+      };
+    });
+
+    return nextActiveEmergencies;
   },
   
   // Asignar un veterinario a una emergencia existente

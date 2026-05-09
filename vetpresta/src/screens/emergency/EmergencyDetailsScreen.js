@@ -20,6 +20,7 @@ import useAuthStore from '../../store/useAuthStore';
 import useEmergencyStore from '../../store/useEmergencyStore';
 import usePagoStore from '../../store/usePagoStore';
 import * as Location from 'expo-location';
+import { connectEmergencySocket, onEmergencyUpdated } from '../../services/socketService';
 
 // En un proyecto real, importaríamos el componente de MapView
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -76,6 +77,38 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadEmergencyDetails();
   }, [emergencyId]);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    let isMounted = true;
+    const activeEmergencyId = emergencyId || emergencyDetails?._id || emergencyDetails?.id;
+
+    if (!activeEmergencyId) {
+      return unsubscribe;
+    }
+
+    const setupSocket = async () => {
+      const socket = await connectEmergencySocket();
+      if (!isMounted || !socket) return;
+
+      unsubscribe = onEmergencyUpdated((payload) => {
+        const updatedEmergency = payload?.emergencia;
+        const updatedEmergencyId = updatedEmergency?._id || updatedEmergency?.id;
+        if (!updatedEmergency || updatedEmergencyId !== activeEmergencyId) return;
+
+        useEmergencyStore.getState().applySocketEmergencyUpdate(updatedEmergency);
+        setEmergencyDetails(prev => ({ ...(prev || {}), ...updatedEmergency }));
+        setCurrentStatus(updatedEmergency.estado);
+      });
+    };
+
+    setupSocket();
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [emergencyId, emergencyDetails?._id, emergencyDetails?.id]);
   
   // Cargar información del pago
   useEffect(() => {

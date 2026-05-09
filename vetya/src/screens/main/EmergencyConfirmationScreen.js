@@ -22,6 +22,7 @@ const { width } = Dimensions.get('window');
 const EmergencyConfirmationScreen = ({ navigation, route }) => {
   const { 
     emergency, 
+    emergencyData,
     vetInfo: initialVetInfo, 
     emergencyId, 
     petInfo: initialPetInfo, 
@@ -81,7 +82,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
   // Costo y tiempo estimado
   const emergencyCost = vetInfo?.precioEmergencia ?? vetInfo?.price ?? emergency?.precioEmergencia ?? 0;
   const estimatedTime = initialVetInfo?.estimatedTime || emergencyDetails?.tiempoEstimado?.texto || vetInfo?.tiempoEstimado?.texto || 'Calculando...';
-  const emergencyAddress = emergencyDetails?.ubicacion?.direccion || emergency?.ubicacion?.direccion || 'Tu ubicación actual';
+  const emergencyAddress = emergencyDetails?.ubicacion?.direccion || emergency?.ubicacion?.direccion || emergencyData?.ubicacion?.direccion || 'Tu ubicación actual';
   
   // Animaciones
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -339,21 +340,35 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
             <TouchableOpacity 
               style={styles.confirmButton || styles.contactButton}
               onPress={async () => {
-                if (!emergencyIdToUse || !vetInfo) {
-                  Alert.alert('Error', 'No se puede procesar la solicitud sin un ID de emergencia o información del veterinario');
+                if ((!emergencyIdToUse && !emergencyData) || !vetInfo) {
+                  Alert.alert('Error', 'No se puede procesar la solicitud sin datos de emergencia o información del veterinario');
                   return;
                 }
                 
                 try {
                   setConfirming(true);
                   
+                  let finalEmergencyId = emergencyIdToUse;
                   // Primero verificamos el estado actual de la emergencia
                   let currentEmergencyStatus = emergencyStatus;
+
+                  if (!finalEmergencyId && emergencyData) {
+                    const { createEmergency } = useEmergencyStore.getState();
+                    const createResult = await createEmergency(emergencyData);
+
+                    if (!createResult.success || !createResult.data?._id) {
+                      Alert.alert('Error', createResult.error || 'No se pudo crear la emergencia');
+                      return;
+                    }
+
+                    finalEmergencyId = createResult.data._id;
+                    currentEmergencyStatus = createResult.data.estado || 'Solicitada';
+                  }
                   
                   // Si es necesario, consultamos el estado actual desde el backend
-                  if (emergencyIdToUse) {
+                  if (finalEmergencyId) {
                     try {
-                      const emergencyDetailsResponse = await emergenciaService.getEmergencyDetails(emergencyIdToUse);
+                      const emergencyDetailsResponse = await emergenciaService.getEmergencyDetails(finalEmergencyId);
                       if (emergencyDetailsResponse.success && emergencyDetailsResponse.data) {
                         currentEmergencyStatus = emergencyDetailsResponse.data.estado;
                         // console.log(`Estado actual de la emergencia: ${currentEmergencyStatus}`);
@@ -370,7 +385,12 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                   if ((currentEmergencyStatus === 'Solicitada' && vetInfo) || currentEmergencyStatus === 'Asignada' || currentEmergencyStatus === 'En camino') {
                     // console.log(`Confirmando servicio para emergencia ${emergencyIdToUse} en estado ${currentEmergencyStatus}...`);
                     // console.log(`Método de pago seleccionado: ${selectedPaymentMethod}`);
-                    const result = await emergenciaService.confirmEmergencyService(emergencyIdToUse, selectedPaymentMethod);
+                    const veterinarianId = vetInfo?._id || vetInfo?.id;
+                    const result = await emergenciaService.confirmEmergencyService(
+                      finalEmergencyId,
+                      selectedPaymentMethod,
+                      veterinarianId
+                    );
                     
                     if (result.success) {
                       // Actualizar el estado localmente si es necesario, o confiar en la navegación y recarga de datos.
@@ -413,7 +433,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
               style={styles.cancelButton}
               onPress={async () => {
                 if (!emergencyIdToUse) {
-                  Alert.alert('Error', 'No se puede cancelar sin un ID de emergencia');
+                  navigation.navigate('MainTabs', { screen: 'Inicio' });
                   return;
                 }
                 
