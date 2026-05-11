@@ -177,6 +177,7 @@
                   <div class="col">
                     <p class="text-xs text-uppercase text-muted mb-1">Ingresos</p>
                     <h4 class="mb-0">$<%= estadisticas.totalRecibido.toFixed(2) %></h4>
+                    <small class="text-muted">Cobrado confirmado</small>
                   </div>
                   <div class="col-auto">
                     <i class="fas fa-dollar-sign fa-2x text-info opacity-50"></i>
@@ -202,11 +203,46 @@
           </div>
         </div>
 
+        <div class="row">
+          <div class="col-xl-3 col-md-6">
+            <div class="card stat-card success">
+              <div class="card-body">
+                <p class="text-xs text-uppercase text-muted mb-1">Digital neto</p>
+                <h5 class="mb-0">$<%= estadisticas.ingresoDigital.toFixed(2) %></h5>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="card stat-card warning">
+              <div class="card-body">
+                <p class="text-xs text-uppercase text-muted mb-1">Efectivo cobrado</p>
+                <h5 class="mb-0">$<%= estadisticas.efectivoCobrado.toFixed(2) %></h5>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="card stat-card danger">
+              <div class="card-body">
+                <p class="text-xs text-uppercase text-muted mb-1">Comisiones VetYa</p>
+                <h5 class="mb-0">$<%= estadisticas.comisionesVetya.toFixed(2) %></h5>
+              </div>
+            </div>
+          </div>
+          <div class="col-xl-3 col-md-6">
+            <div class="card stat-card info">
+              <div class="card-body">
+                <p class="text-xs text-uppercase text-muted mb-1">Pendiente</p>
+                <h5 class="mb-0">$<%= estadisticas.pagosPendientesMonto.toFixed(2) %></h5>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Deuda por efectivo -->
         <div class="card stat-card danger">
           <div class="card-body">
-            <% const cashDebt = Number(prestador.wallet && prestador.wallet.cashDebt ? prestador.wallet.cashDebt : 0); %>
-            <% const canAcceptCash = cashDebt <= 0 && (!prestador.wallet || prestador.wallet.canAcceptCash !== false); %>
+            <% const cashDebt = Number(estadisticas.deudaEfectivo || 0); %>
+            <% const canAcceptCash = estadisticas.puedeAceptarEfectivo; %>
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
               <div>
                 <h5 class="section-title mb-2"><i class="fas fa-hand-holding-dollar me-2"></i>Comisiones de efectivo</h5>
@@ -394,6 +430,9 @@
                         <tr>
                           <th>Fecha</th>
                           <th>Monto</th>
+                          <th>Método</th>
+                          <th>Comisión</th>
+                          <th>Neto digital</th>
                           <th>Cliente</th>
                           <th>Estado</th>
                           <th>Concepto</th>
@@ -404,9 +443,12 @@
                           <tr>
                             <td><%= new Date(pago.createdAt).toLocaleDateString('es-ES') %></td>
                             <td><strong>$<%= pago.monto ? pago.monto.toFixed(2) : '0.00' %></strong></td>
+                            <td><%= pago.metodoPago || 'N/A' %></td>
+                            <td>$<%= pago.finanzas ? pago.finanzas.comision.toFixed(2) : '0.00' %></td>
+                            <td>$<%= pago.finanzas ? pago.finanzas.netoDigital.toFixed(2) : '0.00' %></td>
                             <td><%= pago.usuario ? pago.usuario.username : 'N/A' %></td>
                             <td>
-                              <span class="badge <%= pago.estado === 'Completado' ? 'bg-success' : 'bg-warning' %>">
+                              <span class="badge <%= pago.estadoBadgeClass || 'bg-warning' %>">
                                 <%= pago.estado || 'Pendiente' %>
                               </span>
                             </td>

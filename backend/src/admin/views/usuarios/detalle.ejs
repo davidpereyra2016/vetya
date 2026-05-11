@@ -434,7 +434,7 @@
                             <td><strong>$<%= pago.monto ? pago.monto.toFixed(2) : '0.00' %></strong></td>
                             <td><%= pago.metodoPago || 'N/A' %></td>
                             <td>
-                              <span class="badge <%= pago.estado === 'Completado' ? 'bg-success' : (pago.estado === 'Pendiente' ? 'bg-warning' : 'bg-danger') %>">
+                              <span class="badge <%= ['Pagado', 'Capturado', 'Completado'].includes(pago.estado) ? 'bg-success' : (['Pendiente', 'Procesando'].includes(pago.estado) ? 'bg-warning' : 'bg-danger') %>">
                                 <%= pago.estado || 'N/A' %>
                               </span>
                             </td>

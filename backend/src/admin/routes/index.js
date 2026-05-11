@@ -17,7 +17,11 @@ import PrestadorValidacion from '../../models/PrestadorValidacion.js';
 import Anunciante from '../../models/Anunciante.js';
 import CampanaBanner from '../../models/CampanaBanner.js';
 import Suscripcion from '../../models/Suscripcion.js';
-import { markCashDebtAsPaid } from '../../services/cashDebtService.js';
+import {
+  CASH_COMMISSION_PERCENTAGE,
+  markCashDebtAsPaid,
+  registerCashDebtForPayment,
+} from '../../services/cashDebtService.js';
 
 // Multer en memoria para uploads del admin (publicidad)
 const uploadMem = multer({
@@ -40,6 +44,43 @@ const uploadBufferToCloudinary = (buffer, folder = 'vetya/publicidad') =>
     );
     stream.end(buffer);
   });
+
+const ESTADOS_PAGO_COBRADO = new Set(['Pagado', 'Capturado', 'Completado']);
+const ESTADOS_PAGO_PENDIENTE = new Set(['Pendiente', 'Procesando']);
+
+const toMoney = (value) => Math.round((Number(value) || 0) * 100) / 100;
+
+function getAdminPaymentFinancials(pago) {
+  const monto = toMoney(pago?.monto);
+  const esCobrado = ESTADOS_PAGO_COBRADO.has(pago?.estado);
+  const esPendiente = ESTADOS_PAGO_PENDIENTE.has(pago?.estado);
+  const esEfectivo = pago?.metodoPago === 'Efectivo';
+  const esMercadoPago = pago?.metodoPago === 'MercadoPago';
+  const comision = esEfectivo
+    ? toMoney(pago?.cashDebt?.platformFee || monto * CASH_COMMISSION_PERCENTAGE)
+    : toMoney(pago?.mercadoPago?.marketplaceFee || (esMercadoPago ? monto * CASH_COMMISSION_PERCENTAGE : 0));
+  const netoDigital = esCobrado && esMercadoPago
+    ? toMoney(pago?.mercadoPago?.sellerNetAmount || Math.max(monto - comision, 0))
+    : 0;
+
+  return {
+    monto,
+    esCobrado,
+    esPendiente,
+    esEfectivo,
+    esMercadoPago,
+    comision,
+    netoDigital,
+    efectivoCobrado: esCobrado && esEfectivo ? monto : 0,
+    ingresoBruto: esCobrado ? monto : 0,
+  };
+}
+
+function getEstadoPagoBadgeClass(estado) {
+  if (ESTADOS_PAGO_COBRADO.has(estado)) return 'bg-success';
+  if (ESTADOS_PAGO_PENDIENTE.has(estado)) return 'bg-warning';
+  return 'bg-danger';
+}
 
 const isAllowedCloudinaryUrl = (value) => {
   try {
@@ -438,9 +479,9 @@ router.get('/usuarios/:id', isAuthenticated, async (req, res) => {
       emergenciasActivas: emergencias.filter(e => ['Solicitada', 'Asignada', 'En camino', 'En atención'].includes(e.estado)).length,
       emergenciasCompletadas: emergencias.filter(e => e.estado === 'Atendida').length,
       totalPagos: pagos.length,
-      totalGastado: pagos.reduce((sum, p) => sum + (p.monto || 0), 0),
-      pagosCompletados: pagos.filter(p => p.estado === 'completado').length,
-      pagosPendientes: pagos.filter(p => p.estado === 'pendiente').length,
+      totalGastado: pagos.filter(p => ESTADOS_PAGO_COBRADO.has(p.estado)).reduce((sum, p) => sum + (p.monto || 0), 0),
+      pagosCompletados: pagos.filter(p => ESTADOS_PAGO_COBRADO.has(p.estado)).length,
+      pagosPendientes: pagos.filter(p => ESTADOS_PAGO_PENDIENTE.has(p.estado)).length,
       totalValoraciones: valoraciones.length,
       promedioCalificaciones: valoraciones.length > 0 
         ? (valoraciones.reduce((sum, v) => sum + v.calificacion, 0) / valoraciones.length).toFixed(1)
@@ -597,6 +638,36 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
       // Validación del prestador
       PrestadorValidacion.findOne({ prestador: req.params.id })
     ]);
+
+    for (const pago of pagos) {
+      await registerCashDebtForPayment(pago);
+    }
+
+    const prestadorActualizado = await Prestador.findById(req.params.id).populate('usuario', 'username email');
+    const pagosConFinanzas = pagos.map((pago) => {
+      const pagoObj = pago.toObject ? pago.toObject() : pago;
+      return {
+        ...pagoObj,
+        finanzas: getAdminPaymentFinancials(pagoObj),
+        estadoBadgeClass: getEstadoPagoBadgeClass(pagoObj.estado),
+      };
+    });
+    const cashDebt = toMoney(prestadorActualizado?.wallet?.cashDebt || 0);
+    const canAcceptCash = cashDebt <= 0 && prestadorActualizado?.wallet?.canAcceptCash !== false;
+    const totalesPago = pagosConFinanzas.reduce((acc, pago) => {
+      acc.ingresoBruto += pago.finanzas.ingresoBruto;
+      acc.ingresoDigital += pago.finanzas.netoDigital;
+      acc.efectivoCobrado += pago.finanzas.efectivoCobrado;
+      acc.comisiones += pago.finanzas.esCobrado ? pago.finanzas.comision : 0;
+      acc.pendiente += pago.finanzas.esPendiente ? pago.finanzas.monto : 0;
+      return acc;
+    }, {
+      ingresoBruto: 0,
+      ingresoDigital: 0,
+      efectivoCobrado: 0,
+      comisiones: 0,
+      pendiente: 0,
+    });
     
     // Calcular estadísticas
     const estadisticas = {
@@ -609,9 +680,15 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
       emergenciasActivas: emergencias.filter(e => ['Solicitada', 'Asignada', 'En camino', 'En atención'].includes(e.estado)).length,
       emergenciasCompletadas: emergencias.filter(e => e.estado === 'Atendida').length,
       totalPagos: pagos.length,
-      totalRecibido: pagos.filter(p => p.estado === 'Completado').reduce((sum, p) => sum + (p.monto || 0), 0),
-      pagosCompletados: pagos.filter(p => p.estado === 'Completado').length,
-      pagosPendientes: pagos.filter(p => p.estado === 'Pendiente').length,
+      totalRecibido: toMoney(totalesPago.ingresoBruto),
+      ingresoDigital: toMoney(totalesPago.ingresoDigital),
+      efectivoCobrado: toMoney(totalesPago.efectivoCobrado),
+      comisionesVetya: toMoney(totalesPago.comisiones),
+      pagosPendientesMonto: toMoney(totalesPago.pendiente),
+      deudaEfectivo: cashDebt,
+      puedeAceptarEfectivo: canAcceptCash,
+      pagosCompletados: pagosConFinanzas.filter(p => p.finanzas.esCobrado).length,
+      pagosPendientes: pagosConFinanzas.filter(p => p.finanzas.esPendiente).length,
       totalValoraciones: valoraciones.length,
       promedioCalificaciones: valoraciones.length > 0 
         ? (valoraciones.reduce((sum, v) => sum + v.calificacion, 0) / valoraciones.length).toFixed(1)
@@ -623,10 +700,10 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
     console.log('Estadísticas:', estadisticas);
     
     res.render('prestadores/detalle', { 
-      prestador,
+      prestador: prestadorActualizado || prestador,
       citas,
       emergencias,
-      pagos,
+      pagos: pagosConFinanzas,
       valoraciones,
       servicios,
       disponibilidades,
