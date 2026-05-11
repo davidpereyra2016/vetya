@@ -123,6 +123,29 @@ const pagoSchema = new mongoose.Schema({
       // Porcentaje aplicado para calcular la comision
     }
   },
+  cashDebt: {
+    platformFee: {
+      type: Number,
+      default: 0
+    },
+    providerCollected: {
+      type: Number,
+      default: 0
+    },
+    percentage: {
+      type: Number,
+      default: 0.3
+    },
+    status: {
+      type: String,
+      enum: ['Ninguna', 'Pendiente', 'Pagada'],
+      default: 'Ninguna'
+    },
+    recordedAt: Date,
+    paidAt: Date,
+    paymentAlias: String,
+    paymentLink: String
+  },
   comprobante: {
     type: String
     // URL a la imagen del comprobante (si aplica)

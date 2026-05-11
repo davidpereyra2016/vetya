@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { emergenciaService } from '../../services/api';
 import useEmergencyStore from '../../store/useEmergencyStore';
+import usePagoStore from '../../store/usePagoStore';
 
 const { width } = Dimensions.get('window');
 
@@ -40,6 +41,8 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
   const [confirming, setConfirming] = useState(false);
   const [cancelingEmergency, setCancelingEmergency] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('Efectivo');
+  const [cashStatus, setCashStatus] = useState(null);
+  const { obtenerEstadoEfectivoPrestador } = usePagoStore();
   
   // Efecto para cargar los detalles de la emergencia
   useEffect(() => {
@@ -73,6 +76,9 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
     ...(initialVetInfo || {}),
     ...(emergencyDetails?.veterinario || {})
   };
+  const veterinarianId = vetInfo?._id || vetInfo?.id;
+  const initialCanAcceptCash = vetInfo?.canAcceptCash ?? vetInfo?.can_accept_cash ?? true;
+  const canUseCash = (cashStatus?.canAcceptCash ?? initialCanAcceptCash) !== false;
   const emergencyStatus = emergencyDetails?.estado || 'Solicitada';
   const emergencyIdToUse = emergencyDetails?._id || emergencyId;
   
@@ -131,6 +137,28 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
       )
     ]).start();
   }, []);
+
+  useEffect(() => {
+    const loadCashStatus = async () => {
+      if (!veterinarianId) return;
+
+      const result = await obtenerEstadoEfectivoPrestador(veterinarianId);
+      if (result.success) {
+        setCashStatus(result.data);
+        if (result.data?.canAcceptCash === false) {
+          setSelectedPaymentMethod('MercadoPago');
+        }
+      }
+    };
+
+    loadCashStatus();
+  }, [veterinarianId]);
+
+  useEffect(() => {
+    if (!canUseCash && selectedPaymentMethod === 'Efectivo') {
+      setSelectedPaymentMethod('MercadoPago');
+    }
+  }, [canUseCash, selectedPaymentMethod]);
   
   // Convertir la animación de rotación a grados
   const spin = rotationAnim.interpolate({
@@ -269,9 +297,11 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
               <TouchableOpacity 
                 style={[
                   styles.paymentOption,
-                  selectedPaymentMethod === 'Efectivo' && styles.paymentOptionSelected
+                  selectedPaymentMethod === 'Efectivo' && styles.paymentOptionSelected,
+                  !canUseCash && styles.paymentOptionDisabled
                 ]}
-                onPress={() => setSelectedPaymentMethod('Efectivo')}
+                onPress={() => canUseCash && setSelectedPaymentMethod('Efectivo')}
+                disabled={!canUseCash}
               >
                 <View style={styles.paymentOptionContent}>
                   <Ionicons 
@@ -285,7 +315,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                       selectedPaymentMethod === 'Efectivo' && styles.paymentOptionTitleSelected
                     ]}>Efectivo</Text>
                     <Text style={styles.paymentOptionDescription}>
-                      Pagas al veterinario cuando llegue
+                      {canUseCash ? 'Pagas al veterinario cuando llegue' : 'No disponible por deuda de comisiones del veterinario'}
                     </Text>
                   </View>
                 </View>
@@ -383,6 +413,10 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                   // o si ya está 'Asignada' (por algún otro flujo o re-entrada a la pantalla),
                   // procedemos a confirmar el servicio.
                   if ((currentEmergencyStatus === 'Solicitada' && vetInfo) || currentEmergencyStatus === 'Asignada' || currentEmergencyStatus === 'En camino') {
+                    if (selectedPaymentMethod === 'Efectivo' && !canUseCash) {
+                      Alert.alert('Efectivo no disponible', 'Este veterinario debe regularizar comisiones pendientes y por ahora solo puede recibir pagos con Mercado Pago.');
+                      return;
+                    }
                     // console.log(`Confirmando servicio para emergencia ${emergencyIdToUse} en estado ${currentEmergencyStatus}...`);
                     // console.log(`Método de pago seleccionado: ${selectedPaymentMethod}`);
                     const veterinarianId = vetInfo?._id || vetInfo?.id;
@@ -709,6 +743,10 @@ const styles = StyleSheet.create({
   paymentOptionSelected: {
     backgroundColor: '#E3F2FD',
     borderColor: '#1E88E5',
+  },
+  paymentOptionDisabled: {
+    opacity: 0.55,
+    backgroundColor: '#F1F5F9',
   },
   paymentOptionContent: {
     flexDirection: 'row',

@@ -1159,5 +1159,22 @@ export const pagoService = {
           'Error al registrar el pago en efectivo',
       };
     }
+  },
+
+  obtenerEstadoEfectivoPrestador: async (prestadorId) => {
+    try {
+      const response = await axios.get(`/pagos/cash/prestador/${prestadorId}/status`);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error.response?.data?.message ||
+          'Error al consultar disponibilidad de efectivo',
+      };
+    }
   }
 };

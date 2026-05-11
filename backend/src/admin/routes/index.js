@@ -17,6 +17,7 @@ import PrestadorValidacion from '../../models/PrestadorValidacion.js';
 import Anunciante from '../../models/Anunciante.js';
 import CampanaBanner from '../../models/CampanaBanner.js';
 import Suscripcion from '../../models/Suscripcion.js';
+import { markCashDebtAsPaid } from '../../services/cashDebtService.js';
 
 // Multer en memoria para uploads del admin (publicidad)
 const uploadMem = multer({
@@ -643,6 +644,32 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
       prestadores: []
     });
   }
+});
+
+router.post('/prestadores/:id/deuda-efectivo/pagar', isAuthenticated, async (req, res) => {
+  try {
+    await markCashDebtAsPaid(req.params.id);
+  } catch (error) {
+    console.error('Error al marcar deuda de efectivo como pagada:', error);
+  }
+
+  res.redirect(`/admin/prestadores/${req.params.id}`);
+});
+
+router.post('/prestadores/:id/deuda-efectivo/instrucciones', isAuthenticated, async (req, res) => {
+  try {
+    const { alias, link } = req.body;
+    await Prestador.findByIdAndUpdate(req.params.id, {
+      $set: {
+        'wallet.cashDebtPaymentAlias': alias || process.env.CASH_DEBT_PAYMENT_ALIAS || 'davidpereyra.mercado',
+        'wallet.cashDebtPaymentLink': link || '',
+      },
+    });
+  } catch (error) {
+    console.error('Error al actualizar instrucciones de deuda:', error);
+  }
+
+  res.redirect(`/admin/prestadores/${req.params.id}`);
 });
 
 // Rutas para gestión de mascotas

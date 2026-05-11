@@ -202,6 +202,44 @@
           </div>
         </div>
 
+        <!-- Deuda por efectivo -->
+        <div class="card stat-card danger">
+          <div class="card-body">
+            <% const cashDebt = Number(prestador.wallet && prestador.wallet.cashDebt ? prestador.wallet.cashDebt : 0); %>
+            <% const canAcceptCash = cashDebt <= 0 && (!prestador.wallet || prestador.wallet.canAcceptCash !== false); %>
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+              <div>
+                <h5 class="section-title mb-2"><i class="fas fa-hand-holding-dollar me-2"></i>Comisiones de efectivo</h5>
+                <p class="mb-1"><strong>Deuda pendiente:</strong> $<%= cashDebt.toFixed(2) %></p>
+                <p class="mb-1"><strong>Puede aceptar efectivo:</strong>
+                  <span class="badge <%= canAcceptCash ? 'bg-success' : 'bg-danger' %>">
+                    <%= canAcceptCash ? 'Si' : 'No' %>
+                  </span>
+                </p>
+                <p class="mb-0 text-muted">Alias/link visible en VetPresta para liquidar la deuda.</p>
+              </div>
+              <form method="POST" action="/admin/prestadores/<%= prestador._id %>/deuda-efectivo/pagar">
+                <button type="submit" class="btn btn-success" <%= cashDebt <= 0 ? 'disabled' : '' %>>
+                  <i class="fas fa-check me-1"></i> Marcar deuda pagada
+                </button>
+              </form>
+            </div>
+            <form method="POST" action="/admin/prestadores/<%= prestador._id %>/deuda-efectivo/instrucciones" class="row g-2 mt-3">
+              <div class="col-md-5">
+                <label class="form-label">Alias de cobro</label>
+                <input class="form-control" name="alias" value="<%= (prestador.wallet && prestador.wallet.cashDebtPaymentAlias) || 'davidpereyra.mercado' %>">
+              </div>
+              <div class="col-md-5">
+                <label class="form-label">Link de pago</label>
+                <input class="form-control" name="link" value="<%= (prestador.wallet && prestador.wallet.cashDebtPaymentLink) || '' %>">
+              </div>
+              <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
         <!-- Tabs -->
         <ul class="nav nav-tabs" id="prestadorTabs" role="tablist">
           <li class="nav-item" role="presentation">

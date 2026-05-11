@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -28,12 +28,38 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(isRescheduling ? currentPaymentMethod : 'Efectivo');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [createdAppointment, setCreatedAppointment] = useState(null);
+  const [cashStatus, setCashStatus] = useState(null);
   const [paymentIdempotencyKey] = useState(() => createIdempotencyKey());
   const paymentSubmissionRef = useRef(false);
   
   // Stores
-  const { crearPreferencia, crearPagoEfectivo } = usePagoStore();
+  const { crearPreferencia, crearPagoEfectivo, obtenerEstadoEfectivoPrestador } = usePagoStore();
   const { createAppointment, reprogramAppointment } = useCitaStore();
+  const providerId = provider?._id || appointmentData?.prestador;
+  const initialCanAcceptCash = provider?.canAcceptCash ?? provider?.can_accept_cash ?? true;
+  const canUseCash = isRescheduling || (cashStatus?.canAcceptCash ?? initialCanAcceptCash) !== false;
+
+  useEffect(() => {
+    const loadCashStatus = async () => {
+      if (!providerId || isRescheduling) return;
+
+      const result = await obtenerEstadoEfectivoPrestador(providerId);
+      if (result.success) {
+        setCashStatus(result.data);
+        if (result.data?.canAcceptCash === false) {
+          setSelectedPaymentMethod('MercadoPago');
+        }
+      }
+    };
+
+    loadCashStatus();
+  }, [providerId, isRescheduling]);
+
+  useEffect(() => {
+    if (!canUseCash && selectedPaymentMethod === 'Efectivo') {
+      setSelectedPaymentMethod('MercadoPago');
+    }
+  }, [canUseCash, selectedPaymentMethod]);
   
   // Si no hay datos de appointment, mostrar mensaje de error
   if (!appointmentData) {
@@ -99,6 +125,11 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
 
   const handleEfectivoPayment = async () => {
     if (paymentSubmissionRef.current) return;
+
+    if (!canUseCash) {
+      Alert.alert('Efectivo no disponible', 'Este prestador debe regularizar comisiones pendientes y por ahora solo puede recibir pagos con Mercado Pago.');
+      return;
+    }
 
     if (!appointmentData) {
       paymentSubmissionRef.current = false;
@@ -380,10 +411,11 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
             <TouchableOpacity 
               style={[
                 styles.paymentOption,
-                selectedPaymentMethod === 'Efectivo' && styles.paymentOptionSelected
+                selectedPaymentMethod === 'Efectivo' && styles.paymentOptionSelected,
+                !canUseCash && styles.paymentOptionDisabled
               ]}
-              onPress={() => !isRescheduling && setSelectedPaymentMethod('Efectivo')}
-              disabled={isRescheduling}
+              onPress={() => !isRescheduling && canUseCash && setSelectedPaymentMethod('Efectivo')}
+              disabled={isRescheduling || !canUseCash}
             >
               <View style={styles.paymentOptionContent}>
                 <Ionicons 
@@ -397,7 +429,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                     selectedPaymentMethod === 'Efectivo' && styles.paymentOptionTitleSelected
                   ]}>Efectivo</Text>
                   <Text style={styles.paymentOptionDescription}>
-                    Pagas al veterinario en la consulta
+                    {canUseCash ? 'Pagas al veterinario en la consulta' : 'No disponible por deuda de comisiones del prestador'}
                   </Text>
                 </View>
               </View>
@@ -644,6 +676,10 @@ const styles = StyleSheet.create({
   paymentOptionSelected: {
     borderColor: '#1E88E5',
     backgroundColor: '#E3F2FD',
+  },
+  paymentOptionDisabled: {
+    opacity: 0.55,
+    backgroundColor: '#F1F5F9',
   },
   paymentOptionContent: {
     flexDirection: 'row',

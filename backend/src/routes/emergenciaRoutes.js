@@ -12,6 +12,10 @@ import { enviarNotificacionPush, esTokenValido } from "../utils/notificacionesUt
 import { createMarketplacePreference } from "../lib/mercadopago.js";
 import { emitEmergencyCreated, emitEmergencyUpdated } from "../services/socketService.js";
 import {
+  assertPrestadorCanAcceptCash,
+  registerCashDebtForPayment,
+} from "../services/cashDebtService.js";
+import {
   beginIdempotency,
   completeIdempotency,
   failIdempotency,
@@ -209,6 +213,7 @@ async function completarPagoEfectivoEmergencia(emergencia) {
   }
 
   await pago.save();
+  await registerCashDebtForPayment(pago);
   return pago;
 }
 
@@ -2214,6 +2219,10 @@ router.patch("/:id/confirmar", protectRoute, async (req, res) => {
       emergencia.metodoPago = metodoPago;
     } else {
       emergencia.metodoPago = "Efectivo"; // Valor por defecto
+    }
+
+    if (emergencia.metodoPago === "Efectivo") {
+      await assertPrestadorCanAcceptCash(veterinarioFinalId);
     }
     
     // Registrar fecha de confirmación

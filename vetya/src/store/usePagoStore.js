@@ -11,6 +11,7 @@ const usePagoStore = create((set, get) => ({
   // ============================================
   pagos: [],
   pagoActual: null,
+  cashStatusByPrestador: {},
   isLoading: false,
   error: null,
 
@@ -90,6 +91,30 @@ const usePagoStore = create((set, get) => ({
     } catch (error) {
       console.error('❌ Store: Excepción al crear pago en efectivo:', error);
       set({ error: error.message, isLoading: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  obtenerEstadoEfectivoPrestador: async (prestadorId) => {
+    if (!prestadorId) {
+      return { success: false, error: 'Prestador no especificado' };
+    }
+
+    try {
+      const result = await pagoService.obtenerEstadoEfectivoPrestador(prestadorId);
+
+      if (result.success) {
+        set((state) => ({
+          cashStatusByPrestador: {
+            ...state.cashStatusByPrestador,
+            [prestadorId]: result.data,
+          },
+        }));
+        return { success: true, data: result.data };
+      }
+
+      return { success: false, error: result.error };
+    } catch (error) {
       return { success: false, error: error.message };
     }
   },

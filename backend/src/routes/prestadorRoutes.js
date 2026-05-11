@@ -96,7 +96,7 @@ router.get('/', async (req, res) => {
 
     // Obtener prestadores con populate del usuario para acceder a profilePicture
     const prestadoresDb = await Prestador.find(filtro)
-      .select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia')
+      .select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia wallet')
       .populate('usuario', 'profilePicture')
       .lean();
     
@@ -108,6 +108,10 @@ router.get('/', async (req, res) => {
       if (prestadorObj.usuario && prestadorObj.usuario.profilePicture) {
         prestadorObj.imagen = prestadorObj.usuario.profilePicture;
       }
+
+      const cashDebt = Number(prestadorObj.wallet?.cashDebt || 0);
+      prestadorObj.canAcceptCash = cashDebt <= 0 && prestadorObj.wallet?.canAcceptCash !== false;
+      prestadorObj.can_accept_cash = prestadorObj.canAcceptCash;
       
       // Eliminar el objeto usuario para no exponer información innecesaria
       delete prestadorObj.usuario;
@@ -133,7 +137,7 @@ router.get('/tipo/:tipo', async (req, res) => {
     const prestadoresDb = await Prestador.find({
       tipo: req.params.tipo,
       activo: true
-    }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias')
+    }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias wallet')
       .populate('usuario', 'profilePicture')
       .lean();
     
@@ -145,6 +149,10 @@ router.get('/tipo/:tipo', async (req, res) => {
       if (prestadorObj.usuario && prestadorObj.usuario.profilePicture) {
         prestadorObj.imagen = prestadorObj.usuario.profilePicture;
       }
+
+      const cashDebt = Number(prestadorObj.wallet?.cashDebt || 0);
+      prestadorObj.canAcceptCash = cashDebt <= 0 && prestadorObj.wallet?.canAcceptCash !== false;
+      prestadorObj.can_accept_cash = prestadorObj.canAcceptCash;
       
       // Eliminar el objeto usuario para no exponer información innecesaria
       delete prestadorObj.usuario;
@@ -166,7 +174,7 @@ router.get('/emergencias', async (req, res) => {
       tipo: 'Veterinario',
       disponibleEmergencias: true,
       activo: true
-    }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia ubicacionActual radio')
+    }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia ubicacionActual radio wallet')
       .populate('usuario', 'profilePicture')
       .lean();
     
@@ -186,6 +194,10 @@ router.get('/emergencias', async (req, res) => {
       if (prestadorObj.usuario && prestadorObj.usuario.profilePicture) {
         prestadorObj.imagen = prestadorObj.usuario.profilePicture;
       }
+
+      const cashDebt = Number(prestadorObj.wallet?.cashDebt || 0);
+      prestadorObj.canAcceptCash = cashDebt <= 0 && prestadorObj.wallet?.canAcceptCash !== false;
+      prestadorObj.can_accept_cash = prestadorObj.canAcceptCash;
       
       // Eliminar el objeto usuario para no exponer información innecesaria
       delete prestadorObj.usuario;
@@ -332,7 +344,7 @@ router.get('/emergencias/ubicacion', async (req, res) => {
     console.log(`📊 [BACKEND] Con ubicacionActual.lat: ${conUbicacion}`);
     
     const prestadores = await Prestador.find(query).select(
-      'nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia radio ubicacionActual'
+      'nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia radio ubicacionActual wallet'
     ).lean();
     
     console.log(`✅ [BACKEND] Prestadores encontrados con coords válidas: ${prestadores.length}`);
@@ -353,7 +365,13 @@ router.get('/emergencias/ubicacion', async (req, res) => {
     }
     
     // Si se proporcionaron coordenadas del cliente, calcular distancia y tiempo estimado
-    let resultado = prestadores;
+    let resultado = prestadores.map(prestador => {
+      const prestadorObj = { ...prestador };
+      const cashDebt = Number(prestadorObj.wallet?.cashDebt || 0);
+      prestadorObj.canAcceptCash = cashDebt <= 0 && prestadorObj.wallet?.canAcceptCash !== false;
+      prestadorObj.can_accept_cash = prestadorObj.canAcceptCash;
+      return prestadorObj;
+    });
     if (lat && lng) {
       const clientLocation = {
         lat: parseFloat(lat),
@@ -361,7 +379,7 @@ router.get('/emergencias/ubicacion', async (req, res) => {
       };
       
       // Calcular distancia y tiempo estimado para cada prestador
-      resultado = prestadores.map(prestador => {
+      resultado = resultado.map(prestador => {
         const prestadorObj = { ...prestador };
         
         if (prestadorObj.ubicacionActual && prestadorObj.ubicacionActual.coordenadas) {

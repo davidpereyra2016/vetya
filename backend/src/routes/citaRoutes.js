@@ -10,6 +10,10 @@ import protectRoute from "../middleware/auth.middleware.js";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import { enviarNotificacionPush, esTokenValido } from "../utils/notificacionesUtils.js";
+import {
+  assertPrestadorCanAcceptCash,
+  registerCashDebtForPayment,
+} from "../services/cashDebtService.js";
 
 const router = express.Router();
 
@@ -165,6 +169,7 @@ async function sincronizarPagoCitaCompletada(cita) {
   }
 
   await pago.save();
+  await registerCashDebtForPayment(pago);
   return pago;
 }
 
@@ -1057,6 +1062,10 @@ router.post("/", protectRoute, async (req, res) => {
     let usandoHorarioGeneral = false;
     let estaDisponible = false;
     let prestadorObj = null;
+
+    if (metodoPago === "Efectivo") {
+      await assertPrestadorCanAcceptCash(prestador);
+    }
     
     // 4.1 Si no hay disponibilidad específica o no está activa, usar horarios generales del prestador
     if (!disponibilidad || !disponibilidad.horarioEspecifico || !disponibilidad.horarioEspecifico.activo) {
@@ -1203,7 +1212,12 @@ router.post("/", protectRoute, async (req, res) => {
     console.log('=== FIN DE CREACI�N DE CITA ===');
     res.status(201).json(citaConDatos);
   } catch (error) {
-    res.status(500).json({ message: "Error creando cita", error: error.message });
+    res.status(error.status || 500).json({
+      message: error.message || "Error creando cita",
+      code: error.code,
+      cashStatus: error.cashStatus,
+      error: error.message
+    });
   }
 });
 
@@ -1639,6 +1653,8 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
     }
+
+    await assertPrestadorCanAcceptCash(prestador._id);
     
     // Buscar la cita y verificar que pertenezca al prestador
     const cita = await Cita.findById(citaId)

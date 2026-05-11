@@ -11,6 +11,8 @@ const usePagoStore = create((set, get) => ({
   // ============================================
   pagos: [],
   pagoActual: null,
+  estadisticas: null,
+  cashDebtInfo: null,
   isLoading: false,
   error: null,
 
@@ -64,6 +66,14 @@ const usePagoStore = create((set, get) => ({
         
         set({ 
           pagos: result.data.pagos || [],
+          estadisticas: result.data.estadisticas || null,
+          cashDebtInfo: result.data.estadisticas
+            ? {
+                cashDebt: result.data.estadisticas.deudaEfectivo || 0,
+                canAcceptCash: result.data.estadisticas.canAcceptCash !== false,
+                payment: result.data.estadisticas.cashDebtPayment || {},
+              }
+            : null,
           isLoading: false 
         });
         return { success: true, data: result.data };
@@ -143,6 +153,8 @@ const usePagoStore = create((set, get) => ({
     set({
       pagos: [],
       pagoActual: null,
+      estadisticas: null,
+      cashDebtInfo: null,
       isLoading: false,
       error: null
     });

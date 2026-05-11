@@ -99,6 +99,8 @@ const AgendarCitaScreen = ({ navigation, route }) => {
   const [services, setServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [rescheduleReady, setRescheduleReady] = useState(false);
+  const providerCanAcceptCash = (provider) =>
+    provider?.canAcceptCash ?? provider?.can_accept_cash ?? true;
 
   const getLocationOptionsForService = () => {
     const modalidades = Array.isArray(selectedService?.modalidadAtencion)
@@ -463,6 +465,11 @@ const AgendarCitaScreen = ({ navigation, route }) => {
                     </View>
                   ) : (
                     <Text style={newStyles.prestadorTipo} numberOfLines={1}>{provider.tipo || ''}</Text>
+                  )}
+                  {!providerCanAcceptCash(provider) && (
+                    <View style={newStyles.cashPausedBadge}>
+                      <Text style={newStyles.cashPausedText}>Sin efectivo</Text>
+                    </View>
                   )}
                 </TouchableOpacity>
               );
@@ -1633,6 +1640,20 @@ const newStyles = StyleSheet.create({
     fontWeight: '500',
     color: '#E3F2FD',
     flex: 1,
+  },
+  cashPausedBadge: {
+    marginTop: 8,
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FDBA74',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  cashPausedText: {
+    fontSize: 10,
+    color: '#B45309',
+    fontWeight: '800',
   },
 });
 

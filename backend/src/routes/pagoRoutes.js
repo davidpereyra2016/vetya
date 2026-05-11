@@ -21,6 +21,12 @@ import {
   requireIdempotencyKey,
 } from "../utils/idempotency.js";
 import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
+import {
+  CASH_COMMISSION_PERCENTAGE,
+  assertPrestadorCanAcceptCash,
+  getProviderCashStatus,
+  registerCashDebtForPayment,
+} from "../services/cashDebtService.js";
 
 const router = express.Router();
 
@@ -136,6 +142,31 @@ function obtenerMontoCita(cita) {
   return Number(cita?.costoEstimado || cita?.servicio?.precio || 0);
 }
 
+function isPositivePaymentState(estado) {
+  return ["Completado", "Capturado", "Pagado"].includes(estado);
+}
+
+function getPaymentFinancials(pago) {
+  const amount = Number(pago?.monto || 0);
+  const isCash = pago?.metodoPago === "Efectivo";
+  const isMercadoPago = pago?.metodoPago === "MercadoPago";
+  const isPositive = isPositivePaymentState(pago?.estado);
+  const marketplaceFee = isCash
+    ? Number(pago?.cashDebt?.platformFee || amount * CASH_COMMISSION_PERCENTAGE)
+    : Number(pago?.mercadoPago?.marketplaceFee || (isMercadoPago ? amount * MARKETPLACE_PERCENTAGE : 0));
+  const digitalNet = isPositive && isMercadoPago
+    ? Number(pago?.mercadoPago?.sellerNetAmount || Math.max(amount - marketplaceFee, 0))
+    : 0;
+
+  return {
+    grossAmount: amount,
+    marketplaceFee,
+    digitalNet,
+    cashCollected: isPositive && isCash ? amount : 0,
+    cashDebt: isPositive && isCash ? marketplaceFee : 0,
+  };
+}
+
 async function reconciliarPagosCitasCompletadas({ usuarioId = null, prestadorId = null } = {}) {
   const filtro = { estado: "Completada" };
 
@@ -201,6 +232,7 @@ async function reconciliarPagosCitasCompletadas({ usuarioId = null, prestadorId 
       });
 
       await pago.save();
+      await registerCashDebtForPayment(pago);
       creados += 1;
       continue;
     }
@@ -233,7 +265,10 @@ async function reconciliarPagosCitasCompletadas({ usuarioId = null, prestadorId 
 
     if (huboCambios) {
       await pago.save();
+      await registerCashDebtForPayment(pago);
       actualizados += 1;
+    } else {
+      await registerCashDebtForPayment(pago);
     }
   }
 
@@ -289,7 +324,7 @@ router.get("/", protectRoute, async (req, res) => {
 router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
   try {
     // Obtener el prestador asociado al usuario autenticado
-    const prestador = await Prestador.findOne({ usuario: req.user._id }).select("_id").lean();
+    const prestador = await Prestador.findOne({ usuario: req.user._id }).select("_id wallet");
     
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
@@ -334,27 +369,39 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
     console.log('✅ Pagos encontrados:', pagos.length);
 
     // Calcular estadísticas
+    const cashStatus = getProviderCashStatus(prestador);
     const estadisticas = {
       total: 0,
       pendiente: 0,
       completado: 0,
       capturado: 0,
-      pagado: 0
+      pagado: 0,
+      brutoTotal: 0,
+      digitalTotal: 0,
+      efectivoCobrado: 0,
+      deudaEfectivo: cashStatus.cashDebt,
+      canAcceptCash: cashStatus.canAcceptCash,
+      can_accept_cash: cashStatus.can_accept_cash,
+      cashDebtPayment: cashStatus.cashDebtPayment,
     };
 
     pagos.forEach(pago => {
-      estadisticas.total += pago.monto;
+      const financials = getPaymentFinancials(pago);
+      estadisticas.brutoTotal += financials.grossAmount;
+      estadisticas.digitalTotal += financials.digitalNet;
+      estadisticas.efectivoCobrado += financials.cashCollected;
+      estadisticas.total += financials.digitalNet;
       
       if (pago.estado === 'Pendiente' || pago.estado === 'Procesando') {
-        estadisticas.pendiente += pago.monto;
+        estadisticas.pendiente += pago.metodoPago === 'MercadoPago' ? financials.digitalNet : 0;
       } else if (pago.estado === 'Completado' || pago.estado === 'Capturado' || pago.estado === 'Pagado') {
-        estadisticas.completado += pago.monto;
+        estadisticas.completado += financials.digitalNet;
       }
 
       if (pago.estado === 'Capturado') {
-        estadisticas.capturado += pago.monto;
+        estadisticas.capturado += financials.digitalNet;
       } else if (pago.estado === 'Pagado') {
-        estadisticas.pagado += pago.monto;
+        estadisticas.pagado += financials.digitalNet;
       }
     });
 
@@ -366,6 +413,21 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
   } catch (error) {
     console.error('❌ Error al obtener pagos del prestador:', error);
     res.status(500).json({ message: "Error al obtener los pagos del prestador" });
+  }
+});
+
+router.get("/cash/prestador/:prestadorId/status", protectRoute, async (req, res) => {
+  try {
+    const prestador = await Prestador.findById(req.params.prestadorId).select("wallet nombre tipo activo");
+
+    if (!prestador) {
+      return res.status(404).json({ message: "Prestador no encontrado" });
+    }
+
+    res.status(200).json(getProviderCashStatus(prestador));
+  } catch (error) {
+    console.error("Error al obtener estado de efectivo del prestador:", error);
+    res.status(500).json({ message: "Error al obtener el estado de efectivo" });
   }
 });
 
@@ -489,6 +551,7 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
       }
       
       await pago.save();
+      await registerCashDebtForPayment(pago);
     }
     
     res.status(200).json(pago);
@@ -1325,6 +1388,8 @@ router.post("/efectivo", protectRoute, async (req, res) => {
         .status(400)
         .json({ message: "No se pudo determinar el prestador asociado" });
     }
+
+    await assertPrestadorCanAcceptCash(prestadorId);
 
     const idempotency = await beginIdempotency(req, "pagos:efectivo");
     idempotencyRecord = idempotency.record;

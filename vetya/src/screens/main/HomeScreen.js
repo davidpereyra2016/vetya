@@ -986,6 +986,18 @@ const HomeScreen = ({ navigation }) => {
               </Animated.View>
             )}
             
+            <View style={styles.emergencyPaymentNotice}>
+              <View style={styles.emergencyPaymentIcon}>
+                <Ionicons name="receipt-outline" size={20} color="#B26A00" />
+              </View>
+              <View style={styles.emergencyPaymentCopy}>
+                <Text style={styles.emergencyPaymentTitle}>Importante sobre el abono</Text>
+                <Text style={styles.emergencyPaymentText}>
+                  El abono de la emergencia incluye únicamente la visita y el diagnóstico del veterinario en tu domicilio. Los insumos, medicación o tratamientos extra corren por tu cuenta y se abonan directamente al profesional.
+                </Text>
+              </View>
+            </View>
+
             <View style={styles.emergencyContent}>
               <View style={styles.vetImageContainer}>
                 <View style={[styles.vetImagePlaceholder, { backgroundColor: activeEmergencyVet.vetAssigned === false ? '#757575' : '#F44336' }]}>
@@ -1627,6 +1639,39 @@ const styles = StyleSheet.create({
   emergencyContent: {
     flexDirection: 'row',
     marginBottom: 12,
+  },
+  emergencyPaymentNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF8E1',
+    borderWidth: 1,
+    borderColor: '#FFE0A3',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+  },
+  emergencyPaymentIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFE9B8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  emergencyPaymentCopy: {
+    flex: 1,
+  },
+  emergencyPaymentTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#8A4F00',
+    marginBottom: 4,
+  },
+  emergencyPaymentText: {
+    fontSize: 13,
+    color: '#5F4B23',
+    lineHeight: 18,
   },
   vetImageContainer: {
     marginRight: 12,

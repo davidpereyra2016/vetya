@@ -208,7 +208,9 @@ const citaService = {
         tipo: p.tipo,
         especialidades: p.especialidades,
         rating: p.rating || 4.5,
-        imagen: p.imagen
+        imagen: p.imagen,
+        canAcceptCash: p.canAcceptCash ?? p.can_accept_cash ?? true,
+        can_accept_cash: p.can_accept_cash ?? p.canAcceptCash ?? true
       }));
       
       return { success: true, data: providers };

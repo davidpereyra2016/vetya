@@ -164,6 +164,29 @@ const prestadorSchema = new Schema({
     connectedAt: Date,
     lastRefreshAt: Date
   },
+  wallet: {
+    cashDebt: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    canAcceptCash: {
+      type: Boolean,
+      default: true
+    },
+    cashDebtUpdatedAt: Date,
+    cashDebtLastPaidAt: Date,
+    cashDebtPaymentAlias: {
+      type: String,
+      trim: true,
+      default: () => process.env.CASH_DEBT_PAYMENT_ALIAS || 'davidpereyra.mercado'
+    },
+    cashDebtPaymentLink: {
+      type: String,
+      trim: true,
+      default: () => process.env.CASH_DEBT_PAYMENT_LINK || ''
+    }
+  },
   precioEmergencia: {
     type: Number,
     default: 0

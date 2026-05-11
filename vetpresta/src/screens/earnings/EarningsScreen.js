@@ -25,6 +25,10 @@ const toNumber = (value, fallback = 0) => {
 };
 
 const getCommissionPercentage = (pago) => {
+  if (pago?.metodoPago === "Efectivo") {
+    return DEFAULT_VETYA_COMMISSION_PERCENTAGE;
+  }
+
   return toNumber(
     pago?.mercadoPago?.marketplacePercentage,
     pago?.metodoPago === "MercadoPago" ? DEFAULT_VETYA_COMMISSION_PERCENTAGE : 0
@@ -34,6 +38,10 @@ const getCommissionPercentage = (pago) => {
 const getCommissionAmount = (pago) => {
   const amount = toNumber(pago?.monto);
   const backendFee = pago?.mercadoPago?.marketplaceFee;
+
+  if (pago?.metodoPago === "Efectivo") {
+    return toNumber(pago?.cashDebt?.platformFee, amount * DEFAULT_VETYA_COMMISSION_PERCENTAGE);
+  }
 
   if (backendFee !== undefined && backendFee !== null) {
     return toNumber(backendFee);
@@ -45,6 +53,10 @@ const getCommissionAmount = (pago) => {
 const getNetAmount = (pago) => {
   const amount = toNumber(pago?.monto);
   const backendNetAmount = pago?.mercadoPago?.sellerNetAmount;
+
+  if (pago?.metodoPago === "Efectivo") {
+    return 0;
+  }
 
   if (backendNetAmount !== undefined && backendNetAmount !== null) {
     return toNumber(backendNetAmount, amount);
@@ -61,6 +73,10 @@ const EarningsScreen = ({ navigation }) => {
     total: 0,
     pendiente: 0,
     completado: 0,
+    efectivoCobrado: 0,
+    deudaEfectivo: 0,
+    canAcceptCash: true,
+    cashDebtPayment: {},
   });
   const [transactions, setTransactions] = useState([]);
 
@@ -132,6 +148,7 @@ const EarningsScreen = ({ navigation }) => {
           const comision = getCommissionAmount(pago);
           const porcentajeComision = getCommissionPercentage(pago);
           const montoNeto = getNetAmount(pago);
+          const esEfectivo = pago.metodoPago === "Efectivo";
 
           return {
             id: pago._id,
@@ -146,6 +163,9 @@ const EarningsScreen = ({ navigation }) => {
             comision,
             porcentajeComision,
             montoNeto,
+            esEfectivo,
+            deudaEfectivo: esEfectivo ? comision : 0,
+            efectivoCobrado: esEfectivo && estadoUI === "completado" ? toNumber(pago.monto) : 0,
           };
         });
 
@@ -164,9 +184,13 @@ const EarningsScreen = ({ navigation }) => {
         );
 
         setTotalEarnings({
-          total: netStats.completado,
-          pendiente: netStats.pendiente,
-          completado: netStats.completado,
+          total: toNumber(estadisticas?.digitalTotal, netStats.completado),
+          pendiente: toNumber(estadisticas?.pendiente, netStats.pendiente),
+          completado: toNumber(estadisticas?.digitalTotal, netStats.completado),
+          efectivoCobrado: toNumber(estadisticas?.efectivoCobrado),
+          deudaEfectivo: toNumber(estadisticas?.deudaEfectivo),
+          canAcceptCash: estadisticas?.canAcceptCash !== false,
+          cashDebtPayment: estadisticas?.cashDebtPayment || {},
         });
 
         setTransactions(earningsData);
@@ -248,7 +272,14 @@ const EarningsScreen = ({ navigation }) => {
           <Text style={styles.transactionDate}>{item.fecha}</Text>
         </View>
         <View style={styles.amountContainer}>
-          <Text style={styles.amount}>{formatCurrency(item.montoNeto)}</Text>
+          <Text style={styles.amount}>
+            {formatCurrency(item.esEfectivo ? item.monto : item.montoNeto)}
+          </Text>
+          {item.esEfectivo && (
+            <Text style={styles.cashDebtMini}>
+              Deuda VetYa {formatCurrency(item.deudaEfectivo)}
+            </Text>
+          )}
           <View
             style={[
               styles.statusBadge,
@@ -427,7 +458,7 @@ Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
                 />
               </View>
             </View>
-            <Text style={styles.detailCardLabel}>Cobrado</Text>
+            <Text style={styles.detailCardLabel}>Digital</Text>
             <Text style={[styles.detailCardValue, { color: COLORS.success }]}>
               {formatCurrency(totalEarnings.completado)}
             </Text>
@@ -444,12 +475,34 @@ Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
                 />
               </View>
             </View>
-            <Text style={styles.detailCardLabel}>Pendiente</Text>
+            <Text style={styles.detailCardLabel}>Efectivo</Text>
             <Text style={[styles.detailCardValue, { color: COLORS.warning }]}>
-              {formatCurrency(totalEarnings.pendiente)}
+              {formatCurrency(totalEarnings.efectivoCobrado)}
             </Text>
           </View>
         </View>
+
+        {totalEarnings.deudaEfectivo > 0 && (
+          <View style={styles.cashDebtCard}>
+            <View style={styles.cashDebtHeader}>
+              <Ionicons name="alert-circle" size={24} color="#B45309" />
+              <View style={styles.cashDebtTextBox}>
+                <Text style={styles.cashDebtTitle}>Efectivo pausado</Text>
+                <Text style={styles.cashDebtText}>
+                  Tenes {formatCurrency(totalEarnings.deudaEfectivo)} de comisiones por pagos en efectivo. Abona la deuda para volver a recibir servicios en efectivo.
+                </Text>
+                <Text style={styles.cashDebtAlias}>
+                  Alias: {totalEarnings.cashDebtPayment?.alias || "davidpereyra.mercado"}
+                </Text>
+                {!!totalEarnings.cashDebtPayment?.link && (
+                  <Text style={styles.cashDebtAlias}>
+                    Link: {totalEarnings.cashDebtPayment.link}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Filtro de período */}
@@ -663,6 +716,45 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: COLORS.dark,
+  },
+  cashDebtMini: {
+    fontSize: 11,
+    color: "#B45309",
+    marginTop: 2,
+    fontWeight: "600",
+  },
+  cashDebtCard: {
+    backgroundColor: "#FFF7ED",
+    borderColor: "#FDBA74",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 14,
+  },
+  cashDebtHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  cashDebtTextBox: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  cashDebtTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#92400E",
+    marginBottom: 4,
+  },
+  cashDebtText: {
+    fontSize: 13,
+    color: "#92400E",
+    lineHeight: 19,
+  },
+  cashDebtAlias: {
+    fontSize: 13,
+    color: "#7C2D12",
+    fontWeight: "700",
+    marginTop: 6,
   },
   statusBadge: {
     paddingHorizontal: 8,
