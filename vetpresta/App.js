@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, SafeAreaView, StatusBar, Platform, LogBox, Alert } from 'react-native';
+import { StyleSheet, StatusBar, Platform, LogBox, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import 'react-native-gesture-handler';
 import axios from 'axios';
 

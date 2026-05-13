@@ -40,9 +40,11 @@ const EmailVerificationScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     // Enfocar el primer input al montar
-    setTimeout(() => {
+    const focusTimer = setTimeout(() => {
       inputRefs.current[0]?.focus();
     }, 300);
+
+    return () => clearTimeout(focusTimer);
   }, []);
 
   const handleCodeChange = (text, index) => {

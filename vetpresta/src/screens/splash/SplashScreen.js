@@ -17,12 +17,12 @@ const AppSplashScreen = ({ onFinish }) => {
 
   useEffect(() => {
     // Esconder la splash screen nativa
-    setTimeout(async () => {
+    const hideSplashTimer = setTimeout(async () => {
       await SplashScreen.hideAsync();
     }, 300);
 
     // Iniciar las animaciones en secuencia
-    Animated.sequence([
+    const animation = Animated.sequence([
       // Aparecer y escalar el logo
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -50,6 +50,11 @@ const AppSplashScreen = ({ onFinish }) => {
         onFinish();
       }
     });
+
+    return () => {
+      clearTimeout(hideSplashTimer);
+      animation.stop();
+    };
   }, []);
 
   return (
