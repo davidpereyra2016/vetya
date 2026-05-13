@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Animated, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../../styles/globalStyles';
@@ -11,9 +11,9 @@ const { width, height } = Dimensions.get('window');
 
 const AppSplashScreen = ({ onFinish }) => {
   // Animaciones
-  const fadeAnim = new Animated.Value(0);
-  const scaleAnim = new Animated.Value(0.8);
-  const translateYAnim = new Animated.Value(20);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const translateYAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     // Esconder la splash screen nativa
@@ -44,7 +44,9 @@ const AppSplashScreen = ({ onFinish }) => {
 
       // Esperar un momento con todo visible
       Animated.delay(1000),
-    ]).start(() => {
+    ]);
+
+    animation.start(() => {
       // Notificar que la splash screen ha terminado
       if (onFinish) {
         onFinish();

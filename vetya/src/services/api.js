@@ -150,7 +150,9 @@ export const veterinarioService = {
   // Obtener todos los veterinarios
   getAll: async () => {
     try {
-      const response = await axios.get('/veterinarios');
+      const response = await axios.get('/prestadores', {
+        params: { tipo: 'Veterinario' }
+      });
       return {
         success: true,
         data: response.data
@@ -166,7 +168,7 @@ export const veterinarioService = {
   // Obtener un veterinario por ID
   getById: async (id) => {
     try {
-      const response = await axios.get(`/veterinarios/${id}`);
+      const response = await axios.get(`/prestadores/${id}`);
       return {
         success: true,
         data: response.data
@@ -263,7 +265,12 @@ export const veterinarioService = {
   // Buscar veterinarios por especialidad
   getByEspecialidad: async (especialidad) => {
     try {
-      const response = await axios.get(`/veterinarios/especialidad/${especialidad}`);
+      const response = await axios.get('/prestadores', {
+        params: {
+          tipo: 'Veterinario',
+          especialidad
+        }
+      });
       return {
         success: true,
         data: response.data
@@ -489,32 +496,19 @@ export const emergenciaService = {
   // Subir imágenes para una emergencia
   uploadEmergencyImages: async (images) => {
     try {
-      const formData = new FormData();
-      
-      for (let i = 0; i < images.length; i++) {
-        const imageUri = images[i];
-        const filename = imageUri.split('/').pop();
-        
-        // Determine mime type
-        const match = /\.([\w\d_]+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        
-        formData.append('imagenes', {
-          uri: imageUri,
-          name: filename,
-          type
+      const urls = await Promise.all((images || []).map(async (imageUri) => {
+        const filename = imageUri.split('/').pop() || '';
+        const extension = filename.split('.').pop()?.toLowerCase();
+        const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+        const base64 = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64
         });
-      }
-      
-      const response = await axios.post('/upload/emergencia', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
+        return `data:${mimeType};base64,${base64}`;
+      }));
+
       return {
         success: true,
-        data: response.data
+        data: { urls }
       };
     } catch (error) {
       return {

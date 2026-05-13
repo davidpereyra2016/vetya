@@ -16,6 +16,7 @@ import consejoDeSaludRoutes from "./consejoDeSaludRoutes.js";
 import notificacionRoutes from "./notificacionRoutes.js";
 import pagoRoutes from "./pagoRoutes.js";
 import prestadorRoutes from "./prestadorRoutes.js";
+import uploadRoutes from "./uploadRoutes.js";
 import catalogoRoutes from "./catalogoRoutes.js";
 import disponibilidadRoutes from "./disponibilidadRoutes.js";
 import clientRoutes from "./clientRoutes.js"; // Importar las nuevas rutas de clientes
@@ -44,6 +45,8 @@ router.use("/consejos-salud", consejoDeSaludRoutes);
 router.use("/notificaciones", notificacionRoutes);
 router.use("/pagos", pagoRoutes);
 router.use("/prestadores", prestadorRoutes);
+router.use("/veterinarios", prestadorRoutes); // Alias de compatibilidad para apps antiguas
+router.use("/upload", uploadRoutes);
 router.use("/clients", clientRoutes); // Añadir ruta para clientes
 router.use("/catalogo", catalogoRoutes);
 router.use("/disponibilidad", disponibilidadRoutes);

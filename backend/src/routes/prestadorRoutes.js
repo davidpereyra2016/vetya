@@ -94,6 +94,10 @@ router.get('/', async (req, res) => {
       filtro.tipo = req.query.tipo;
     }
 
+    if (req.query.especialidad) {
+      filtro.especialidades = req.query.especialidad;
+    }
+
     // Obtener prestadores con populate del usuario para acceder a profilePicture
     const prestadoresDb = await Prestador.find(filtro)
       .select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia wallet')
@@ -164,6 +168,37 @@ router.get('/tipo/:tipo', async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: 'Error al obtener los prestadores por tipo' });
+  }
+});
+
+// Alias de compatibilidad para /veterinarios/especialidad/:especialidad.
+router.get('/especialidad/:especialidad', async (req, res) => {
+  try {
+    const prestadoresDb = await Prestador.find({
+      tipo: 'Veterinario',
+      especialidades: req.params.especialidad,
+      activo: true
+    })
+      .select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia wallet')
+      .populate('usuario', 'profilePicture')
+      .lean();
+
+    const prestadores = prestadoresDb.map(prestador => {
+      const prestadorObj = { ...prestador };
+      if (prestadorObj.usuario?.profilePicture) {
+        prestadorObj.imagen = prestadorObj.usuario.profilePicture;
+      }
+      const cashDebt = Number(prestadorObj.wallet?.cashDebt || 0);
+      prestadorObj.canAcceptCash = cashDebt <= 0 && prestadorObj.wallet?.canAcceptCash !== false;
+      prestadorObj.can_accept_cash = prestadorObj.canAcceptCash;
+      delete prestadorObj.usuario;
+      return prestadorObj;
+    });
+
+    res.json(prestadores);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Error al obtener veterinarios por especialidad' });
   }
 });
 
@@ -458,6 +493,33 @@ router.get('/cercanos', async (req, res) => {
   }
 });
 
+// Alias de compatibilidad para clientes antiguos de VetPresta.
+router.put('/horarios', protectRoute, async (req, res) => {
+  try {
+    const availableHours = req.body.availableHours || req.body.horarios;
+
+    if (!Array.isArray(availableHours)) {
+      return res.status(400).json({ message: 'Se requiere un array de horarios' });
+    }
+
+    const prestador = await Prestador.findOne({ usuario: req.user._id });
+    if (!prestador) {
+      return res.status(404).json({ message: 'Prestador no encontrado' });
+    }
+
+    prestador.horarios = availableHours;
+    await prestador.save();
+
+    res.json({
+      message: 'Horarios actualizados correctamente',
+      prestador
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Error al actualizar horarios disponibles' });
+  }
+});
+
 // Obtener un prestador por ID
 router.get('/:id', async (req, res) => {
   try {
@@ -656,6 +718,47 @@ router.patch('/:id/precio-emergencia', protectRoute, async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: 'Error al actualizar el precio de emergencia' });
+  }
+});
+
+// Alias de compatibilidad para clientes antiguos de VetPresta.
+router.patch('/:id/emergencia', protectRoute, async (req, res) => {
+  try {
+    const { disponibleEmergencias } = req.body;
+    const prestador = await Prestador.findById(req.params.id);
+
+    if (!prestador) {
+      return res.status(404).json({ message: 'Prestador no encontrado' });
+    }
+
+    if (prestador.usuario.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: 'No autorizado para modificar este prestador' });
+    }
+
+    if (prestador.tipo !== 'Veterinario') {
+      return res.status(400).json({ message: 'Solo los veterinarios pueden configurar servicios de emergencia' });
+    }
+
+    if (disponibleEmergencias !== undefined) {
+      prestador.disponibleEmergencias = disponibleEmergencias;
+      if (!disponibleEmergencias && prestador.ubicacionActual) {
+        prestador.ubicacionActual = undefined;
+      }
+    }
+
+    await prestador.save();
+
+    res.json({
+      message: 'Disponibilidad de emergencia actualizada correctamente',
+      prestador: {
+        _id: prestador._id,
+        precioEmergencia: prestador.precioEmergencia,
+        disponibleEmergencias: prestador.disponibleEmergencias
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: 'Error al actualizar disponibilidad de emergencias' });
   }
 });
 

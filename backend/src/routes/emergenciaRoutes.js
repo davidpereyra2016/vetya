@@ -1407,6 +1407,70 @@ router.get("/:id/ubicacion-veterinario", protectRoute, async (req, res) => {
   }
 });
 
+// Compatibilidad para builds antiguas de VetPresta: actualizar ubicacion del veterinario
+// desde el contexto de una emergencia asignada.
+router.post("/:id/ubicacion-veterinario", protectRoute, async (req, res) => {
+  try {
+    const lat = parseFloat(req.body.lat ?? req.body.latitud ?? req.body.latitude);
+    const lng = parseFloat(req.body.lng ?? req.body.longitud ?? req.body.longitude);
+
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({ message: "Se requieren coordenadas validas" });
+    }
+
+    const emergencia = await Emergencia.findById(req.params.id);
+    if (!emergencia) {
+      return res.status(404).json({ message: "Emergencia no encontrada" });
+    }
+
+    if (!emergencia.veterinario) {
+      return res.status(400).json({ message: "No hay veterinario asignado a esta emergencia" });
+    }
+
+    const prestador = await Prestador.findById(emergencia.veterinario);
+    if (!prestador) {
+      return res.status(404).json({ message: "Prestador no encontrado" });
+    }
+
+    if (prestador.usuario.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: "No autorizado para actualizar esta ubicacion" });
+    }
+
+    if (prestador.tipo !== "Veterinario") {
+      return res.status(400).json({ message: "Solo los veterinarios pueden actualizar ubicacion de emergencia" });
+    }
+
+    prestador.ubicacionActual = {
+      coordenadas: { lat, lng },
+      ultimaActualizacion: new Date()
+    };
+    prestador.ubicacionActualGeo = {
+      type: "Point",
+      coordinates: [lng, lat]
+    };
+
+    if (!prestador.direccion) {
+      prestador.direccion = {};
+    }
+    prestador.direccion.coordenadas = { lat, lng };
+    prestador.direccionGeo = {
+      type: "Point",
+      coordinates: [lng, lat]
+    };
+
+    await prestador.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Ubicacion del veterinario actualizada correctamente",
+      ubicacion: prestador.ubicacionActual
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Error al actualizar la ubicacion del veterinario" });
+  }
+});
+
 // Agregar imagen a una emergencia
 router.post("/:id/imagen", protectRoute, async (req, res) => {
   try {

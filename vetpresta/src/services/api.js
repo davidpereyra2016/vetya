@@ -292,9 +292,14 @@ export const prestadorService = {
   },
 
   // Actualizar horarios disponibles
-  updateAvailableHours: async (availableHours) => {
+  updateAvailableHours: async (prestadorId, availableHours) => {
     try {
-      const response = await axios.put('/prestadores/horarios', { availableHours });
+      const response = await axios.post(`/disponibilidad/prestador/${prestadorId}`, {
+        horarioEspecifico: {
+          activo: true,
+          horarios: availableHours
+        }
+      });
       return {
         success: true,
         data: response.data
@@ -330,7 +335,7 @@ export const prestadorService = {
   // Actualizar disponibilidad para emergencias
   updateEmergencyAvailability: async (id, isAvailable) => {
     try {
-      const response = await axios.patch(`/prestadores/${id}/emergencia`, {
+      const response = await axios.patch(`/prestadores/${id}/precio-emergencia`, {
         disponibleEmergencias: isAvailable
       });
       return {
@@ -612,9 +617,19 @@ export const emergenciaService = {
   // Actualizar ubicación del veterinario durante una emergencia
   updateEmergencyLocation: async (emergencyId, latitude, longitude) => {
     try {
-      const response = await axios.post(`/emergencias/${emergencyId}/ubicacion-veterinario`, {
-        latitud: latitude,
-        longitud: longitude
+      const emergencyResponse = await axios.get(`/emergencias/${emergencyId}`);
+      const prestadorId = emergencyResponse.data?.veterinario?._id || emergencyResponse.data?.veterinario;
+
+      if (!prestadorId) {
+        return {
+          success: false,
+          error: 'No se encontrÃ³ el prestador asignado a la emergencia'
+        };
+      }
+
+      const response = await axios.patch(`/prestadores/${prestadorId}/ubicacion`, {
+        lat: latitude,
+        lng: longitude
       });
       return {
         success: true,
@@ -634,7 +649,9 @@ export const veterinarioService = {
   // Obtener todos los veterinarios
   getAll: async () => {
     try {
-      const response = await axios.get('/veterinarios');
+      const response = await axios.get('/prestadores', {
+        params: { tipo: 'Veterinario' }
+      });
       return {
         success: true,
         data: response.data
@@ -650,7 +667,7 @@ export const veterinarioService = {
   // Obtener un veterinario por ID
   getById: async (id) => {
     try {
-      const response = await axios.get(`/veterinarios/${id}`);
+      const response = await axios.get(`/prestadores/${id}`);
       return {
         success: true,
         data: response.data
@@ -666,7 +683,12 @@ export const veterinarioService = {
   // Buscar veterinarios por especialidad
   getByEspecialidad: async (especialidad) => {
     try {
-      const response = await axios.get(`/veterinarios/especialidad/${especialidad}`);
+      const response = await axios.get('/prestadores', {
+        params: {
+          tipo: 'Veterinario',
+          especialidad
+        }
+      });
       return {
         success: true,
         data: response.data
