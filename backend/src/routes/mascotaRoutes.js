@@ -7,8 +7,11 @@ import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
 const router = express.Router();
 
 const PET_LIST_FIELDS = "_id nombre tipo raza edad genero color peso vacunado imagen fechaNacimiento ultimaVisita activo createdAt";
+const REQUIRED_FIELDS = ["nombre", "tipo", "raza", "edad", "genero"];
 
 const ownsPetFilter = (id, userId) => ({ _id: id, propietario: userId });
+const isMissing = (value) => value === undefined || value === null || String(value).trim() === "";
+const normalizeOptionalString = (value) => (value === undefined || value === null ? "" : String(value).trim());
 
 router.get("/", protectRoute, async (req, res) => {
   try {
@@ -75,7 +78,8 @@ router.post("/", protectRoute, async (req, res) => {
   try {
     const { nombre, tipo, raza, edad, genero, color, peso, vacunado, necesidadesEspeciales, fechaNacimiento } = req.body;
 
-    if (!nombre || !tipo || !raza || !edad || !genero) {
+    const missingFields = REQUIRED_FIELDS.filter((field) => isMissing(req.body[field]));
+    if (missingFields.length > 0) {
       return res.status(400).json({ message: "Por favor completa todos los campos obligatorios" });
     }
 
@@ -86,15 +90,15 @@ router.post("/", protectRoute, async (req, res) => {
     }
 
     const nuevaMascota = await Mascota.create({
-      nombre,
-      tipo,
-      raza,
-      edad,
-      genero,
-      color: color || "",
-      peso: peso || "",
+      nombre: normalizeOptionalString(nombre),
+      tipo: normalizeOptionalString(tipo),
+      raza: normalizeOptionalString(raza),
+      edad: normalizeOptionalString(edad),
+      genero: normalizeOptionalString(genero),
+      color: normalizeOptionalString(color),
+      peso: normalizeOptionalString(peso),
       vacunado: vacunado || false,
-      necesidadesEspeciales: necesidadesEspeciales || "",
+      necesidadesEspeciales: normalizeOptionalString(necesidadesEspeciales),
       imagen: imageUrl,
       fechaNacimiento: fechaNacimiento || null,
       propietario: req.user._id,
@@ -103,6 +107,9 @@ router.post("/", protectRoute, async (req, res) => {
     res.status(201).json(nuevaMascota);
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error(error);
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: Object.values(error.errors)[0]?.message || "Datos de mascota invalidos" });
+    }
     res.status(500).json({ message: "Error al crear la mascota" });
   }
 });

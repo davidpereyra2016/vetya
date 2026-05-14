@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import axios from '../config/axios';
 
+const getMascotasFromResponse = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
 /**
  * Store para gestionar el estado de las mascotas usando Zustand
  */
@@ -16,12 +22,12 @@ const usePetStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get('/mascotas');
-      // console.log('Respuesta de mascotas:', response.data); // Debugging
+      const mascotas = getMascotasFromResponse(response.data);
       set({ 
-        pets: response.data, 
+        pets: mascotas,
         isLoading: false 
       });
-      return { success: true, data: response.data };
+      return { success: true, data: mascotas };
     } catch (error) {
       console.error('Error al obtener mascotas:', error);
       const errorMessage = error.response?.data?.message || 'Error al obtener las mascotas';
@@ -52,8 +58,9 @@ const usePetStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.post('/mascotas', petData);
+      const currentPets = Array.isArray(get().pets) ? get().pets : [];
       set({ 
-        pets: [...get().pets, response.data], 
+        pets: [response.data, ...currentPets],
         isLoading: false 
       });
       return { success: true, data: response.data };

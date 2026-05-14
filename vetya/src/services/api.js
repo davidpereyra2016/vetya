@@ -602,6 +602,12 @@ export const emergenciaService = {
 };
 
 // Servicio para manejo de mascotas
+const getMascotasFromResponse = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
 export const mascotaService = {
   // Obtener todas las mascotas del usuario
   getAll: async () => {
@@ -609,7 +615,7 @@ export const mascotaService = {
       const response = await axios.get('/mascotas');
       return {
         success: true,
-        data: response.data
+        data: getMascotasFromResponse(response.data)
       };
     } catch (error) {
       return {

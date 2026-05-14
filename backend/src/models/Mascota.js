@@ -14,7 +14,7 @@ const mascotaSchema = new mongoose.Schema({
   tipo: {
     type: String,
     required: true,
-    enum: ['Perro', 'Gato', 'Ave', 'Reptil', 'Roedor', 'Otro']
+    enum: ['Perro', 'Gato', 'Ave', 'Pez', 'Conejo', 'Reptil', 'Roedor', 'Otro']
   },
   raza: {
     type: String,
