@@ -1,5 +1,7 @@
 import express from "express";
 import Mascota from "../models/Mascota.js";
+import Cita from "../models/Cita.js";
+import Emergencia from "../models/Emergencia.js";
 import cloudinary from "../lib/cloudinary.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
@@ -8,6 +10,8 @@ const router = express.Router();
 
 const PET_LIST_FIELDS = "_id nombre tipo raza edad genero color peso vacunado imagen fechaNacimiento ultimaVisita activo createdAt";
 const REQUIRED_FIELDS = ["nombre", "tipo", "raza", "edad", "genero"];
+const ACTIVE_APPOINTMENT_STATES = ["Pendiente", "Confirmada"];
+const ACTIVE_EMERGENCY_STATES = ["Solicitada", "Asignada", "Confirmada", "En camino", "En atención"];
 
 const ownsPetFilter = (id, userId) => ({ _id: id, propietario: userId });
 const isMissing = (value) => value === undefined || value === null || String(value).trim() === "";
@@ -151,11 +155,42 @@ router.put("/:id", protectRoute, async (req, res) => {
 router.delete("/:id", protectRoute, async (req, res) => {
   try {
     const mascota = await Mascota.findOne(ownsPetFilter(req.params.id, req.user._id))
-      .select("_id imagen")
+      .select("_id imagen activo")
       .lean();
 
     if (!mascota) {
       return res.status(404).json({ message: "Mascota no encontrada" });
+    }
+
+    const [activeCita, activeEmergencia] = await Promise.all([
+      Cita.findOne({
+        mascota: mascota._id,
+        usuario: req.user._id,
+        estado: { $in: ACTIVE_APPOINTMENT_STATES },
+      }).select("_id estado fecha").lean(),
+      Emergencia.findOne({
+        mascota: mascota._id,
+        usuario: req.user._id,
+        estado: { $in: ACTIVE_EMERGENCY_STATES },
+      }).select("_id estado fechaSolicitud").lean(),
+    ]);
+
+    if (activeCita || activeEmergencia) {
+      const dependency = activeCita ? "una cita activa" : "una emergencia activa";
+      return res.status(409).json({
+        message: `No puedes eliminar esta mascota porque tiene ${dependency}. Cancela o finaliza ese proceso antes de eliminarla.`,
+        code: activeCita ? "PET_HAS_ACTIVE_APPOINTMENT" : "PET_HAS_ACTIVE_EMERGENCY",
+      });
+    }
+
+    const [hasCitaHistory, hasEmergenciaHistory] = await Promise.all([
+      Cita.exists({ mascota: mascota._id, usuario: req.user._id }),
+      Emergencia.exists({ mascota: mascota._id, usuario: req.user._id }),
+    ]);
+
+    if (hasCitaHistory || hasEmergenciaHistory) {
+      await Mascota.updateOne(ownsPetFilter(req.params.id, req.user._id), { $set: { activo: false } });
+      return res.status(200).json({ message: "Mascota eliminada de tu perfil" });
     }
 
     if (mascota.imagen?.includes("cloudinary")) {
