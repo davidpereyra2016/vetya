@@ -88,8 +88,7 @@ export async function syncCurrentUserLocation(options = {}) {
         lastUpdated: new Date().toISOString()
       }
     };
-  } catch (error) {
-    console.error('Error al sincronizar ubicación del usuario:', error);
+  } catch (_error) {
     return {
       success: false,
       error: 'No se pudo obtener tu ubicación actual'

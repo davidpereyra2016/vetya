@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { Platform } from 'react-native';
+import { normalizeAvatarUri } from '../utils/avatar';
 
 const getApiErrorMessage = (error, fallback) => {
   if (error.response?.status === 429) {
@@ -36,9 +37,18 @@ export const authService = {
         password,
         appType: 'client' // Importante: indicar que es la app de clientes
       });
+      const data = response.data?.user
+        ? {
+            ...response.data,
+            user: {
+              ...response.data.user,
+              profilePicture: normalizeAvatarUri(response.data.user.profilePicture)
+            }
+          }
+        : response.data;
       return {
         success: true,
-        data: response.data
+        data
       };
     } catch (error) {
       console.log('[api.js login] Error status:', error.response?.status);
@@ -84,9 +94,18 @@ export const authService = {
   verifyEmail: async (email, code) => {
     try {
       const response = await axios.post('/auth/verify-email', { email, code });
+      const data = response.data?.user
+        ? {
+            ...response.data,
+            user: {
+              ...response.data.user,
+              profilePicture: normalizeAvatarUri(response.data.user.profilePicture)
+            }
+          }
+        : response.data;
       return {
         success: true,
-        data: response.data
+        data
       };
     } catch (error) {
       return {
@@ -761,9 +780,13 @@ export const userService = {
   getProfile: async () => {
     try {
       const response = await axios.get('/users/profile');
+      const data = {
+        ...response.data,
+        profilePicture: normalizeAvatarUri(response.data?.profilePicture)
+      };
       return {
         success: true,
-        data: response.data
+        data
       };
     } catch (error) {
       return {
@@ -814,9 +837,13 @@ export const userService = {
   updateProfile: async (userData) => {
     try {
       const response = await axios.put('/users/profile', userData);
+      const data = {
+        ...response.data,
+        profilePicture: normalizeAvatarUri(response.data?.profilePicture)
+      };
       return {
         success: true,
-        data: response.data
+        data
       };
     } catch (error) {
       return {
@@ -915,9 +942,9 @@ export const userService = {
     try {
       // Crear FormData para subir la imagen
       const formData = new FormData();
-      const filename = imageUri.split('/').pop();
-      const match = /\.([\w\d]+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image';
+      const filename = imageUri.split('/').pop() || `profile-${Date.now()}.jpg`;
+      const extension = (/\.(\w+)$/.exec(filename)?.[1] || 'jpg').toLowerCase();
+      const type = extension === 'jpg' ? 'image/jpeg' : `image/${extension}`;
 
       formData.append('image', {
         uri: imageUri,
@@ -933,7 +960,10 @@ export const userService = {
 
       return {
         success: true,
-        data: response.data
+        data: {
+          ...response.data,
+          profilePicture: normalizeAvatarUri(response.data?.profilePicture)
+        }
       };
     } catch (error) {
       return {

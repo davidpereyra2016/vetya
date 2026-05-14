@@ -17,6 +17,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
 import { userService } from '../../services/api';
+import { normalizeAvatarUri } from '../../utils/avatar';
 
 const EditProfileScreen = ({ navigation }) => {
   const user = useAuthStore(state => state.user);
@@ -37,7 +38,7 @@ const EditProfileScreen = ({ navigation }) => {
           updateUser(result.data);
           setUsername(result.data.username || '');
           setEmail(result.data.email || '');
-          setProfileImage(result.data.profilePicture || null);
+          setProfileImage(normalizeAvatarUri(result.data.profilePicture) || null);
         }
       } catch (error) {
         console.log('Error al cargar perfil para edición:', error);
@@ -49,7 +50,7 @@ const EditProfileScreen = ({ navigation }) => {
     if (user) {
       setUsername(user.username || '');
       setEmail(user.email || '');
-      setProfileImage(user.profilePicture || null);
+      setProfileImage(normalizeAvatarUri(user.profilePicture) || null);
     }
     
     loadUserProfile();
@@ -73,7 +74,7 @@ const EditProfileScreen = ({ navigation }) => {
   };
 
   const handleUploadImage = async () => {
-    if (!profileImage || profileImage === user?.profilePicture) return null;
+    if (!profileImage || profileImage === normalizeAvatarUri(user?.profilePicture)) return null;
     
     try {
       setIsLoading(true);
@@ -105,7 +106,7 @@ const EditProfileScreen = ({ navigation }) => {
       setIsLoading(true);
 
       let updatedProfilePicture = user?.profilePicture;
-      if (profileImage && profileImage !== user?.profilePicture) {
+      if (profileImage && profileImage !== normalizeAvatarUri(user?.profilePicture)) {
         try {
           updatedProfilePicture = await handleUploadImage();
         } catch (error) {

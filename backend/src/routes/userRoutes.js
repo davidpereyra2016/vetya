@@ -5,8 +5,9 @@ import Emergencia from "../models/Emergencia.js";
 import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
 import multer from "multer";
-import { existsSync, mkdirSync } from "fs";
+import { existsSync, mkdirSync, unlink } from "fs";
 import { getPagination, normalizeEmail, paginatedResponse } from "../utils/routePerformance.js";
+import { normalizeAvatarUrl } from "../utils/avatar.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -25,9 +26,21 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter(_req, file, cb) {
+    if (!file.mimetype?.startsWith("image/")) {
+      return cb(new Error("El archivo debe ser una imagen"));
+    }
+    cb(null, true);
+  },
+});
 const router = express.Router();
 const USER_PUBLIC_FIELDS = "_id email username profilePicture role emailVerified ubicacionActual deviceToken createdAt";
+const removeLocalFile = (path) => {
+  if (path) unlink(path, () => {});
+};
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -66,8 +79,16 @@ router.get("/", authenticateToken, async (req, res) => {
 
 router.get("/profile", authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select(USER_PUBLIC_FIELDS).lean();
+    let user = await User.findById(req.user.userId).select(USER_PUBLIC_FIELDS).lean();
     if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+    const normalizedProfilePicture = normalizeAvatarUrl(user.profilePicture);
+    if (normalizedProfilePicture !== user.profilePicture) {
+      user = await User.findByIdAndUpdate(
+        req.user.userId,
+        { $set: { profilePicture: normalizedProfilePicture } },
+        { new: true, runValidators: true }
+      ).select(USER_PUBLIC_FIELDS).lean();
+    }
     res.json(user);
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("Error al obtener perfil:", error);
@@ -177,7 +198,7 @@ router.put("/profile", authenticateToken, async (req, res) => {
     const updateData = {};
     if (req.body.username) updateData.username = String(req.body.username).trim();
     if (req.body.email) updateData.email = normalizeEmail(req.body.email);
-    if (req.body.profilePicture) updateData.profilePicture = req.body.profilePicture;
+    if (req.body.profilePicture) updateData.profilePicture = normalizeAvatarUrl(req.body.profilePicture);
 
     if (updateData.email) {
       const existingEmail = await User.findOne({
@@ -267,7 +288,9 @@ router.post("/profile-picture", authenticateToken, upload.single("image"), async
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "profile_pictures",
       transformation: [{ width: 500, height: 500, crop: "limit" }],
+      resource_type: "image",
     });
+    removeLocalFile(req.file.path);
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user.userId,
@@ -277,8 +300,9 @@ router.post("/profile-picture", authenticateToken, upload.single("image"), async
 
     res.json(updatedUser);
   } catch (error) {
+    removeLocalFile(req.file?.path);
     if (process.env.NODE_ENV !== "production") console.error(error);
-    res.status(500).json({ message: "Error al subir la imagen" });
+    res.status(500).json({ message: error.message || "Error al subir la imagen" });
   }
 });
 

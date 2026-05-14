@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { generateVerificationCode, sendVerificationEmail, sendPasswordResetEmail } from "../utils/emailService.js";
 import { authLimiter, authRecoveryLimiter, normalizeEmail } from "../utils/routePerformance.js";
+import { createDefaultAvatarUrl, normalizeAvatarUrl } from "../utils/avatar.js";
 const router = express.Router();
 
 /**
@@ -113,7 +114,7 @@ router.post("/register/client", authLimiter, async (req, res) => {
         const uniqueUsername = await createUniqueClientUsername(username);
         
         // Crear foto de perfil aleatoria
-        const profilePicture = `https://api.dicebear.com/7.x/avataaars/svg?seed=${uniqueUsername}`;
+        const profilePicture = createDefaultAvatarUrl(uniqueUsername);
         
         // Crear usuario con role=client
         const newUser = new User({
@@ -194,7 +195,7 @@ router.post("/register/provider", authLimiter, async (req, res) => {
         }
         
         // Crear foto de perfil aleatoria
-        const profilePicture = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
+        const profilePicture = createDefaultAvatarUrl(username);
         
         // Crear usuario con role=provider
         const newUser = new User({
@@ -281,7 +282,7 @@ router.post("/register", authLimiter, async (req, res) => {
         }
         
         // Crear foto de perfil aleatoria
-        const profilePicture = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
+        const profilePicture = createDefaultAvatarUrl(username);
         
         // Crear usuario con role=client por defecto
         const newUser = new User({
@@ -374,6 +375,12 @@ router.post("/login", authLimiter, async (req, res) => {
         }
         
         // Si todo está correcto, generar token
+        const profilePicture = normalizeAvatarUrl(user.profilePicture);
+        if (profilePicture !== user.profilePicture) {
+            user.profilePicture = profilePicture;
+            await user.save();
+        }
+
         const token = generateToken(user._id);
         
         // Datos básicos de usuario para la respuesta
@@ -381,7 +388,7 @@ router.post("/login", authLimiter, async (req, res) => {
             id: user._id, 
             email: user.email, 
             username: user.username, 
-            profilePicture: user.profilePicture,
+            profilePicture,
             role: user.role
         };
         
@@ -546,6 +553,7 @@ router.post("/verify-email", authRecoveryLimiter, async (req, res) => {
         user.emailVerified = true;
         user.emailVerificationCode = undefined;
         user.emailVerificationExpires = undefined;
+        user.profilePicture = normalizeAvatarUrl(user.profilePicture);
         await user.save();
         
         // Generar token y responder con login automático

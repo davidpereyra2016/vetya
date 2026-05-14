@@ -79,7 +79,7 @@ async function createAdmin() {
             email: 'vetyaoficial@gmail.com',
             password: 'admin123',
             role: 'admin',
-            profilePicture: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+            profilePicture: 'https://api.dicebear.com/7.x/avataaars/png?seed=admin&size=256',
             telefono: '+1234567890'
         };
 

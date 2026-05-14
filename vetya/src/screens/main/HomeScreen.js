@@ -24,6 +24,7 @@ import usePrestadoresStore from '../../store/usePrestadoresStore';
 import useValoracionesStore from '../../store/useValoracionesStore';
 import useCountPacientesStore from '../../store/useCountPacientesStore';
 import useAuthStore from '../../store/useAuthStore';
+import { getUserAvatarUri } from '../../utils/avatar';
 import usePetStore from '../../store/usePetStore';
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
@@ -116,6 +117,7 @@ const HomeScreen = ({ navigation }) => {
 
   // Datos del usuario autenticado (para saludo y avatar del header)
   const user = useAuthStore(state => state.user);
+  const profilePicture = getUserAvatarUri(user);
 
   // Mascotas del usuario (para personalizar el saludo con el nombre de la mascota)
   const { pets, fetchPets } = usePetStore();
@@ -870,9 +872,9 @@ const HomeScreen = ({ navigation }) => {
             activeOpacity={0.8}
             onPress={() => navigation.navigate('Perfil')}
           >
-            {user?.profilePicture ? (
+            {profilePicture ? (
               <Image
-                source={{ uri: user.profilePicture }}
+                source={{ uri: profilePicture }}
                 style={styles.profileImage}
               />
             ) : (

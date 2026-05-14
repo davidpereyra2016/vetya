@@ -17,6 +17,7 @@ import useAuthStore from '../../store/useAuthStore';
 import { userService } from '../../services/api';
 import { useEffect } from 'react';
 import axios from '../../config/axios';
+import { getUserAvatarUri } from '../../utils/avatar';
 
 const ProfileScreen = (props) => {
   // Usar el hook useNavigation para asegurar que siempre tengamos acceso a navigation
@@ -44,6 +45,7 @@ const ProfileScreen = (props) => {
   }, []);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(true);
+  const profilePicture = getUserAvatarUri(user);
 
   const handleLogout = () => {
     Alert.alert(
@@ -84,11 +86,11 @@ const ProfileScreen = (props) => {
         {/* Info Usuario */}
         <View style={styles.profileInfoContainer}>
           <View style={styles.profileImageWrapper}>
-            {user?.profilePicture ? (
+            {profilePicture ? (
               <Image
-                source={{ uri: user.profilePicture }}
+                source={{ uri: profilePicture }}
                 style={styles.profileImage}
-                onError={() => console.log('Error cargando imagen:', user.profilePicture)}
+                onError={() => console.log('Error cargando imagen:', profilePicture)}
               />
             ) : (
               <View style={[styles.profileImage, styles.profilePlaceholder]}>
