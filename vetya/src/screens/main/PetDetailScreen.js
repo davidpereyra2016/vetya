@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import usePetStore from '../../store/usePetStore';
+import { mascotaService } from '../../services/api';
 import {
   StyleSheet,
   Text,
@@ -22,6 +23,7 @@ const PetDetailScreen = ({ route, navigation }) => {
   const [pet, setPet] = useState(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editedPet, setEditedPet] = useState(null);
+  const [selectedPetImage, setSelectedPetImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -48,6 +50,7 @@ const PetDetailScreen = ({ route, navigation }) => {
             vacunado: result.data.vacunado || false,
             necesidadesEspeciales: result.data.necesidadesEspeciales || ''
           });
+          setSelectedPetImage(null);
         } else {
           setError(result.error || 'Error al cargar los detalles de la mascota');
         }
@@ -112,10 +115,27 @@ const PetDetailScreen = ({ route, navigation }) => {
     
     try {
       const { updatePet } = usePetStore.getState();
-      const result = await updatePet(pet._id, editedPet);
+      const petData = {
+        ...editedPet,
+        ...(selectedPetImage?.base64 ? { imagen: selectedPetImage.base64 } : {})
+      };
+      const result = await updatePet(pet._id, petData);
       
       if (result.success) {
         setPet(result.data);
+        setEditedPet({
+          ...result.data,
+          nombre: result.data.nombre || '',
+          edad: result.data.edad || '',
+          peso: result.data.peso || '',
+          color: result.data.color || '',
+          tipo: result.data.tipo || '',
+          raza: result.data.raza || '',
+          genero: result.data.genero || '',
+          vacunado: result.data.vacunado || false,
+          necesidadesEspeciales: result.data.necesidadesEspeciales || ''
+        });
+        setSelectedPetImage(null);
         setIsEditModalVisible(false);
         // Mostrar alerta de éxito
         Alert.alert("Cambios guardados", "Los datos de la mascota se han actualizado correctamente.");
@@ -126,6 +146,23 @@ const PetDetailScreen = ({ route, navigation }) => {
       console.error('Error al actualizar mascota:', err);
       Alert.alert("Error", "Ocurrió un error al guardar los cambios");
     }
+  };
+
+  const handleSelectPetImage = async () => {
+    const result = await mascotaService.pickPetImage();
+    if (result.success) {
+      setSelectedPetImage(result.data);
+      return;
+    }
+
+    if (result.error !== 'Selección cancelada') {
+      Alert.alert('Error', result.error || 'No se pudo seleccionar la imagen');
+    }
+  };
+
+  const closeEditModal = () => {
+    setSelectedPetImage(null);
+    setIsEditModalVisible(false);
   };
 
   // Renderizar el ícono correspondiente para el tipo de mascota
@@ -332,7 +369,7 @@ const PetDetailScreen = ({ route, navigation }) => {
         animationType="slide"
         transparent={true}
         visible={isEditModalVisible}
-        onRequestClose={() => setIsEditModalVisible(false)}
+        onRequestClose={closeEditModal}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -343,7 +380,7 @@ const PetDetailScreen = ({ route, navigation }) => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Editar Mascota</Text>
               <TouchableOpacity
-                onPress={() => setIsEditModalVisible(false)}
+                onPress={closeEditModal}
                 style={styles.modalCloseBtn}
               >
                 <Ionicons name="close" size={22} color="#333" />
@@ -351,6 +388,31 @@ const PetDetailScreen = ({ route, navigation }) => {
             </View>
 
             <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
+              <View style={styles.photoContainer}>
+                <TouchableOpacity
+                  style={styles.photoButton}
+                  onPress={handleSelectPetImage}
+                  activeOpacity={0.85}
+                >
+                  {selectedPetImage?.uri || editedPet.imagen ? (
+                    <Image
+                      source={{ uri: selectedPetImage?.uri || editedPet.imagen }}
+                      style={styles.petImagePreview}
+                    />
+                  ) : (
+                    <View style={styles.photoPlaceholder}>
+                      {renderPetIcon(editedPet.tipo || pet.tipo, 34)}
+                      <Text style={styles.photoText}>Agregar foto</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSelectPetImage} activeOpacity={0.85}>
+                  <Text style={styles.changePhotoText}>
+                    {editedPet.imagen || selectedPetImage ? 'Cambiar foto de mascota' : 'Agregar foto de mascota'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Nombre *</Text>
                 <TextInput
@@ -798,6 +860,43 @@ const styles = StyleSheet.create({
   },
   modalScrollView: {
     paddingHorizontal: 25,
+  },
+  photoContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  photoButton: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#E3F2FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#90CAF9',
+    borderStyle: 'dashed',
+    overflow: 'hidden',
+  },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  petImagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  photoText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#1E88E5',
+    fontWeight: '600',
+  },
+  changePhotoText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#1E88E5',
+    fontWeight: '700',
   },
   inputGroup: {
     marginBottom: 16,
