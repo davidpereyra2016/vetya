@@ -1,40 +1,42 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Linking,
+  Platform,
+  ScrollView,
+  Share,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
   TouchableOpacity,
-  Share,
-  Platform,
-  Dimensions,
+  View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import useConsejosSaludStore from '../../store/useConsejosSaludStore';
 
 const { height, width } = Dimensions.get('window');
 
-// Paleta de colores por categoría (para el hero/acentos visuales)
-const getCategoryPalette = (category) => {
+const getCategoryPalette = (tip) => {
+  const color = tip?.color || '#1E88E5';
+  const category = tip?.category;
   switch (category) {
+    case 'Nutricion':
     case 'Nutrición':
       return { bg: '#E65100', accent: '#FF9800', icon: 'restaurant' };
-    case 'Higiene':
-      return { bg: '#00695C', accent: '#26A69A', icon: 'water' };
-    case 'Cuidados Generales':
-      return { bg: '#1565C0', accent: '#42A5F5', icon: 'heart' };
     case 'Comportamiento':
       return { bg: '#6A1B9A', accent: '#AB47BC', icon: 'happy' };
-    case 'Actividad Física':
-      return { bg: '#B71C1C', accent: '#EF5350', icon: 'fitness' };
+    case 'Prevencion':
     case 'Prevención':
       return { bg: '#2E7D32', accent: '#4CAF50', icon: 'shield-checkmark' };
+    case 'Emergencias':
+      return { bg: '#B71C1C', accent: '#EF5350', icon: 'alert-circle' };
     default:
-      return { bg: '#1A237E', accent: '#3F51B5', icon: 'medical' };
+      return { bg: color === '#1E88E5' ? '#1A237E' : color, accent: color, icon: tip?.icon || 'medical' };
   }
 };
 
-// Extrae iniciales del autor (ej: "Dr. Carlos Rodríguez" → "CR")
 const getAuthorInitials = (author) => {
   if (!author) return 'V';
   const cleaned = String(author).replace(/^(Dr\.|Dra\.)\s*/i, '').trim();
@@ -42,85 +44,169 @@ const getAuthorInitials = (author) => {
   return parts.slice(0, 2).map((p) => p[0]).join('').toUpperCase() || 'V';
 };
 
+const getPetTypeIcon = (tip) => {
+  const type = tip?.petType;
+  if (type === 'cat') return 'logo-octocat';
+  if (type === 'bird') return 'airplane';
+  if (type === 'fish') return 'fish';
+  if (type === 'reptile') return 'leaf';
+  if (type === 'rabbit') return 'extension-puzzle';
+  if (type === 'rodent') return 'ellipse';
+  return 'paw';
+};
+
+const getPetTypeName = (tip) => {
+  const types = Array.isArray(tip?.petTypes) && tip.petTypes.length > 0 ? tip.petTypes : ['Todos'];
+  return types.join(', ');
+};
+
+const renderInlineMarkdown = (text, style, accentColor, key) => {
+  const parts = [];
+  const regex = /(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+    const token = match[0];
+    if (token.startsWith('**')) {
+      parts.push({ type: 'bold', value: token.slice(2, -2) });
+    } else {
+      const link = token.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      if (link) parts.push({ type: 'link', value: link[1], url: link[2] });
+    }
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push({ type: 'text', value: text.slice(lastIndex) });
+
+  return (
+    <Text key={key} style={style}>
+      {parts.map((part, index) => {
+        if (part.type === 'bold') return <Text key={index} style={styles.inlineBold}>{part.value}</Text>;
+        if (part.type === 'link') {
+          return (
+            <Text key={index} style={[styles.inlineLink, { color: accentColor }]} onPress={() => Linking.openURL(part.url)}>
+              {part.value}
+            </Text>
+          );
+        }
+        return <Text key={index}>{part.value}</Text>;
+      })}
+    </Text>
+  );
+};
+
+const MarkdownContent = ({ content, accentColor }) => {
+  const blocks = String(content || '').trim().split(/\n\s*\n/).filter(Boolean);
+  if (blocks.length === 0) return null;
+
+  return (
+    <View style={styles.articleBody}>
+      {blocks.map((block, idx) => {
+        const trimmed = block.trim();
+        if (/^###\s+/.test(trimmed)) {
+          return <Text key={idx} style={styles.subHeadingSmall}>{trimmed.replace(/^###\s+/, '')}</Text>;
+        }
+        if (/^##\s+/.test(trimmed)) {
+          return <Text key={idx} style={styles.subHeading}>{trimmed.replace(/^##\s+/, '')}</Text>;
+        }
+
+        const lines = trimmed.split('\n').filter(Boolean);
+        const isList = lines.every((line) => /^\s*(-|\d+\.)\s+/.test(line));
+        if (isList) {
+          return (
+            <View key={idx} style={styles.listBlock}>
+              {lines.map((line, lineIndex) => (
+                <View key={lineIndex} style={styles.listItem}>
+                  <View style={[styles.listBullet, { backgroundColor: accentColor }]}>
+                    <Text style={styles.listBulletText}>{/^\s*\d+\./.test(line) ? lineIndex + 1 : '•'}</Text>
+                  </View>
+                  {renderInlineMarkdown(line.replace(/^\s*(-|\d+\.)\s+/, ''), styles.listItemText, accentColor)}
+                </View>
+              ))}
+            </View>
+          );
+        }
+
+        if (/^>/.test(trimmed)) {
+          return (
+            <View key={idx} style={[styles.quoteBlock, { borderLeftColor: accentColor }]}>
+              {renderInlineMarkdown(trimmed.replace(/^>\s?/, ''), [styles.quoteText, { color: accentColor }], accentColor)}
+            </View>
+          );
+        }
+
+        return renderInlineMarkdown(trimmed, idx === 0 ? styles.leadText : styles.paragraph, accentColor, idx);
+      })}
+    </View>
+  );
+};
+
 const HealthTipDetailScreen = ({ route, navigation }) => {
-  const { tip } = route.params;
-  
-  // Función para compartir el consejo
+  const routeTip = route.params?.tip || null;
+  const selectedConsejo = useConsejosSaludStore((state) => state.selectedConsejo);
+  const isLoading = useConsejosSaludStore((state) => state.isLoading);
+  const error = useConsejosSaludStore((state) => state.error);
+  const fetchConsejoById = useConsejosSaludStore((state) => state.fetchConsejoById);
+  const likeConsejo = useConsejosSaludStore((state) => state.likeConsejo);
+  const clearSelectedConsejo = useConsejosSaludStore((state) => state.clearSelectedConsejo);
+
+  const tip = selectedConsejo?.id === routeTip?.id ? selectedConsejo : routeTip || selectedConsejo;
+  const palette = useMemo(() => getCategoryPalette(tip), [tip]);
+  const authorInitials = getAuthorInitials(tip?.author);
+
+  useEffect(() => {
+    if (routeTip?.id) fetchConsejoById(routeTip.id);
+    return () => clearSelectedConsejo();
+  }, [clearSelectedConsejo, fetchConsejoById, routeTip?.id]);
+
   const handleShare = async () => {
+    if (!tip) return;
     try {
       await Share.share({
-        message: `${tip.title} - ${tip.description}\n\nLeído en la app VetYa`,
+        message: `${tip.title}\n\n${tip.description}\n\nLeido en la app VetYa`,
         title: 'Consejo de salud para mascotas',
       });
     } catch (error) {
       console.log('Error compartiendo:', error);
     }
   };
-  
-  // Determinar el icono basado en el tipo de mascota
-  const getPetTypeIcon = () => {
-    switch (tip.petType) {
-      case 'dog': return 'logo-reddit';
-      case 'cat': return 'logo-octocat';
-      case 'bird': return 'airplane';
-      case 'fish': return 'fish';
-      case 'reptile': return 'leaf';
-      case 'rabbit': return 'extension-puzzle';
-      case 'rodent': return 'ellipse';
-      default: return 'paw';
-    }
+
+  const handleLike = () => {
+    if (tip?.id) likeConsejo(tip.id);
   };
-  
-  // Obtener el nombre del tipo de mascota
-  const getPetTypeName = () => {
-    switch (tip.petType) {
-      case 'dog': return 'Perros';
-      case 'cat': return 'Gatos';
-      case 'bird': return 'Aves';
-      case 'fish': return 'Peces';
-      case 'reptile': return 'Reptiles';
-      case 'rabbit': return 'Conejos';
-      case 'rodent': return 'Roedores';
-      default: return 'Todas las mascotas';
-    }
-  };
-  
-  // Texto para el contenido del artículo (simulado)
-  const articleContent = `
-${tip.description}
 
-Los dueños de mascotas deben estar atentos a estos consejos para garantizar la salud y bienestar de sus compañeros. Es importante recordar que cada animal tiene necesidades específicas según su especie, raza, edad y condiciones de salud particulares.
+  if (!tip && isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1E88E5" />
+        <Text style={styles.loadingText}>Cargando consejo...</Text>
+      </View>
+    );
+  }
 
-Aspectos importantes a considerar:
-
-1. **Alimentación**: Proporciona una dieta balanceada adaptada a sus necesidades específicas.
-2. **Hidratación**: Asegúrate que siempre tenga agua fresca disponible.
-3. **Ejercicio**: El nivel adecuado de actividad física es esencial para mantener un peso saludable.
-4. **Visitas al veterinario**: Revisiones periódicas para prevenir problemas de salud.
-5. **Higiene**: Mantener una rutina de limpieza y aseo adecuada para cada tipo de mascota.
-
-Recuerda que cada mascota es única y puede tener necesidades especiales. Siempre consulta con un veterinario para obtener recomendaciones personalizadas para tu compañero.
-  `;
-  
-  // Paleta del diseño basada en la categoría del consejo
-  const palette = getCategoryPalette(tip.category);
-  const heroBg = tip.bgColor || palette.bg;
-  const heroIcon = tip.iconName || palette.icon;
-  const accentColor = palette.accent;
-  const authorInitials = getAuthorInitials(tip.author);
+  if (!tip) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="alert-circle-outline" size={58} color="#F44336" />
+        <Text style={styles.loadingText}>{error || 'No se pudo cargar el consejo'}</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-
-      {/* HEADER FLOTANTE (botones absolutos con efecto cristal) */}
       <View style={styles.floatingHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassButton}>
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={[styles.glassButton, { marginRight: 10 }]}>
-            <Ionicons name="bookmark-outline" size={22} color="#FFF" />
+          <TouchableOpacity style={[styles.glassButton, { marginRight: 10 }]} onPress={handleLike}>
+            <Ionicons name="heart-outline" size={22} color="#FFF" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.glassButton} onPress={handleShare}>
             <Ionicons name="share-social-outline" size={22} color="#FFF" />
@@ -129,26 +215,27 @@ Recuerda que cada mascota es única y puede tener necesidades especiales. Siempr
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* HERO: icono grande con color de fondo dinámico */}
-        <View style={[styles.heroSection, { backgroundColor: heroBg }]}>
-          <Ionicons name={heroIcon} size={150} color="rgba(255,255,255,0.15)" />
-          {/* Ícono de tipo de mascota como acento */}
+        <View style={[styles.heroSection, { backgroundColor: palette.bg }]}>
+          {tip.image ? (
+            <Image source={{ uri: tip.image }} style={styles.heroImage} />
+          ) : (
+            <Ionicons name={palette.icon} size={150} color="rgba(255,255,255,0.15)" />
+          )}
+          <View style={styles.heroOverlay} />
           <View style={styles.heroPetTypeBadge}>
-            <Ionicons name={getPetTypeIcon()} size={28} color="#FFF" />
+            <Ionicons name={getPetTypeIcon(tip)} size={28} color="#FFF" />
           </View>
         </View>
 
-        {/* SHEET CONTAINER (sube sobre el hero con bordes curvos) */}
         <View style={styles.sheetContainer}>
-          {/* Metadatos superiores */}
           <View style={styles.metaTopRow}>
             <View style={styles.metaTags}>
-              <View style={[styles.categoryPill, { backgroundColor: `${accentColor}1A` }]}>
-                <Text style={[styles.categoryPillText, { color: accentColor }]}>{tip.category}</Text>
+              <View style={[styles.categoryPill, { backgroundColor: `${palette.accent}1A` }]}>
+                <Text style={[styles.categoryPillText, { color: palette.accent }]}>{tip.category}</Text>
               </View>
               <View style={styles.petTypePill}>
-                <Ionicons name={getPetTypeIcon()} size={12} color="#666" style={{ marginRight: 4 }} />
-                <Text style={styles.petTypePillText}>{getPetTypeName()}</Text>
+                <Ionicons name={getPetTypeIcon(tip)} size={12} color="#666" style={{ marginRight: 4 }} />
+                <Text style={styles.petTypePillText}>{getPetTypeName(tip)}</Text>
               </View>
             </View>
             <View style={styles.timeInfo}>
@@ -157,107 +244,31 @@ Recuerda que cada mascota es única y puede tener necesidades especiales. Siempr
             </View>
           </View>
 
-          {/* Título principal */}
           <Text style={styles.articleTitle}>{tip.title}</Text>
-
-          {/* Tarjeta del autor */}
           <View style={styles.authorSection}>
-            <View style={[styles.authorAvatar, { backgroundColor: `${accentColor}1A` }]}>
-              <Text style={[styles.authorInitials, { color: accentColor }]}>{authorInitials}</Text>
+            <View style={[styles.authorAvatar, { backgroundColor: `${palette.accent}1A` }]}>
+              <Text style={[styles.authorInitials, { color: palette.accent }]}>{authorInitials}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.authorName}>{tip.author}</Text>
-              <Text style={styles.authorRole}>Especialista veterinario • {tip.date}</Text>
+              <Text style={styles.authorRole}>{tip.doctor || 'Especialista veterinario'} · {tip.date}</Text>
             </View>
           </View>
 
-          {/* Cuerpo del artículo: se usa el mismo contenido pero renderizado
-              con jerarquía visual (lead + párrafos + quote). */}
-          <View style={styles.articleBody}>
-            {(() => {
-              // Parseamos articleContent para darle estilo por bloques
-              const blocks = articleContent.trim().split(/\n\s*\n/).filter(Boolean);
-              return blocks.map((block, idx) => {
-                const trimmed = block.trim();
+          <MarkdownContent content={tip.content || tip.description} accentColor={palette.accent} />
 
-                // Primer bloque => lead text (descripción principal)
-                if (idx === 0) {
-                  return <Text key={idx} style={styles.leadText}>{trimmed}</Text>;
-                }
-
-                // Subtítulo: termina en ":"
-                if (/:$/.test(trimmed) && !trimmed.includes('\n')) {
-                  return <Text key={idx} style={styles.subHeading}>{trimmed}</Text>;
-                }
-
-                // Último bloque que comienza con "Recuerda" => quote
-                if (/^recuerda/i.test(trimmed)) {
-                  return (
-                    <View key={idx} style={[styles.quoteBlock, { borderLeftColor: accentColor }]}>
-                      <Text style={[styles.quoteText, { color: accentColor }]}>{trimmed}</Text>
-                    </View>
-                  );
-                }
-
-                // Bloques con líneas numeradas (1. 2. 3. ...) => lista destacada
-                const lines = trimmed.split('\n').filter(Boolean);
-                const isNumberedList = lines.every((l) => /^\s*\d+\.\s*/.test(l));
-                if (isNumberedList) {
-                  return (
-                    <View key={idx} style={styles.listBlock}>
-                      {lines.map((line, i) => (
-                        <View key={i} style={styles.listItem}>
-                          <View style={[styles.listBullet, { backgroundColor: accentColor }]}>
-                            <Text style={styles.listBulletText}>{i + 1}</Text>
-                          </View>
-                          <Text style={styles.listItemText}>
-                            {line.replace(/^\s*\d+\.\s*/, '').replace(/\*\*(.+?)\*\*:/g, '$1:')}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  );
-                }
-
-                // Bloque por defecto: párrafo
-                return <Text key={idx} style={styles.paragraph}>{trimmed}</Text>;
-              });
-            })()}
-          </View>
-
-          {/* Sección de consejos relacionados (preservada) */}
-          <View style={styles.relatedContainer}>
-            <Text style={styles.relatedTitle}>Consejos relacionados</Text>
-
-            <TouchableOpacity style={styles.relatedItem} activeOpacity={0.8}>
-              <View style={[styles.relatedImagePlaceholder, { backgroundColor: `${accentColor}1A` }]}>
-                <Ionicons name={getPetTypeIcon()} size={24} color={accentColor} />
-              </View>
-              <View style={styles.relatedInfo}>
-                <Text style={styles.relatedItemTitle}>Cómo detectar alergias en tu mascota</Text>
-                <Text style={styles.relatedItemCategory}>{tip.category}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#CCC" />
+          {tip.source ? (
+            <TouchableOpacity style={styles.sourceBox} onPress={() => Linking.openURL(tip.source)}>
+              <Ionicons name="link-outline" size={18} color={palette.accent} />
+              <Text style={[styles.sourceText, { color: palette.accent }]} numberOfLines={2}>Fuente profesional</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.relatedItem} activeOpacity={0.8}>
-              <View style={[styles.relatedImagePlaceholder, { backgroundColor: `${accentColor}1A` }]}>
-                <Ionicons name={getPetTypeIcon()} size={24} color={accentColor} />
-              </View>
-              <View style={styles.relatedInfo}>
-                <Text style={styles.relatedItemTitle}>Cuidados preventivos para cada etapa de vida</Text>
-                <Text style={styles.relatedItemCategory}>Cuidados Generales</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#CCC" />
-            </TouchableOpacity>
-          </View>
+          ) : null}
         </View>
       </ScrollView>
 
-      {/* FLOATING ACTION BUTTON (Agendar consulta) */}
       <View style={styles.fabWrapper}>
         <TouchableOpacity
-          style={[styles.fabButton, { backgroundColor: heroBg, shadowColor: heroBg }]}
+          style={[styles.fabButton, { backgroundColor: palette.bg, shadowColor: palette.bg }]}
           activeOpacity={0.9}
           onPress={() => navigation.navigate('AgendarCita')}
         >
@@ -270,10 +281,11 @@ Recuerda que cada mascota es única y puede tener necesidades especiales. Siempr
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFF',
-  },
+  container: { flex: 1, backgroundColor: '#FFF' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#FFF' },
+  loadingText: { color: '#607D8B', fontSize: 15, marginTop: 12, textAlign: 'center' },
+  backButton: { backgroundColor: '#1E88E5', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12, marginTop: 18 },
+  backButtonText: { color: '#FFF', fontWeight: 'bold' },
   floatingHeader: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 50 : 40,
@@ -283,23 +295,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     zIndex: 100,
   },
-  headerRight: {
-    flexDirection: 'row',
-  },
+  headerRight: { flexDirection: 'row' },
   glassButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(0,0,0,0.28)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heroSection: {
-    width: width,
-    height: height * 0.35,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  heroSection: { width, height: height * 0.35, justifyContent: 'center', alignItems: 'center' },
+  heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.24)' },
   heroPetTypeBadge: {
     position: 'absolute',
     bottom: 60,
@@ -307,7 +314,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -319,219 +326,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     paddingTop: 30,
     minHeight: height * 0.7,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
     elevation: 10,
   },
-  metaTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  metaTags: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  categoryPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    marginRight: 8,
-  },
-  categoryPillText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  petTypePill: {
-    backgroundColor: '#F5F5F5',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  petTypePillText: {
-    color: '#666',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  timeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeInfoText: {
-    color: '#999',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  articleTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#1A237E',
-    lineHeight: 34,
-    marginBottom: 20,
-  },
-  authorSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    marginBottom: 25,
-  },
-  authorAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  authorInitials: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  authorName: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
-  },
-  authorRole: {
-    fontSize: 12,
-    color: '#888',
-  },
-  articleBody: {
-    paddingBottom: 20,
-  },
-  leadText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#444',
-    lineHeight: 26,
-    marginBottom: 16,
-  },
-  paragraph: {
-    fontSize: 15,
-    color: '#666',
-    lineHeight: 24,
-    marginBottom: 16,
-  },
-  subHeading: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 10,
-    marginBottom: 12,
-  },
-  listBlock: {
-    marginBottom: 18,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  listBullet: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    marginTop: 2,
-  },
-  listBulletText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  listItemText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#555',
-    lineHeight: 22,
-  },
-  quoteBlock: {
-    backgroundColor: '#F5F7FA',
-    borderLeftWidth: 4,
-    padding: 16,
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
-    marginVertical: 15,
-  },
-  quoteText: {
-    fontSize: 15,
-    fontStyle: 'italic',
-    fontWeight: '500',
-    lineHeight: 22,
-  },
-  relatedContainer: {
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  relatedTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  relatedItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    backgroundColor: '#F7F9FC',
-    padding: 12,
-    borderRadius: 14,
-  },
-  relatedImagePlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  relatedInfo: {
-    flex: 1,
-  },
-  relatedItemTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  relatedItemCategory: {
-    fontSize: 12,
-    color: '#888',
-  },
-  fabWrapper: {
-    position: 'absolute',
-    bottom: 25,
-    left: 20,
-    right: 20,
-  },
-  fabButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: 56,
-    borderRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  fabText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  metaTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  metaTags: { flexDirection: 'row', flexShrink: 1 },
+  categoryPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, marginRight: 8 },
+  categoryPillText: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
+  petTypePill: { backgroundColor: '#F5F5F5', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, flexShrink: 1 },
+  petTypePillText: { color: '#666', fontSize: 11, fontWeight: 'bold' },
+  timeInfo: { flexDirection: 'row', alignItems: 'center' },
+  timeInfoText: { color: '#999', fontSize: 12, fontWeight: '600' },
+  articleTitle: { fontSize: 26, fontWeight: '900', color: '#1A237E', lineHeight: 34, marginBottom: 20 },
+  authorSection: { flexDirection: 'row', alignItems: 'center', paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', marginBottom: 25 },
+  authorAvatar: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  authorInitials: { fontSize: 16, fontWeight: 'bold' },
+  authorName: { fontSize: 15, fontWeight: 'bold', color: '#333', marginBottom: 2 },
+  authorRole: { fontSize: 12, color: '#888' },
+  articleBody: { paddingBottom: 20 },
+  leadText: { fontSize: 17, fontWeight: '600', color: '#444', lineHeight: 26, marginBottom: 16 },
+  paragraph: { fontSize: 15, color: '#666', lineHeight: 24, marginBottom: 16 },
+  subHeading: { fontSize: 20, fontWeight: 'bold', color: '#333', marginTop: 8, marginBottom: 12 },
+  subHeadingSmall: { fontSize: 17, fontWeight: 'bold', color: '#333', marginTop: 6, marginBottom: 10 },
+  inlineBold: { fontWeight: 'bold', color: '#333' },
+  inlineLink: { fontWeight: 'bold', textDecorationLine: 'underline' },
+  listBlock: { marginBottom: 18 },
+  listItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  listBullet: { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 },
+  listBulletText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
+  listItemText: { flex: 1, fontSize: 15, color: '#555', lineHeight: 22 },
+  quoteBlock: { backgroundColor: '#F5F7FA', borderLeftWidth: 4, padding: 16, borderTopRightRadius: 12, borderBottomRightRadius: 12, marginVertical: 15 },
+  quoteText: { fontSize: 15, fontStyle: 'italic', fontWeight: '500', lineHeight: 22 },
+  sourceBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F9FC', padding: 14, borderRadius: 14, marginBottom: 28 },
+  sourceText: { fontSize: 14, fontWeight: 'bold', marginLeft: 8 },
+  fabWrapper: { position: 'absolute', bottom: 25, left: 20, right: 20 },
+  fabButton: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 56, borderRadius: 16, elevation: 8 },
+  fabText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
 });
 
 export default HealthTipDetailScreen;

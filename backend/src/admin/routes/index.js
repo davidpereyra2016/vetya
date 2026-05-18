@@ -17,6 +17,8 @@ import PrestadorValidacion from '../../models/PrestadorValidacion.js';
 import Anunciante from '../../models/Anunciante.js';
 import CampanaBanner from '../../models/CampanaBanner.js';
 import Suscripcion from '../../models/Suscripcion.js';
+import ConsejoDeSalud from '../../models/ConsejoDeSalud.js';
+import CategoriaConsejoSalud from '../../models/CategoriaConsejoSalud.js';
 import {
   CASH_COMMISSION_PERCENTAGE,
   markCashDebtAsPaid,
@@ -94,6 +96,44 @@ const isAllowedCloudinaryUrl = (value) => {
   } catch {
     return false;
   }
+};
+
+const slugifyConsejoCategoria = (value = '') =>
+  String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const parseAdminList = (value, fallback = []) => {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (!value) return fallback;
+  return String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const ensureAdminConsejoCategoria = async (nombre, extras = {}) => {
+  const cleanName = String(nombre || '').trim();
+  if (!cleanName) return null;
+  const slug = slugifyConsejoCategoria(cleanName);
+  return CategoriaConsejoSalud.findOneAndUpdate(
+    { slug },
+    {
+      $setOnInsert: {
+        nombre: cleanName,
+        slug,
+        descripcion: extras.descripcion || '',
+        color: extras.color || '#1E88E5',
+        icono: extras.icono || 'medical',
+        activo: true,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
 };
 
 const router = express.Router();
@@ -1114,6 +1154,271 @@ router.post('/validaciones/:id/decision', isAuthenticated, async (req, res) => {
 // =====================================================================
 
 // Dashboard del módulo: listado de suscripciones con datos cruzados
+// =====================================================================
+// MODULO CONSEJOS DE SALUD
+// =====================================================================
+
+router.get('/consejos-salud', isAuthenticated, async (req, res) => {
+  try {
+    const [consejos, categorias] = await Promise.all([
+      ConsejoDeSalud.find().sort({ destacado: -1, fechaPublicacion: -1, createdAt: -1 }).lean(),
+      CategoriaConsejoSalud.find().sort({ nombre: 1 }).lean(),
+    ]);
+
+    res.render('consejos-salud/index', {
+      consejos,
+      categorias,
+      estadisticas: {
+        total: consejos.length,
+        publicados: consejos.filter((c) => c.activo).length,
+        destacados: consejos.filter((c) => c.destacado).length,
+        categorias: categorias.length,
+      },
+      mensaje: req.query.mensaje || null,
+      error: req.query.error || null,
+    });
+  } catch (error) {
+    console.error('Error al cargar consejos de salud:', error);
+    res.render('consejos-salud/index', {
+      consejos: [],
+      categorias: [],
+      estadisticas: { total: 0, publicados: 0, destacados: 0, categorias: 0 },
+      mensaje: null,
+      error: 'Error al cargar consejos de salud',
+    });
+  }
+});
+
+router.get('/consejos-salud/nuevo', isAuthenticated, async (req, res) => {
+  try {
+    const categorias = await CategoriaConsejoSalud.find({ activo: true }).sort({ nombre: 1 }).lean();
+    res.render('consejos-salud/form', { consejo: null, categorias, error: req.query.error || null });
+  } catch (error) {
+    res.redirect('/admin/consejos-salud?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.post('/consejos-salud/nuevo', isAuthenticated, uploadMem.single('imagen'), async (req, res) => {
+  try {
+    const { titulo, resumen, contenido, categoriaId, nuevaCategoria, autor, medicoCitado, fuente, tiempoLectura, fechaPublicacion } = req.body;
+    if (!titulo || !resumen || !contenido) throw new Error('Titulo, resumen y contenido son obligatorios');
+    if (!req.file) throw new Error('La imagen principal es obligatoria');
+
+    let categoria = null;
+    if (nuevaCategoria?.trim()) categoria = await ensureAdminConsejoCategoria(nuevaCategoria);
+    else if (categoriaId) categoria = await CategoriaConsejoSalud.findById(categoriaId);
+    if (!categoria) throw new Error('Selecciona o crea una categoria');
+
+    const up = await uploadBufferToCloudinary(req.file.buffer, 'consejos_salud');
+    await ConsejoDeSalud.create({
+      titulo: titulo.trim(),
+      resumen: resumen.trim(),
+      contenido,
+      imagen: up.secure_url,
+      imagenPublicId: up.public_id,
+      categoria: categoria.nombre,
+      categoriaSlug: categoria.slug,
+      categoriaRef: categoria._id,
+      paraTipos: parseAdminList(req.body.paraTipos, ['Todos']),
+      etiquetas: parseAdminList(req.body.etiquetas, []),
+      tiempoLectura: Number(tiempoLectura) || 5,
+      autor: autor?.trim() || 'Equipo Vetya',
+      medicoCitado: medicoCitado?.trim() || '',
+      fuente: fuente?.trim() || '',
+      destacado: req.body.destacado === 'on',
+      activo: req.body.activo === 'on',
+      fechaPublicacion: fechaPublicacion ? new Date(fechaPublicacion) : new Date(),
+    });
+
+    res.redirect('/admin/consejos-salud?mensaje=' + encodeURIComponent('Consejo creado correctamente'));
+  } catch (error) {
+    console.error('Error al crear consejo:', error);
+    res.redirect('/admin/consejos-salud/nuevo?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.get('/consejos-salud/categorias', isAuthenticated, async (req, res) => {
+  try {
+    const categorias = await CategoriaConsejoSalud.find().sort({ nombre: 1 }).lean();
+    const usos = await ConsejoDeSalud.aggregate([{ $group: { _id: '$categoriaSlug', total: { $sum: 1 } } }]);
+    const usosPorSlug = usos.reduce((acc, item) => ({ ...acc, [item._id]: item.total }), {});
+    res.render('consejos-salud/categorias', {
+      categorias,
+      usosPorSlug,
+      mensaje: req.query.mensaje || null,
+      error: req.query.error || null,
+    });
+  } catch (error) {
+    res.redirect('/admin/consejos-salud?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.post('/consejos-salud/categorias', isAuthenticated, async (req, res) => {
+  try {
+    const { nombre, descripcion, color, icono } = req.body;
+    if (!nombre?.trim()) throw new Error('El nombre de la categoria es obligatorio');
+    const slug = slugifyConsejoCategoria(nombre);
+    const exists = await CategoriaConsejoSalud.findOne({ slug }).lean();
+    if (exists) throw new Error('Ya existe una categoria con ese nombre');
+    await CategoriaConsejoSalud.create({
+      nombre: nombre.trim(),
+      slug,
+      descripcion: descripcion || '',
+      color: color || '#1E88E5',
+      icono: icono || 'medical',
+      activo: req.body.activo === 'on',
+    });
+    res.redirect('/admin/consejos-salud/categorias?mensaje=' + encodeURIComponent('Categoria creada correctamente'));
+  } catch (error) {
+    res.redirect('/admin/consejos-salud/categorias?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.post('/consejos-salud/categorias/:id/editar', isAuthenticated, async (req, res) => {
+  try {
+    const categoria = await CategoriaConsejoSalud.findById(req.params.id);
+    if (!categoria) throw new Error('Categoria no encontrada');
+    const previousName = categoria.nombre;
+    categoria.nombre = req.body.nombre?.trim() || categoria.nombre;
+    categoria.slug = slugifyConsejoCategoria(categoria.nombre);
+    categoria.descripcion = req.body.descripcion || '';
+    categoria.color = req.body.color || '#1E88E5';
+    categoria.icono = req.body.icono || 'medical';
+    categoria.activo = req.body.activo === 'on';
+    await categoria.save();
+    await ConsejoDeSalud.updateMany(
+      { $or: [{ categoriaRef: categoria._id }, { categoria: previousName }] },
+      { $set: { categoria: categoria.nombre, categoriaSlug: categoria.slug, categoriaRef: categoria._id } }
+    );
+    res.redirect('/admin/consejos-salud/categorias?mensaje=' + encodeURIComponent('Categoria actualizada'));
+  } catch (error) {
+    res.redirect('/admin/consejos-salud/categorias?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.post('/consejos-salud/categorias/:id/eliminar', isAuthenticated, async (req, res) => {
+  try {
+    const categoria = await CategoriaConsejoSalud.findById(req.params.id).lean();
+    if (!categoria) throw new Error('Categoria no encontrada');
+    const inUse = await ConsejoDeSalud.countDocuments({
+      $or: [{ categoriaRef: categoria._id }, { categoria: categoria.nombre }, { categoriaSlug: categoria.slug }],
+    });
+    if (inUse > 0) throw new Error('No se puede eliminar una categoria en uso');
+    await CategoriaConsejoSalud.findByIdAndDelete(req.params.id);
+    res.redirect('/admin/consejos-salud/categorias?mensaje=' + encodeURIComponent('Categoria eliminada'));
+  } catch (error) {
+    res.redirect('/admin/consejos-salud/categorias?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.get('/consejos-salud/:id', isAuthenticated, async (req, res) => {
+  try {
+    const consejo = await ConsejoDeSalud.findById(req.params.id).lean();
+    if (!consejo) return res.redirect('/admin/consejos-salud?error=Consejo no encontrado');
+    res.render('consejos-salud/detalle', { consejo, mensaje: req.query.mensaje || null, error: req.query.error || null });
+  } catch (error) {
+    res.redirect('/admin/consejos-salud?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.get('/consejos-salud/:id/editar', isAuthenticated, async (req, res) => {
+  try {
+    const [consejo, categorias] = await Promise.all([
+      ConsejoDeSalud.findById(req.params.id).lean(),
+      CategoriaConsejoSalud.find({ activo: true }).sort({ nombre: 1 }).lean(),
+    ]);
+    if (!consejo) return res.redirect('/admin/consejos-salud?error=Consejo no encontrado');
+    res.render('consejos-salud/form', { consejo, categorias, error: req.query.error || null });
+  } catch (error) {
+    res.redirect('/admin/consejos-salud?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.post('/consejos-salud/:id/editar', isAuthenticated, uploadMem.single('imagen'), async (req, res) => {
+  try {
+    const consejo = await ConsejoDeSalud.findById(req.params.id);
+    if (!consejo) throw new Error('Consejo no encontrado');
+    let categoria = null;
+    if (req.body.nuevaCategoria?.trim()) categoria = await ensureAdminConsejoCategoria(req.body.nuevaCategoria);
+    else if (req.body.categoriaId) categoria = await CategoriaConsejoSalud.findById(req.body.categoriaId);
+    if (!categoria) throw new Error('Selecciona o crea una categoria');
+    if (req.file) {
+      if (consejo.imagenPublicId) {
+        try {
+          await cloudinary.uploader.destroy(consejo.imagenPublicId);
+        } catch (err) {
+          console.warn('Cloudinary delete error:', err.message);
+        }
+      }
+      const up = await uploadBufferToCloudinary(req.file.buffer, 'consejos_salud');
+      consejo.imagen = up.secure_url;
+      consejo.imagenPublicId = up.public_id;
+    }
+    consejo.titulo = req.body.titulo?.trim() || consejo.titulo;
+    consejo.resumen = req.body.resumen?.trim() || consejo.resumen;
+    consejo.contenido = req.body.contenido || consejo.contenido;
+    consejo.categoria = categoria.nombre;
+    consejo.categoriaSlug = categoria.slug;
+    consejo.categoriaRef = categoria._id;
+    consejo.paraTipos = parseAdminList(req.body.paraTipos, ['Todos']);
+    consejo.etiquetas = parseAdminList(req.body.etiquetas, []);
+    consejo.tiempoLectura = Number(req.body.tiempoLectura) || 5;
+    consejo.autor = req.body.autor?.trim() || 'Equipo Vetya';
+    consejo.medicoCitado = req.body.medicoCitado?.trim() || '';
+    consejo.fuente = req.body.fuente?.trim() || '';
+    consejo.destacado = req.body.destacado === 'on';
+    consejo.activo = req.body.activo === 'on';
+    consejo.fechaPublicacion = req.body.fechaPublicacion ? new Date(req.body.fechaPublicacion) : consejo.fechaPublicacion;
+    await consejo.save();
+    res.redirect('/admin/consejos-salud/' + consejo._id + '?mensaje=' + encodeURIComponent('Consejo actualizado'));
+  } catch (error) {
+    console.error('Error al editar consejo:', error);
+    res.redirect('/admin/consejos-salud/' + req.params.id + '/editar?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.post('/consejos-salud/:id/toggle-activo', isAuthenticated, async (req, res) => {
+  try {
+    const consejo = await ConsejoDeSalud.findById(req.params.id);
+    if (!consejo) throw new Error('Consejo no encontrado');
+    consejo.activo = !consejo.activo;
+    await consejo.save();
+    res.redirect('/admin/consejos-salud?mensaje=' + encodeURIComponent('Estado actualizado'));
+  } catch (error) {
+    res.redirect('/admin/consejos-salud?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.post('/consejos-salud/:id/toggle-destacado', isAuthenticated, async (req, res) => {
+  try {
+    const consejo = await ConsejoDeSalud.findById(req.params.id);
+    if (!consejo) throw new Error('Consejo no encontrado');
+    consejo.destacado = !consejo.destacado;
+    await consejo.save();
+    res.redirect('/admin/consejos-salud?mensaje=' + encodeURIComponent('Destacado actualizado'));
+  } catch (error) {
+    res.redirect('/admin/consejos-salud?error=' + encodeURIComponent(error.message));
+  }
+});
+
+router.post('/consejos-salud/:id/eliminar', isAuthenticated, async (req, res) => {
+  try {
+    const consejo = await ConsejoDeSalud.findById(req.params.id).lean();
+    if (!consejo) throw new Error('Consejo no encontrado');
+    if (consejo.imagenPublicId) {
+      try {
+        await cloudinary.uploader.destroy(consejo.imagenPublicId);
+      } catch (err) {
+        console.warn('Cloudinary delete error:', err.message);
+      }
+    }
+    await ConsejoDeSalud.findByIdAndDelete(req.params.id);
+    res.redirect('/admin/consejos-salud?mensaje=' + encodeURIComponent('Consejo eliminado'));
+  } catch (error) {
+    res.redirect('/admin/consejos-salud?error=' + encodeURIComponent(error.message));
+  }
+});
+
 router.get('/publicidad', isAuthenticated, async (req, res) => {
   try {
     const [suscripciones, anunciantes, campanas] = await Promise.all([
