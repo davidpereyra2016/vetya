@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: Platform.OS === "ios" ? 30 : 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 35,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
