@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
   // ─── HERO SECTION ───
   heroSection: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 60 : 35,
     paddingBottom: 70,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,

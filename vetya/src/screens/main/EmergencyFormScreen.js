@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingTop: Platform.OS === 'ios' ? 60 : 35,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',

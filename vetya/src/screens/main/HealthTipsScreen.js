@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 30 : 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 35,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,

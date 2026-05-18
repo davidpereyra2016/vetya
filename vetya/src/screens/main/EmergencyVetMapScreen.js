@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'rgba(30, 136, 229, 0.9)', 
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingTop: Platform.OS === 'ios' ? 60 : 35,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',

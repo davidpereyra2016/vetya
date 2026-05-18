@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   // ─── HEADER FIJO (patrón HomeScreen: fuera del ScrollView, con zIndex + elevation) ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 25 : 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 35,
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -60,11 +60,11 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [activeEmergencyVet?.emergencyId]);
   
-  // Referencia al temporizador para actualizaciÃ³n de ubicaciÃ³n
+  // Referencia al temporizador para actualización de ubicación
   const locationUpdateTimerRef = useRef(null);
   // Contador de errores consecutivos del endpoint /ubicacion-veterinario.
-  // Si el backend reporta "Coordenadas del veterinario invÃ¡lidas" varias veces seguidas
-  // significa que el vet no estÃ¡ compartiendo ubicaciÃ³n en tiempo real: detenemos el
+  // Si el backend reporta "Coordenadas del veterinario inválidas" varias veces seguidas
+  // significa que el vet no está compartiendo ubicación en tiempo real: detenemos el
   // polling para no saturar logs ni red.
   const locationUpdateErrorCountRef = useRef(0);
   const LOCATION_UPDATE_MAX_ERRORS = 3;
@@ -132,15 +132,15 @@ const HomeScreen = ({ navigation }) => {
   // Nombre de la mascota: primera mascota registrada (si existe)
   const firstPetName = pets && pets.length > 0 ? (pets[0]?.nombre || null) : null;
   
-  // Estado para almacenar prestadores con calificaciÃ³n > 4.5
+  // Estado para almacenar prestadores con calificación > 4.5
   const [prestadoresDestacadosConStats, setPrestadoresDestacadosConStats] = useState([]);
   
-  // Estados para almacenar estadÃ­sticas de prestadores y conteo de pacientes
+  // Estados para almacenar estadísticas de prestadores y conteo de pacientes
   const [estadisticasPrestadores, setEstadisticasPrestadores] = useState({});
   const [countPacientes, setCountPacientes] = useState({});
 
-  // NOTA: La carga de estadÃ­sticas se hace en cargarEstadisticasYPacientesEnParalelo
-  // llamado desde loadInitialData para evitar duplicaciÃ³n de requests
+  // NOTA: La carga de estadísticas se hace en cargarEstadisticasYPacientesEnParalelo
+  // llamado desde loadInitialData para evitar duplicación de requests
 
   // Datos de ejemplo para los servicios
   const services = [
@@ -158,7 +158,7 @@ const HomeScreen = ({ navigation }) => {
     // },
     // {
     //   id: '2',
-    //   title: 'VacunaciÃ³n',
+    //   title: 'Vacunación',
     //   icon: 'shield-checkmark-outline', 
     //   color: '#4CAF50'
     //   // #4CAF50
@@ -183,7 +183,7 @@ const HomeScreen = ({ navigation }) => {
     }
   ];
 
-  // FunciÃ³n para procesar emergencias activas y configurar actualizaciones
+  // Función para procesar emergencias activas y configurar actualizaciones
   const processActiveEmergencies = useCallback((emergencies) => {
     if (!emergencies || emergencies.length === 0) {
       // No hay emergencias activas, detener las actualizaciones
@@ -193,18 +193,18 @@ const HomeScreen = ({ navigation }) => {
       }
       setActiveEmergencyVet(null);
       setIsEmergencyInProgress(false);
-      // Importante: evitar actualizaciones periÃ³dicas innecesarias
+      // Importante: evitar actualizaciones periódicas innecesarias
       return;
     }
     
-    // Ordenar emergencias por fecha de solicitud (mÃ¡s reciente primero)
+    // Ordenar emergencias por fecha de solicitud (más reciente primero)
     const sortedEmergencies = [...emergencies].sort((a, b) => {
       const dateA = new Date(a.fechaSolicitud);
       const dateB = new Date(b.fechaSolicitud);
-      return dateB - dateA; // Orden descendente (mÃ¡s reciente primero)
+      return dateB - dateA; // Orden descendente (más reciente primero)
     });
     
-    // Tomar la primera emergencia activa (la mÃ¡s reciente)
+    // Tomar la primera emergencia activa (la más reciente)
     const activeEmergency = sortedEmergencies[0];
 
     // Verificar si la emergencia tiene un veterinario asignado
@@ -236,7 +236,7 @@ const HomeScreen = ({ navigation }) => {
       setCurrentDistance(activeEmergency.distancia?.texto || '--');
       setEstimatedArrivalTime(activeEmergency.tiempoEstimado?.texto || '--');
 
-      const shouldTrackVetLocation = ['En camino', 'En atenciÃ³n'].includes(activeEmergency.estado);
+      const shouldTrackVetLocation = ['En camino', 'En atención'].includes(activeEmergency.estado);
       if (shouldTrackVetLocation) {
         startLocationUpdates(activeEmergency);
       } else if (locationUpdateTimerRef.current) {
@@ -248,12 +248,12 @@ const HomeScreen = ({ navigation }) => {
       setActiveEmergencyVet({
         emergencyId: activeEmergency._id,
         name: "Buscando veterinario...",
-        specialty: "Se te notificarÃ¡ cuando un veterinario sea asignado.",
+        specialty: "Se te notificará cuando un veterinario sea asignado.",
         status: activeEmergency.estado, // Usar el estado actual de la emergencia
         vetAssigned: false // Flag para la UI
       });
       setEmergencyStatus(activeEmergency.estado);
-      // No iniciar actualizaciones de ubicaciÃ³n si no hay veterinario
+      // No iniciar actualizaciones de ubicación si no hay veterinario
       if (locationUpdateTimerRef.current) {
         clearInterval(locationUpdateTimerRef.current);
         locationUpdateTimerRef.current = null;
@@ -261,9 +261,9 @@ const HomeScreen = ({ navigation }) => {
     }
   }, []);
 
-  // FunciÃ³n para iniciar actualizaciones periÃ³dicas de la ubicaciÃ³n
+  // Función para iniciar actualizaciones periódicas de la ubicación
   const startLocationUpdates = useCallback((activeEmergency) => {
-    // Solo iniciar actualizaciones si hay una emergencia vÃ¡lida
+    // Solo iniciar actualizaciones si hay una emergencia válida
     if (!activeEmergency || !activeEmergency._id) {
       return;
     }
@@ -277,7 +277,7 @@ const HomeScreen = ({ navigation }) => {
     // Resetear contador de errores al iniciar seguimiento de una emergencia nueva
     locationUpdateErrorCountRef.current = 0;
 
-    // Realizar la primera actualizaciÃ³n inmediatamente
+    // Realizar la primera actualización inmediatamente
     updateVetLocation(activeEmergency);
 
     // Configurar actualizaciones cada 30 segundos
@@ -285,7 +285,7 @@ const HomeScreen = ({ navigation }) => {
       updateVetLocation(activeEmergency);
     }, 30000); // 30 segundos
     
-    // Devolver una funciÃ³n de limpieza para useEffect
+    // Devolver una función de limpieza para useEffect
     return () => {
       if (locationUpdateTimerRef.current) {
         clearInterval(locationUpdateTimerRef.current);
@@ -294,7 +294,7 @@ const HomeScreen = ({ navigation }) => {
     };
   }, []);
 
-  // FunciÃ³n para actualizar la ubicaciÃ³n del veterinario
+  // Función para actualizar la ubicación del veterinario
   const updateVetLocation = async (activeEmergency) => {
     const emergencyId = typeof activeEmergency === 'string'
       ? activeEmergency
@@ -307,19 +307,19 @@ const HomeScreen = ({ navigation }) => {
       const response = await emergenciaService.getVetLocationUpdate(emergencyId);
 
       if (response?.success && response.data) {
-        // Ã‰xito: resetear contador de errores
+        // Éxito: resetear contador de errores
         locationUpdateErrorCountRef.current = 0;
         setCurrentDistance(response.data.distancia?.texto || '---');
         setEstimatedArrivalTime(response.data.tiempoEstimado?.texto || '---');
         setLastUpdated(new Date());
       } else {
-        // Error controlado (p.ej. "Coordenadas del veterinario invÃ¡lidas")
+        // Error controlado (p.ej. "Coordenadas del veterinario inválidas")
         locationUpdateErrorCountRef.current += 1;
 
         if (locationUpdateErrorCountRef.current >= LOCATION_UPDATE_MAX_ERRORS
             && locationUpdateTimerRef.current) {
-          // Detener el polling cuando el vet claramente no tiene ubicaciÃ³n en vivo
-          console.warn(`â¸ï¸  Polling de ubicaciÃ³n detenido: ${locationUpdateErrorCountRef.current} errores consecutivos. El veterinario no comparte ubicaciÃ³n en tiempo real.`);
+          // Detener el polling cuando el vet claramente no tiene ubicación en vivo
+          console.warn(`⏸️  Polling de ubicación detenido: ${locationUpdateErrorCountRef.current} errores consecutivos. El veterinario no comparte ubicación en tiempo real.`);
           clearInterval(locationUpdateTimerRef.current);
           locationUpdateTimerRef.current = null;
           setCurrentDistance('---');
@@ -328,11 +328,11 @@ const HomeScreen = ({ navigation }) => {
       }
     } catch (error) {
       locationUpdateErrorCountRef.current += 1;
-      console.error('Error al actualizar ubicaciÃ³n del veterinario:', error?.message || error);
+      console.error('Error al actualizar ubicación del veterinario:', error?.message || error);
 
       if (locationUpdateErrorCountRef.current >= LOCATION_UPDATE_MAX_ERRORS
           && locationUpdateTimerRef.current) {
-        console.warn('â¸ï¸  Polling de ubicaciÃ³n detenido por errores repetidos de red.');
+        console.warn('⏸️  Polling de ubicación detenido por errores repetidos de red.');
         clearInterval(locationUpdateTimerRef.current);
         locationUpdateTimerRef.current = null;
       }
@@ -345,7 +345,7 @@ const HomeScreen = ({ navigation }) => {
     processActiveEmergencies(activeEmergencies || []);
   }, [activeEmergencies, processActiveEmergencies]);
 
-  // Nueva funciÃ³n para cargar estadÃ­sticas y pacientes en paralelo (evita el problema N+1)
+  // Nueva función para cargar estadísticas y pacientes en paralelo (evita el problema N+1)
 
   const cargarEstadisticasYPacientesEnParalelo = useCallback(async (prestadoresList) => {
     if (!prestadoresList || prestadoresList.length === 0) return;
@@ -356,7 +356,7 @@ const HomeScreen = ({ navigation }) => {
       const nuevasEstadisticas = {};
       const nuevosPacientes = {};
       
-      // Crear un array de promesas para estadÃ­sticas
+      // Crear un array de promesas para estadísticas
       const estadisticasPromises = prestadoresList.map(async prestador => {
         try {
           const id = prestador._id;
@@ -369,7 +369,7 @@ const HomeScreen = ({ navigation }) => {
             nuevasEstadisticas[id] = { promedio: 0, total: 0 };
           }
         } catch (err) {
-          console.error(`Error al cargar estadÃ­sticas para prestador ${prestador._id}:`, err);
+          console.error(`Error al cargar estadísticas para prestador ${prestador._id}:`, err);
         }
       });
       
@@ -421,7 +421,7 @@ const HomeScreen = ({ navigation }) => {
   // Ref para evitar cargas duplicadas
   const isLoadingRef = useRef(false);
   const lastLoadTime = useRef(0);
-  const MIN_LOAD_INTERVAL = 5000; // MÃ­nimo 5 segundos entre cargas
+  const MIN_LOAD_INTERVAL = 5000; // Mínimo 5 segundos entre cargas
 
   // Limpiar temporizadores al desmontar
   useEffect(() => {
@@ -433,7 +433,7 @@ const HomeScreen = ({ navigation }) => {
     };
   }, []);
 
-  // AnimaciÃ³n de entrada del banner principal (fadeInUp)
+  // Animación de entrada del banner principal (fadeInUp)
   useEffect(() => {
     Animated.timing(bannerAnim, {
       toValue: 1,
@@ -442,7 +442,7 @@ const HomeScreen = ({ navigation }) => {
     }).start();
   }, []);
 
-  // AnimaciÃ³n escalonada de secciones (stagger fadeInUp)
+  // Animación escalonada de secciones (stagger fadeInUp)
   useEffect(() => {
     Animated.stagger(
       150,
@@ -456,7 +456,7 @@ const HomeScreen = ({ navigation }) => {
     ).start();
   }, []);
 
-  // AnimaciÃ³n de pulso en el Ã­cono de emergencia activa
+  // Animación de pulso en el ícono de emergencia activa
   useEffect(() => {
     let loop;
     if (isEmergencyInProgress) {
@@ -475,7 +475,7 @@ const HomeScreen = ({ navigation }) => {
     };
   }, [isEmergencyInProgress]);
 
-  // AnimaciÃ³n slide-in del banner de estado de emergencia
+  // Animación slide-in del banner de estado de emergencia
   useEffect(() => {
     if (activeEmergencyVet) {
       statusBannerAnim.setValue(-50);
@@ -487,7 +487,7 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [activeEmergencyVet?.status]);
 
-  // FunciÃ³n para cargar datos iniciales de forma optimizada (paralelizaciÃ³n donde sea posible)
+  // Función para cargar datos iniciales de forma optimizada (paralelización donde sea posible)
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -509,13 +509,13 @@ const HomeScreen = ({ navigation }) => {
       const emergenciesPromise = loadActiveEmergencies();
       const prestadoresPromise = fetchAllPrestadores().catch(err => {
         console.error('Error al cargar prestadores:', err.message || err);
-        return []; // Devolvemos array vacÃ­o en caso de error para no romper el flujo
+        return []; // Devolvemos array vacío en caso de error para no romper el flujo
       });
 
-      // Esperar a que se carguen las emergencias (esto es crÃ­tico para la lÃ³gica de flujo)
+      // Esperar a que se carguen las emergencias (esto es crítico para la lógica de flujo)
       const emergenciesResult = await emergenciesPromise;
 
-      // Esperar a que finalicen todas las demÃ¡s operaciones paralelas
+      // Esperar a que finalicen todas las demás operaciones paralelas
       const prestadores = await prestadoresPromise;
       await availableVetsPromise;
       
@@ -532,7 +532,7 @@ const HomeScreen = ({ navigation }) => {
         setIsEmergencyInProgress(false);
       }
       
-      // Si hay prestadores, cargar sus estadÃ­sticas y pacientes en paralelo
+      // Si hay prestadores, cargar sus estadísticas y pacientes en paralelo
       if (prestadores?.length > 0) {
         void cargarEstadisticasYPacientesEnParalelo(prestadores);
       }
@@ -542,9 +542,9 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [loadAvailableVets, loadActiveEmergencies, processActiveEmergencies, fetchAllPrestadores, cargarEstadisticasYPacientesEnParalelo]);
   
-  // FunciÃ³n para actualizar datos (pull-to-refresh)
+  // Función para actualizar datos (pull-to-refresh)
   const onRefresh = useCallback(async () => {
-    // Resetear el tiempo de Ãºltima carga para permitir refresh manual
+    // Resetear el tiempo de última carga para permitir refresh manual
     lastLoadTime.current = 0;
     setRefreshing(true);
     try {
@@ -558,12 +558,12 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [loadInitialData, fetchUserAppointments, fetchConsejosDestacados]);
 
-  // Usar useFocusEffect para actualizar solo cuando la pantalla estÃ¡ en foco
-  // Con protecciÃ³n contra cargas duplicadas
+  // Usar useFocusEffect para actualizar solo cuando la pantalla está en foco
+  // Con protección contra cargas duplicadas
   useFocusEffect(
     useCallback(() => {
       const now = Date.now();
-      // Evitar cargas muy frecuentes (mÃ­nimo 5 segundos entre cargas)
+      // Evitar cargas muy frecuentes (mínimo 5 segundos entre cargas)
       if (isLoadingRef.current || (now - lastLoadTime.current < MIN_LOAD_INTERVAL)) {
         return;
       }
@@ -585,7 +585,7 @@ const HomeScreen = ({ navigation }) => {
     }, [loadInitialData, fetchUserAppointments, fetchPets, fetchConsejosDestacados])
   );
 
-  // FunciÃ³n para solicitar una emergencia
+  // Función para solicitar una emergencia
   const handleEmergencyRequest = async () => {
     if (isEmergencyInProgress) {
       Alert.alert(
@@ -598,7 +598,7 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('EmergencyForm');
   };
 
-  // Manejar la selecciÃ³n de servicio
+  // Manejar la selección de servicio
   const handleServiceSelect = (service) => {
     if (service.id === 'emergencias') {
       handleEmergencyRequest();
@@ -612,8 +612,8 @@ const HomeScreen = ({ navigation }) => {
     }
   };
   
-  // Datos para la secciÃ³n de prestadores destacados con rating > 4.5
-  // Usamos los datos ya procesados con estadÃ­sticas y pacientes
+  // Datos para la sección de prestadores destacados con rating > 4.5
+  // Usamos los datos ya procesados con estadísticas y pacientes
   const featuredVets = prestadoresDestacadosConStats
     .filter(vet => vet && vet.nombre) // Solo prestadores con nombre
     .map(vet => {
@@ -635,7 +635,7 @@ const HomeScreen = ({ navigation }) => {
             : vet.especialidad ? [vet.especialidad] : ['General'],
         reviews: vet.totalValoraciones || 0,
         patients: vet.pacientesAtendidos || 0,
-        experience: vet['aÃ±osExperiencia'] ? `${vet['aÃ±osExperiencia']} aÃ±os` : 'Experiencia variada',
+        experience: vet['añosExperiencia'] ? `${vet['añosExperiencia']} años` : 'Experiencia variada',
         available: Boolean(vet.disponible)
       };
     });
@@ -692,13 +692,13 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  // FunciÃ³n para manejar la selecciÃ³n de un veterinario
+  // Función para manejar la selección de un veterinario
   const handleVetPress = (vet) => {
     // Navegar a la pantalla de detalle del veterinario
     navigation.navigate('VetDetail', { vet });
   };
   
-  // FunciÃ³n para confirmar la llegada del veterinario
+  // Función para confirmar la llegada del veterinario
   const handleConfirmVetArrival = async (emergencyId) => {
     if (arrivalSubmissionRef.current[emergencyId]) return;
 
@@ -714,20 +714,20 @@ const HomeScreen = ({ navigation }) => {
       
       if (result.success) {
         // Actualizar el estado local
-        setEmergencyStatus('En atenciÃ³n');
+        setEmergencyStatus('En atención');
         // Actualizar el estado del veterinario activo
         setActiveEmergencyVet(prev => ({
           ...prev,
-          status: 'En atenciÃ³n'
+          status: 'En atención'
         }));
         
-        // ðŸ’³ Redirigir a Mercado Pago si hay initPoint
+        // 💳 Redirigir a Mercado Pago si hay initPoint
         if (result.initPoint) {
-          console.log('ðŸ’³ Redirigiendo a Mercado Pago:', result.initPoint);
+          console.log('💳 Redirigiendo a Mercado Pago:', result.initPoint);
           
           Alert.alert(
             "Llegada confirmada",
-            "El veterinario ha llegado. Ahora serÃ¡s redirigido a Mercado Pago para completar el pago del servicio.",
+            "El veterinario ha llegado. Ahora serás redirigido a Mercado Pago para completar el pago del servicio.",
             [
               {
                 text: "Ir a pagar",
@@ -752,7 +752,7 @@ const HomeScreen = ({ navigation }) => {
                 }
               },
               {
-                text: "MÃ¡s tarde",
+                text: "Más tarde",
                 style: "cancel"
               }
             ]
@@ -760,7 +760,7 @@ const HomeScreen = ({ navigation }) => {
         } else {
           Alert.alert(
             "Llegada confirmada",
-            "Has confirmado la llegada del veterinario. Ya puede comenzar la atenciÃ³n."
+            "Has confirmado la llegada del veterinario. Ya puede comenzar la atención."
           );
         }
       } else {
@@ -778,9 +778,9 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  // Renderizar cada prestador destacado (diseÃ±o: imagen arriba + rating overlay + info abajo)
+  // Renderizar cada prestador destacado (diseño: imagen arriba + rating overlay + info abajo)
   const renderFeaturedVetItem = ({ item }) => {
-    // Texto secundario seguro: especialidad (string) o nÃºmero de pacientes.
+    // Texto secundario seguro: especialidad (string) o número de pacientes.
     // NOTA: item.direccion en el backend es un objeto { coordenadas, calle, ... },
     // no se renderiza como texto porque React no acepta objetos como hijos.
     const subtitleText = item.specialty
@@ -823,7 +823,7 @@ const HomeScreen = ({ navigation }) => {
     );
   };
 
-  // Renderizar cada veterinario disponible (diseÃ±o horizontal: imagen + info + badge)
+  // Renderizar cada veterinario disponible (diseño horizontal: imagen + info + badge)
   const renderAvailableVetItem = ({ item }) => (
     <TouchableOpacity
       style={styles.vetCardNew}
@@ -865,12 +865,12 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.headerContent}>
           <View style={{ flex: 1, paddingRight: 12 }}>
             <Text style={styles.greeting} numberOfLines={1}>
-              {`Hola, ${displayName} ðŸ‘‹`}
+              {`Hola, ${displayName} 👋`}
             </Text>
             <Text style={styles.subGreeting} numberOfLines={2}>
               {firstPetName
-                ? `Â¿CÃ³mo podemos ayudar a ${firstPetName} hoy?`
-                : 'Â¿En quÃ© podemos ayudarte hoy?'}
+                ? `¿Cómo podemos ayudar a ${firstPetName} hoy?`
+                : '¿En qué podemos ayudarte hoy?'}
             </Text>
           </View>
           <TouchableOpacity
@@ -905,7 +905,7 @@ const HomeScreen = ({ navigation }) => {
           />
         }
       >
-        {/* â”€â”€â”€ BANNER PUBLICITARIO (DEBAJO del header, no flotante) â”€â”€â”€ */}
+        {/* ─── BANNER PUBLICITARIO (DEBAJO del header, no flotante) ─── */}
         <BannerPublicitario />
 
         {/* Servicios */}
@@ -941,28 +941,28 @@ const HomeScreen = ({ navigation }) => {
             </View>
             
             {/* Mostrar el estado de la emergencia y el veterinario */}
-            {/* Mensaje general si no hay veterinario asignado aÃºn pero la emergencia estÃ¡ activa */}
+            {/* Mensaje general si no hay veterinario asignado aún pero la emergencia está activa */}
             {activeEmergencyVet.vetAssigned === false && activeEmergencyVet.status !== 'Cancelada' && activeEmergencyVet.status !== 'Finalizada' && (
               <Animated.View style={[styles.statusBanner, { backgroundColor: '#FF9800', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Text>
                   <Ionicons name="hourglass-outline" size={16} color="#fff" />
                 </Text>
                 <Text style={styles.statusBannerText}>
-                  {activeEmergencyVet.status === 'Solicitada' ? 'Solicitud enviada. Esperando asignaciÃ³n...' :
-                   activeEmergencyVet.status === 'Asignada' ? 'Veterinario asignado. Esperando confirmaciÃ³n...' :
+                  {activeEmergencyVet.status === 'Solicitada' ? 'Solicitud enviada. Esperando asignación...' :
+                   activeEmergencyVet.status === 'Asignada' ? 'Veterinario asignado. Esperando confirmación...' :
                    'Procesando emergencia...'}
                 </Text>
               </Animated.View>
             )}
 
-            {/* Banners especÃ­ficos cuando el veterinario estÃ¡ asignado */}
+            {/* Banners específicos cuando el veterinario está asignado */}
             {activeEmergencyVet.vetAssigned !== false && activeEmergencyVet.status === 'Asignada' && (
               <Animated.View style={[styles.statusBanner, { backgroundColor: '#FFC107', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Text>
                   <Ionicons name="time-outline" size={16} color="#fff" />
                 </Text>
                 <Text style={styles.statusBannerText}>
-                  Esperando confirmaciÃ³n del veterinario...
+                  Esperando confirmación del veterinario...
                 </Text>
               </Animated.View>
             )}
@@ -971,16 +971,16 @@ const HomeScreen = ({ navigation }) => {
               <Animated.View style={[styles.statusBanner, { backgroundColor: '#4CAF50', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="checkmark-circle" size={16} color="#fff" />
                 <Text style={styles.statusBannerText}>
-                  Â¡Veterinario aceptÃ³ la solicitud y estÃ¡ en camino!
+                  ¡Veterinario aceptó la solicitud y está en camino!
                 </Text>
               </Animated.View>
             )}
             
-            {activeEmergencyVet.status === 'En atenciÃ³n' && (
+            {activeEmergencyVet.status === 'En atención' && (
               <Animated.View style={[styles.statusBanner, { backgroundColor: '#2196F3', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="medkit" size={16} color="#fff" />
                 <Text style={styles.statusBannerText}>
-                  El veterinario estÃ¡ atendiendo a tu mascota
+                  El veterinario está atendiendo a tu mascota
                 </Text>
               </Animated.View>
             )}
@@ -989,7 +989,7 @@ const HomeScreen = ({ navigation }) => {
               <Animated.View style={[styles.statusBanner, { backgroundColor: '#4CAF50', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="checkmark-circle" size={16} color="#fff" />
                 <Text style={styles.statusBannerText}>
-                  Â¡Servicio confirmado! El veterinario confirmo la emergencia.
+                  ¡Servicio confirmado! El veterinario confirmo la emergencia.
                 </Text>
               </Animated.View>
             )}
@@ -1001,7 +1001,7 @@ const HomeScreen = ({ navigation }) => {
               <View style={styles.emergencyPaymentCopy}>
                 <Text style={styles.emergencyPaymentTitle}>Importante sobre el abono</Text>
                 <Text style={styles.emergencyPaymentText}>
-                  El abono de la emergencia incluye Ãºnicamente la visita y el diagnÃ³stico del veterinario en tu domicilio. Los insumos, medicaciÃ³n o tratamientos extra corren por tu cuenta y se abonan directamente al profesional.
+                  El abono de la emergencia incluye únicamente la visita y el diagnóstico del veterinario en tu domicilio. Los insumos, medicación o tratamientos extra corren por tu cuenta y se abonan directamente al profesional.
                 </Text>
               </View>
             </View>
@@ -1019,11 +1019,11 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={styles.emergencyVetName}>{activeEmergencyVet.name}</Text>
                 <Text style={styles.emergencySpecialty}>{activeEmergencyVet.specialty}</Text>
                 
-                {/* Solo mostrar la ubicaciÃ³n si el veterinario ha aceptado y estÃ¡ asignado*/}
+                {/* Solo mostrar la ubicación si el veterinario ha aceptado y está asignado*/}
                 {activeEmergencyVet.vetAssigned !== false && ['Asignada', 'Confirmada', 'En camino'].includes(activeEmergencyVet.status) ? (
                   <View style={styles.vetDistanceCard}>
                     <View style={styles.distanceHeader}>
-                      <Text style={styles.distanceTitle}>UbicaciÃ³n actual</Text>
+                      <Text style={styles.distanceTitle}>Ubicación actual</Text>
                       <Text style={styles.distanceValue}>{currentDistance}</Text>
                     </View>
                     
@@ -1035,13 +1035,13 @@ const HomeScreen = ({ navigation }) => {
                     </View>
                     
                     <Text style={styles.privacyNotice}>
-                      * La ubicaciÃ³n mostrada tiene un radio de privacidad de 1km
+                      * La ubicación mostrada tiene un radio de privacidad de 1km
                     </Text>
                     
                     <View style={styles.updateContainer}>
                       <Text style={styles.lastUpdatedText}>
                         {lastUpdated ? `Actualizado: ${lastUpdated.toLocaleTimeString()}` : 'Cargando...'}
-                        {updatingLocation && ' Â· Actualizando...'}
+                        {updatingLocation && ' · Actualizando...'}
                       </Text>
                       <TouchableOpacity 
                         style={styles.refreshButton}
@@ -1066,7 +1066,7 @@ const HomeScreen = ({ navigation }) => {
               </View>
             </View>
             
-            {/* BotÃ³n para confirmar llegada del veterinario - solo visible cuando estÃ¡ en camino */}
+            {/* Botón para confirmar llegada del veterinario - solo visible cuando está en camino */}
             {activeEmergencyVet.status === 'En camino' && (
               <TouchableOpacity 
                 style={[styles.emergencyButton, styles.confirmButton, isLoading && styles.emergencyButtonDisabled]}
@@ -1078,7 +1078,7 @@ const HomeScreen = ({ navigation }) => {
                 ) : (
                   <Ionicons name="checkmark-circle" size={20} color="#FFF" />
                 )}
-                <Text style={styles.emergencyButtonText}>Confirmar que el veterinario llegÃ³</Text>
+                <Text style={styles.emergencyButtonText}>Confirmar que el veterinario llegó</Text>
               </TouchableOpacity>
             )}
             
@@ -1090,13 +1090,13 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         ) : (
-          /* PrÃ³xima cita - solo se muestra si no hay emergencia activa */
+          /* Próxima cita - solo se muestra si no hay emergencia activa */
           <>
             {(() => {
-              // Renderizando secciÃ³n de cita prÃ³xima
-              // Control de citas prÃ³ximas
+              // Renderizando sección de cita próxima
+              // Control de citas próximas
               
-              // Si no hay citas o el array no estÃ¡ inicializado
+              // Si no hay citas o el array no está inicializado
               if (!upcomingAppointments || upcomingAppointments.length === 0) {
                 // No hay citas disponibles
                 return null;
@@ -1104,7 +1104,7 @@ const HomeScreen = ({ navigation }) => {
               
               // Filtrar solo citas confirmadas
               const citasConfirmadas = upcomingAppointments.filter(cita => {
-                // EvaluaciÃ³n de cita
+                // Evaluación de cita
                 return cita.estado === 'Confirmada';
               });
               
@@ -1115,14 +1115,14 @@ const HomeScreen = ({ navigation }) => {
                 return (
                   <View style={styles.appointmentContainer}>
                     <View style={styles.appointmentHeader}>
-                      <Text style={styles.appointmentTitle}>Tu prÃ³xima cita</Text>
+                      <Text style={styles.appointmentTitle}>Tu próxima cita</Text>
                       <Text>
                         <Ionicons name="calendar" size={24} color="#1E88E5" />
                       </Text>
                     </View>
                     {/* Mostrar la primera cita confirmada */}
                     {(() => {
-                      // Obtener la prÃ³xima cita confirmada
+                      // Obtener la próxima cita confirmada
                       const proximaCita = citasConfirmadas
                         .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))[0];
                       
@@ -1231,7 +1231,7 @@ const HomeScreen = ({ navigation }) => {
                   No hay prestadores destacados
                 </Text>
                 <Text style={styles.emptyStateText}>
-                  AÃºn no hay prestadores con calificaciÃ³n destacada disponibles
+                  Aún no hay prestadores con calificación destacada disponibles
                 </Text>
               </View>
             )}
@@ -1346,7 +1346,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 8,//Margen izquierdo
     fontWeight: '500',//Peso del texto
-    fontSize: 14,//TamaÃ±o del texto
+    fontSize: 14,//Tamaño del texto
   },
   pendingContainer: {
     flexDirection: 'row',//Organiza el contenido horizontalmente
@@ -1360,17 +1360,17 @@ const styles = StyleSheet.create({
   pendingText: {
     marginLeft: 10,//Margen izquierdo
     color: '#FF8F00',//Color del texto
-    fontSize: 14,//TamaÃ±o del texto
+    fontSize: 14,//Tamaño del texto
     fontWeight: '500',//Peso del texto
   },
   container: {
     flex: 1,
     backgroundColor: '#F5F7FA',
   },
-  // â”€â”€â”€ HEADER PERSONALIZADO (saludo + avatar) â”€â”€â”€
+  // ─── HEADER PERSONALIZADO (saludo + avatar) ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 30 : 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 35,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
@@ -1427,21 +1427,21 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   // Estilos originales del banner de bienvenida (preservados por compatibilidad,
-  // ya no se renderizan pero otros flujos podrÃ­an referenciarlos en el futuro).
+  // ya no se renderizan pero otros flujos podrían referenciarlos en el futuro).
   banner: {
     backgroundColor: '#1E88E5',//Color azul
     paddingVertical: 25,//Espacio vertical
     paddingHorizontal: 20,//Espacio horizontal
     borderBottomLeftRadius: 30,//Radio de la esquina inferior izquierda
     borderBottomRightRadius: 30,//Radio de la esquina inferior derecha
-    flexDirection: 'row',//DistribuciÃ³n de los elementos
-    overflow: 'hidden',//Ocultar el contenido que excede el tamaÃ±o del contenedor
+    flexDirection: 'row',//Distribución de los elementos
+    overflow: 'hidden',//Ocultar el contenido que excede el tamaño del contenedor
   },
   bannerContent: {
-    flex: 3,//ProporciÃ³n del espacio
+    flex: 3,//Proporción del espacio
   },
   bannerImageContainer: {
-    flex: 1,//ProporciÃ³n del espacio
+    flex: 1,//Proporción del espacio
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1608,7 +1608,7 @@ const styles = StyleSheet.create({
     color: '#F44336',
   },
   pulseIndicator: {
-    // Se puede agregar una animaciÃ³n de pulso aquÃ­ si es necesario
+    // Se puede agregar una animación de pulso aquí si es necesario
   },
   emergencyContent: {
     flexDirection: 'row',
@@ -1963,7 +1963,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  // â”€â”€â”€ VETERINARIO DISPONIBLE (nuevo diseÃ±o horizontal) â”€â”€â”€
+  // ─── VETERINARIO DISPONIBLE (nuevo diseño horizontal) ───
   vetCardNew: {
     backgroundColor: '#fff',
     width: 280,
@@ -2041,7 +2041,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 4,
   },
-  // â”€â”€â”€ PRESTADOR DESTACADO (nuevo diseÃ±o vertical con imagen top + rating overlay) â”€â”€â”€
+  // ─── PRESTADOR DESTACADO (nuevo diseño vertical con imagen top + rating overlay) ───
   providerCard: {
     backgroundColor: '#FFF',
     width: 240,
