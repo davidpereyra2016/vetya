@@ -20,6 +20,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
 import useServiceStore from '../../store/useServiceStore';
+import useDisponibilidadStore from '../../store/useDisponibilidadStore';
 import usePrestadorStore from '../../store/usePrestadorStore';
 import { prestadorService } from '../../services/api';
 import globalStyles, { COLORS, SIZES, SHADOWS } from '../../styles/globalStyles';
@@ -84,12 +85,10 @@ const getSafeIconName = (iconName) => {
   
   const mappedIcon = iconMapping[iconName.toLowerCase()];
   if (mappedIcon) {
-    console.log(`⚠️ Ícono "${iconName}" no válido, usando "${mappedIcon}" como alternativa`);
     return mappedIcon;
   }
   
   // Si nada funciona, usar ícono por defecto
-  console.log(`⚠️ Ícono "${iconName}" no válido, usando "medical-outline" por defecto`);
   return 'medical-outline';
 };
 
@@ -124,6 +123,11 @@ const ServicesScreen = ({ navigation }) => {
     prestador: prestadorDetails,
     updateEmergencySettings,
   } = usePrestadorStore();
+
+  const {
+    resumenServicios,
+    getResumenDisponibilidadServicios,
+  } = useDisponibilidadStore();
   
   // Estados locales para la UI
   // Estado para filtrado de servicios por estado (activo/inactivo/todos)
@@ -208,7 +212,10 @@ const ServicesScreen = ({ navigation }) => {
       
       // Usar el store para cargar los servicios del prestador
       setIsRefreshing(true);
-      await getProviderServices(providerId);
+      await Promise.all([
+        getProviderServices(providerId),
+        getResumenDisponibilidadServicios(providerId),
+      ]);
       console.log(`Total de servicios cargados: ${myServices.length} (Activos: ${activeServices.length}, Inactivos: ${inactiveServices.length})`);
       setIsRefreshing(false);
     } catch (error) {
@@ -346,7 +353,15 @@ const ServicesScreen = ({ navigation }) => {
       
       if (result) {
         setShowServiceDetailModal(false);
-        Alert.alert('Éxito', 'Servicio agregado correctamente');
+        await getResumenDisponibilidadServicios(providerId);
+        Alert.alert(
+          'Servicio agregado',
+          'Ahora puedes configurar horarios para este servicio o dejar que use tu horario general.',
+          [
+            { text: 'Luego', style: 'cancel' },
+            { text: 'Configurar horarios', onPress: () => handleConfigureAvailability(result) },
+          ]
+        );
       }
     } catch (error) {
       console.log('Error al agregar servicio:', error);
@@ -628,9 +643,49 @@ const ServicesScreen = ({ navigation }) => {
     const categorias = ['Todos', ...new Set(availableServices.map(s => s.categoria))];
     return categorias;
   };
+
+  const getAvailabilitySummary = (service) => {
+    const serviceId = service?._id || service?.id;
+    return resumenServicios?.[serviceId] || {
+      status: 'none',
+      label: 'Sin horarios',
+      blockCount: 0,
+    };
+  };
+
+  const getAvailabilityStyle = (status) => {
+    if (status === 'specific') {
+      return { icon: 'calendar', color: COLORS.success || '#4CAF50', backgroundColor: '#4CAF5015' };
+    }
+    if (status === 'general') {
+      return { icon: 'calendar-outline', color: COLORS.primary, backgroundColor: COLORS.primary + '15' };
+    }
+    return { icon: 'alert-circle-outline', color: COLORS.accent || '#F44336', backgroundColor: '#F4433615' };
+  };
+
+  const handleConfigureAvailability = (service) => {
+    const providerId = provider?._id || provider?.id;
+    const serviceId = service?._id || service?.id;
+
+    if (!providerId || !serviceId) {
+      Alert.alert('Error', 'No se pudo abrir la configuracion de horarios para este servicio.');
+      return;
+    }
+
+    navigation.navigate('Availability', {
+      mode: 'service',
+      serviceId,
+      serviceName: service.nombre,
+      providerId,
+    });
+  };
   
   // Renderizar cada servicio de mi lista
-  const renderMyServiceItem = ({ item }) => (
+  const renderMyServiceItem = ({ item }) => {
+    const availabilitySummary = getAvailabilitySummary(item);
+    const availabilityStyle = getAvailabilityStyle(availabilitySummary.status);
+
+    return (
     <View style={[styles.serviceCard, { opacity: item.activo ? 1 : 0.6 }]}>
       <View style={styles.serviceCardContent}>
         <View style={styles.serviceInfo}>
@@ -678,6 +733,14 @@ const ServicesScreen = ({ navigation }) => {
               </View>
             )}
           </View>
+
+          <View style={[styles.availabilityBadge, { backgroundColor: availabilityStyle.backgroundColor }]}>
+            <Ionicons name={availabilityStyle.icon} size={14} color={availabilityStyle.color} />
+            <Text style={[styles.availabilityBadgeText, { color: availabilityStyle.color }]}>
+              {availabilitySummary.label}
+              {availabilitySummary.blockCount > 0 ? ` · ${availabilitySummary.blockCount} bloques` : ''}
+            </Text>
+          </View>
           
           {/* Badges de modalidad de atención */}
           {Array.isArray(item.modalidadAtencion) && item.modalidadAtencion.length > 0 && (
@@ -699,14 +762,14 @@ const ServicesScreen = ({ navigation }) => {
         </View>
         
         <View style={styles.serviceActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.serviceActionButton}
             onPress={() => handleViewServiceDetail(item)}
           >
             <Ionicons name="create-outline" size={18} color={COLORS.primary} />
           </TouchableOpacity>
           
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.serviceActionButton, { marginTop: 10 }]}
             onPress={() => handleToggleServiceStatus(item)}
           >
@@ -719,6 +782,13 @@ const ServicesScreen = ({ navigation }) => {
           
           <TouchableOpacity 
             style={[styles.serviceActionButton, { marginTop: 10 }]}
+            onPress={() => handleConfigureAvailability(item)}
+          >
+            <Ionicons name="calendar-outline" size={18} color={COLORS.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.serviceActionButton, { marginTop: 10 }]}
             onPress={() => handleRemoveService(item)}
           >
             <Ionicons name="trash-outline" size={18} color={COLORS.accent} />
@@ -727,6 +797,7 @@ const ServicesScreen = ({ navigation }) => {
       </View>
     </View>
   );
+  };
   
   // Renderizar cada servicio del catálogo
   const renderCatalogServiceItem = ({ item }) => (
@@ -1130,7 +1201,7 @@ const ServicesScreen = ({ navigation }) => {
                             <Ionicons 
                               name="business-outline" 
                               size={28} 
-                              color={modalidadAtencion.includes('Clínica') ? COLORS.primary : COLORS.grey} 
+                              color={modalidadAtencion.includes('Clínica') ? COLORS.primary : COLORS.grey}
                             />
                           </View>
                         </TouchableOpacity>
@@ -1458,6 +1529,21 @@ const styles = {
   serviceDetailText: {
     fontSize: 14,
     color: COLORS.dark,
+    marginLeft: 4,
+  },
+  availabilityBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  availabilityBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
     marginLeft: 4,
   },
   serviceActions: {

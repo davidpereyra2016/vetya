@@ -6,6 +6,7 @@ const useDisponibilidadStore = create((set, get) => ({
   // Estado inicial
   disponibilidadGeneral: null,
   disponibilidadServicios: {}, // Mapa de servicioId -> disponibilidad
+  resumenServicios: {},
   disponibilidadEmergencias: {
     disponible: false,
     precio: 0
@@ -92,6 +93,41 @@ const useDisponibilidadStore = create((set, get) => ({
   },
   
   // Configurar o actualizar la disponibilidad para un servicio específico
+  getResumenDisponibilidadServicios: async (prestadorId) => {
+    if (!prestadorId) {
+      return {};
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const result = await disponibilidadService.getResumenDisponibilidadServicios(prestadorId);
+      if (result.success) {
+        const resumenServicios = (result.data || []).reduce((acc, item) => {
+          acc[item.serviceId] = item;
+          return acc;
+        }, {});
+
+        set({
+          resumenServicios,
+          isLoading: false
+        });
+        return resumenServicios;
+      }
+
+      set({
+        error: result.error,
+        isLoading: false
+      });
+      return {};
+    } catch (error) {
+      set({
+        error: "Error al obtener resumen de disponibilidad",
+        isLoading: false
+      });
+      return {};
+    }
+  },
+
   configurarDisponibilidadServicio: async (prestadorId, servicioId, disponibilidadData) => {
     if (!prestadorId || !servicioId) {
       console.log('No se proporcionaron IDs necesarios');
@@ -385,6 +421,7 @@ const useDisponibilidadStore = create((set, get) => ({
   reset: () => set({
     disponibilidadGeneral: null,
     disponibilidadServicios: {},
+    resumenServicios: {},
     disponibilidadEmergencias: {
       disponible: false,
       precio: 0

@@ -264,12 +264,18 @@ const useCitaStore = create((set, get) => ({
         
         return { success: true, data: result.data };
       } else {
+        if (result.transient) {
+          set({ isLoading: false });
+          return { success: false, error: result.error, transient: true };
+        }
+
         set({ isLoading: false, error: result.error });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      set({ isLoading: false, error: error.message });
-      return { success: false, error: error.message };
+      const isTransient = error?.code === 'ECONNABORTED' || !error?.response;
+      set({ isLoading: false, error: isTransient ? null : error.message });
+      return { success: false, error: error.message, transient: isTransient };
     }
   },
   

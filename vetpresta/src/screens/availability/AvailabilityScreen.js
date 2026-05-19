@@ -29,7 +29,7 @@ import usePrestadorStore from '../../store/usePrestadorStore';
 const DEFAULT_START_TIME = '09:00';
 const DEFAULT_END_TIME = '18:00';
 
-export default function AvailabilityScreen({ navigation }) {
+export default function AvailabilityScreen({ navigation, route }) {
   // Ref para controlar si el componente está montado
   const isMounted = React.useRef(true);
   
@@ -136,6 +136,8 @@ export default function AvailabilityScreen({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [currentTab, setCurrentTab] = useState('general'); // 'general', 'services', 'emergency' o 'special'
   const [selectedServiceId, setSelectedServiceId] = useState(null);
+  const requestedServiceId = route?.params?.serviceId || null;
+  const requestedMode = route?.params?.mode || null;
   
   // Estados para configuración de horarios por servicio
   const [serviceScheduleConfig, setServiceScheduleConfig] = useState(null);
@@ -205,6 +207,14 @@ export default function AvailabilityScreen({ navigation }) {
       const servicesData = await getProviderServices(idToUse);
       if (servicesData) {
         setUserServices(servicesData);
+        if (requestedMode === 'service' && requestedServiceId) {
+          const servicioExiste = servicesData.some((service) => (service._id || service.id) === requestedServiceId);
+          if (servicioExiste) {
+            setCurrentTab('services');
+            setSelectedServiceId(requestedServiceId);
+            loadServiceAvailability(requestedServiceId);
+          }
+        }
       }
       
       // 2. Obtener datos básicos del prestador

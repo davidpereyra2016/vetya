@@ -43,6 +43,22 @@ export const disponibilidadService = {
   },
 
   // Configurar o actualizar la disponibilidad para un servicio específico
+  getResumenDisponibilidadServicios: async (prestadorId) => {
+    try {
+      const response = await axios.get(`/disponibilidad/prestador/${prestadorId}/resumen-servicios`);
+      return {
+        success: true,
+        data: response.data?.data || []
+      };
+    } catch (error) {
+      console.log('Error al obtener resumen de disponibilidad:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener resumen de disponibilidad'
+      };
+    }
+  },
+
   configurarDisponibilidadServicio: async (prestadorId, servicioId, disponibilidadData) => {
     try {
       console.log(`Configurando disponibilidad para prestador ID: ${prestadorId}, servicio ID: ${servicioId}`);

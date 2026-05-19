@@ -15,7 +15,7 @@ const disponibilidadSchema = new Schema({
   servicio: {
     type: Schema.Types.ObjectId,
     ref: 'Servicio',
-    required: true
+    default: null
   },
   // Horarios específicos para este servicio (si difieren del horario general del prestador)
   horarioEspecifico: {
@@ -110,6 +110,7 @@ const disponibilidadSchema = new Schema({
 disponibilidadSchema.index({ prestador: 1, servicio: 1 });
 disponibilidadSchema.index({ 'reservas.fecha': 1 });
 disponibilidadSchema.index({ prestador: 1, servicio: 1, 'reservas.fecha': 1 });
+disponibilidadSchema.index({ prestador: 1, servicio: 1, updatedAt: -1 });
 
 const Disponibilidad = mongoose.model('Disponibilidad', disponibilidadSchema);
 

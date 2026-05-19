@@ -662,10 +662,12 @@ async function verificarSlotDisponible(disponibilidad, inicio, fin) {
   const horaInicio = inicio.getHours() + inicio.getMinutes() / 60;
   const horaFin = fin.getHours() + fin.getMinutes() / 60;
   
-  const enManana = horaInicio >= parseHora(horarioDia.manana.apertura) && 
+  const enManana = horarioDia.manana?.activo &&
+                  horaInicio >= parseHora(horarioDia.manana.apertura) &&
                   horaFin <= parseHora(horarioDia.manana.cierre);
   
-  const enTarde = horaInicio >= parseHora(horarioDia.tarde.apertura) && 
+  const enTarde = horarioDia.tarde?.activo &&
+                 horaInicio >= parseHora(horarioDia.tarde.apertura) &&
                  horaFin <= parseHora(horarioDia.tarde.cierre);
   
   if (!enManana && !enTarde) return false;
@@ -846,6 +848,16 @@ router.get("/prestadores/:prestadorId/disponibilidad", protectRoute, async (req,
     const citasExistentes = await Cita.find(filtroCitas);
     console.log('Citas existentes encontradas:', citasExistentes.length);
 
+    const disponibilidadServicio = servicio
+      ? await Disponibilidad.findOne({
+          prestador: prestadorId,
+          servicio: servicio._id
+        }).lean()
+      : null;
+    const horariosBase = disponibilidadServicio?.horarioEspecifico?.activo
+      ? (disponibilidadServicio.horarioEspecifico.horarios || [])
+      : (prestador.horarios || []);
+
     // 5. Generar disponibilidad
     const disponibilidad = [];
     const duracionServicio = servicio?.duracion || 30;
@@ -873,7 +885,7 @@ router.get("/prestadores/:prestadorId/disponibilidad", protectRoute, async (req,
       console.log('Fecha formateada:', fechaFormatted);
       const diaSemana = fecha.getDay();
 
-      const horarioDia = prestador.horarios.find(h => h.dia === diaSemana);
+      const horarioDia = horariosBase.find(h => h.dia === diaSemana);
       if (!horarioDia) {
         console.log(`Día ${diaSemana} (${obtenerNombreDia(diaSemana)}: No trabaja`);
         continue;

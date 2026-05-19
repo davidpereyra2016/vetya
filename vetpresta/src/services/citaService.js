@@ -1,5 +1,17 @@
 import axios from '../config/axios'; // Usar la misma instancia que api.js
 
+const isTransientNetworkError = (error) => (
+  error?.code === 'ECONNABORTED' ||
+  error?.message?.toLowerCase?.().includes('timeout') ||
+  !error?.response
+);
+
+const getErrorMessage = (error, fallback) => (
+  error?.response?.data?.message ||
+  error?.message ||
+  fallback
+);
+
 /**
  * Servicios para gestionar las citas y reservas con diferentes prestadores
  * Específico para la aplicación de prestadores (veterinarios/peluqueros/etc)
@@ -44,10 +56,21 @@ const citaService = {
         return { success: true, data: [] };
       }
       
-      console.error('Error al obtener citas del prestador:', error);
+      const errorMessage = getErrorMessage(error, 'Error al obtener citas del prestador');
+
+      if (isTransientNetworkError(error)) {
+        console.log('No se pudieron actualizar las citas del prestador:', errorMessage);
+        return {
+          success: false,
+          transient: true,
+          error: errorMessage
+        };
+      }
+
+      console.log('Error al obtener citas del prestador:', error.response?.data || errorMessage);
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Error al obtener citas del prestador' 
+        error: errorMessage
       };
     }
   },

@@ -7,6 +7,57 @@ import protectRoute from '../middleware/auth.middleware.js';
 const router = express.Router();
 const duracionServicio = 30;
 
+function parseHora(horaStr) {
+  if (!horaStr || typeof horaStr !== 'string') return null;
+  const [hora, minuto] = horaStr.split(':').map(Number);
+  if (!Number.isFinite(hora) || !Number.isFinite(minuto)) return null;
+  return hora * 60 + minuto;
+}
+
+function turnoActivoValido(turno) {
+  if (!turno?.activo) return null;
+  const inicio = parseHora(turno.apertura);
+  const fin = parseHora(turno.cierre);
+  if (inicio === null || fin === null || inicio >= fin) {
+    return { error: 'Los horarios activos deben tener apertura y cierre validos' };
+  }
+  return { inicio, fin };
+}
+
+function validarHorarios(horarios = []) {
+  const dias = new Set();
+  for (const horario of horarios) {
+    if (dias.has(horario.dia)) {
+      return `El dia ${horario.dia} esta duplicado en la disponibilidad`;
+    }
+    dias.add(horario.dia);
+
+    const manana = turnoActivoValido(horario.manana);
+    if (manana?.error) return manana.error;
+
+    const tarde = turnoActivoValido(horario.tarde);
+    if (tarde?.error) return tarde.error;
+
+    if (manana && tarde && Math.max(manana.inicio, tarde.inicio) < Math.min(manana.fin, tarde.fin)) {
+      return `Los turnos del dia ${horario.dia} se solapan`;
+    }
+  }
+
+  return null;
+}
+
+function tieneBloquesActivos(disponibilidad) {
+  return (disponibilidad?.horarioEspecifico?.horarios || []).some((horario) =>
+    horario?.manana?.activo || horario?.tarde?.activo
+  );
+}
+
+function contarBloquesActivos(disponibilidad) {
+  return (disponibilidad?.horarioEspecifico?.horarios || []).reduce((total, horario) => {
+    return total + (horario?.manana?.activo ? 1 : 0) + (horario?.tarde?.activo ? 1 : 0);
+  }, 0);
+}
+
 router.get('/', async (req, res) => {
   try {
     console.log('Obteniendo prestadores disponibles para emergencias');
@@ -171,6 +222,10 @@ router.post('/prestador/:prestadorId', protectRoute, async (req, res) => {
     
     console.log('Configurando disponibilidad general para prestador ID:', prestadorId);
     console.log('Datos de disponibilidad general:', req.body);
+    const errorHorarios = validarHorarios(horarioEspecifico?.horarios || []);
+    if (errorHorarios) {
+      return res.status(400).json({ message: errorHorarios });
+    }
     
     // Buscar disponibilidad existente o crear una nueva
     let disponibilidad = await Disponibilidad.findOne({
@@ -257,6 +312,86 @@ router.post('/prestador/:prestadorId', protectRoute, async (req, res) => {
 });
 
 // Ruta para obtener la disponibilidad de un prestador para un servicio específico
+// Resumen de disponibilidad para pintar el estado de cada servicio en Vetpresta
+router.get('/prestador/:prestadorId/resumen-servicios', protectRoute, async (req, res) => {
+  try {
+    const { prestadorId } = req.params;
+
+    const prestador = await Prestador.findById(prestadorId).lean();
+    if (!prestador) {
+      return res.status(404).json({ message: 'Prestador no encontrado' });
+    }
+
+    if (prestador.usuario.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'No autorizado para ver esta disponibilidad' });
+    }
+
+    const [servicios, disponibilidades] = await Promise.all([
+      Servicio.find({ prestadorId }).select('_id nombre').lean(),
+      Disponibilidad.find({ prestador: prestadorId }).select('servicio horarioEspecifico updatedAt').lean(),
+    ]);
+
+    const general = disponibilidades.find((disponibilidad) => !disponibilidad.servicio);
+    const generalTieneHorarios = tieneBloquesActivos(general) || (prestador.horarios || []).some((horario) =>
+      horario?.manana?.activo || horario?.tarde?.activo
+    );
+    const generalBloques = general
+      ? contarBloquesActivos(general)
+      : (prestador.horarios || []).reduce((total, horario) => {
+          return total + (horario?.manana?.activo ? 1 : 0) + (horario?.tarde?.activo ? 1 : 0);
+        }, 0);
+
+    const porServicio = new Map(
+      disponibilidades
+        .filter((disponibilidad) => disponibilidad.servicio)
+        .map((disponibilidad) => [disponibilidad.servicio.toString(), disponibilidad])
+    );
+
+    const data = servicios.map((servicio) => {
+      const serviceId = servicio._id.toString();
+      const disponibilidadServicio = porServicio.get(serviceId);
+      const tieneHorarioEspecifico = disponibilidadServicio?.horarioEspecifico?.activo === true &&
+        tieneBloquesActivos(disponibilidadServicio);
+
+      if (tieneHorarioEspecifico) {
+        return {
+          serviceId,
+          serviceName: servicio.nombre,
+          status: 'specific',
+          label: 'Horario especifico',
+          blockCount: contarBloquesActivos(disponibilidadServicio),
+          usesGeneral: false,
+        };
+      }
+
+      if (generalTieneHorarios) {
+        return {
+          serviceId,
+          serviceName: servicio.nombre,
+          status: 'general',
+          label: 'Usa horario general',
+          blockCount: generalBloques,
+          usesGeneral: true,
+        };
+      }
+
+      return {
+        serviceId,
+        serviceName: servicio.nombre,
+        status: 'none',
+        label: 'Sin horarios',
+        blockCount: 0,
+        usesGeneral: false,
+      };
+    });
+
+    res.json({ data });
+  } catch (error) {
+    console.error('Error al obtener resumen de disponibilidad:', error);
+    res.status(500).json({ message: 'Error al obtener resumen de disponibilidad' });
+  }
+});
+
 // GET /api/disponibilidad/prestador/:prestadorId/servicio/:servicioId
 router.get('/prestador/:prestadorId/servicio/:servicioId', protectRoute, async (req, res) => {
   try {
@@ -412,6 +547,10 @@ router.post('/prestador/:prestadorId/servicio/:servicioId', protectRoute, async 
     }
     
     console.log(`Configurando disponibilidad para servicio ${servicioId} del prestador ${prestadorId}`);
+    const errorHorarios = validarHorarios(horarioEspecifico?.horarios || []);
+    if (errorHorarios) {
+      return res.status(400).json({ message: errorHorarios });
+    }
     // Obtener la duración del servicio
     const duracionServicio = servicio.duracion || 30;
     // Buscar disponibilidad existente o crear una nueva
