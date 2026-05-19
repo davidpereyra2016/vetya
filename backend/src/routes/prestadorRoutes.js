@@ -2,6 +2,7 @@ import express from 'express';
 const router = express.Router();
 import Prestador from '../models/Prestador.js';
 import Servicio from '../models/Servicio.js';
+import Cita from '../models/Cita.js';
 import User from '../models/User.js';
 import { protectRoute, checkRole } from '../middleware/auth.middleware.js';
 import { v2 as cloudinary } from 'cloudinary';
@@ -145,20 +146,20 @@ function aplicarPoliticaEmergenciaPrestador(prestador, politica) {
   };
 }
 
-function validarPrecioContraPolitica(precioDeseado, politica, nombreServicio) {
+function validarPrecioContraPolitica(precioDeseado, politica, nombreServicio, esGratisLocal = false) {
   const precio = precioNoNegativo(precioDeseado, politica.esGratis ? 0 : politica.precioMinimo);
   if (precio === null) {
     return { error: "El precio debe ser un número válido y no negativo" };
   }
-  if (politica.esGratis) {
-    return { precio: 0 };
+  if (politica.esGratis || esGratisLocal) {
+    return { precio: 0, esGratis: true };
   }
   if (precio < politica.precioMinimo) {
     return {
       error: `El precio de ${nombreServicio || "este servicio"} no puede ser menor a $${politica.precioMinimo}`,
     };
   }
-  return { precio };
+  return { precio, esGratis: false };
 }
 
 // CAMBIO: Se actualizó esta ruta para que filtre por tipo si se proporciona como query param.
@@ -1105,7 +1106,7 @@ router.post('/:id/servicios', protectRoute, async (req, res) => {
     }
     
     // Verificar si el usuario autenticado es dueño del prestador
-    if (prestador.usuario.toString() !== req.user._id.toString()) {
+    if (prestador.usuario.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(401).json({ message: 'No autorizado para modificar los servicios de este prestador' });
     }
     
@@ -1121,7 +1122,7 @@ router.post('/:id/servicios', protectRoute, async (req, res) => {
       }
       
       const politica = obtenerPrecioMinimoServicio(servicioBase);
-      const precioValidado = validarPrecioContraPolitica(precio, politica, servicioBase.nombre);
+      const precioValidado = validarPrecioContraPolitica(precio, politica, servicioBase.nombre, req.body.esGratis === true);
       if (precioValidado.error) {
         return res.status(400).json({ message: precioValidado.error });
       }
@@ -1134,7 +1135,7 @@ router.post('/:id/servicios', protectRoute, async (req, res) => {
         color: servicioBase.color,
         precio: precioValidado.precio,
         precioMinimo: politica.precioMinimo,
-        esGratis: politica.esGratis,
+        esGratis: precioValidado.esGratis,
         servicioBaseId: servicioBase._id,
         duracion: duracion || servicioBase.duracion,
         categoria: servicioBase.categoria,
@@ -1157,9 +1158,9 @@ router.post('/:id/servicios', protectRoute, async (req, res) => {
         descripcion,
         icono: otrosDatos.icono || 'default-icon',
         color: otrosDatos.color || '#3498db',
-        precio: precioNoNegativo(precio, 0) ?? 0,
+        precio: req.body.esGratis === true ? 0 : (precioNoNegativo(precio, 0) ?? 0),
         precioMinimo: 0,
-        esGratis: false,
+        esGratis: req.body.esGratis === true,
         duracion: duracion || 30,
         categoria: otrosDatos.categoria || 'Otros',
         tipoPrestador: prestador.tipo,
@@ -1211,13 +1212,14 @@ router.put('/:id/servicios/:servicioId', protectRoute, async (req, res) => {
 
     if (req.body.precio !== undefined) {
       const politica = await resolverPoliticaServicioPrestador(servicio);
-      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicio.nombre);
+      const esGratisLocal = req.body.esGratis === true || req.body.esGratis === 'true';
+      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicio.nombre, esGratisLocal);
       if (precioValidado.error) {
         return res.status(400).json({ message: precioValidado.error });
       }
       req.body.precio = precioValidado.precio;
       servicio.precioMinimo = politica.precioMinimo;
-      servicio.esGratis = politica.esGratis;
+      servicio.esGratis = precioValidado.esGratis;
     }
     
     // Actualizar los campos del servicio
@@ -1258,7 +1260,7 @@ router.delete('/:id/servicios/:servicioId', protectRoute, async (req, res) => {
     }
     
     // Verificar si el usuario autenticado es dueño del prestador
-    if (prestador.usuario.toString() !== req.user._id.toString()) {
+    if (prestador.usuario.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(401).json({ message: 'No autorizado para eliminar servicios de este prestador' });
     }
     
@@ -1270,6 +1272,18 @@ router.delete('/:id/servicios/:servicioId', protectRoute, async (req, res) => {
     
     if (!servicio) {
       return res.status(404).json({ message: 'Servicio no encontrado o no pertenece al prestador' });
+    }
+
+    const pacientesAtendidos = await Cita.countDocuments({
+      prestador: id,
+      servicio: servicioId,
+      estado: 'Completada',
+    });
+
+    if (pacientesAtendidos > 0) {
+      return res.status(409).json({
+        message: 'No se puede eliminar este servicio porque ya tiene pacientes atendidos'
+      });
     }
     
     // Eliminar el servicio
@@ -1519,7 +1533,8 @@ router.post('/:prestadorId/servicios', protectRoute, async (req, res) => {
       // Crear una copia personalizada del servicio para este prestador con nombre único
       // Agregando un sufijo único al nombre para evitar duplicados con el índice existente
       const politica = obtenerPrecioMinimoServicio(servicioCatalogo);
-      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicioCatalogo.nombre);
+      const esGratisLocal = req.body.esGratis === true || req.body.esGratis === 'true';
+      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicioCatalogo.nombre, esGratisLocal);
       if (precioValidado.error) {
         return res.status(400).json({ message: precioValidado.error });
       }
@@ -1533,7 +1548,7 @@ router.post('/:prestadorId/servicios', protectRoute, async (req, res) => {
         color: servicioCatalogo.color,
         precio: precioValidado.precio,
         precioMinimo: politica.precioMinimo,
-        esGratis: politica.esGratis,
+        esGratis: precioValidado.esGratis,
         servicioBaseId: servicioCatalogo._id,
         duracion: req.body.duracion || servicioCatalogo.duracion,
         categoria: servicioCatalogo.categoria,
@@ -1567,9 +1582,9 @@ router.post('/:prestadorId/servicios', protectRoute, async (req, res) => {
         descripcion,
         icono: icono || 'medkit-outline',
         color: color || '#1E88E5',
-        precio: precioNoNegativo(precio, 0) ?? 0,
+        precio: req.body.esGratis === true || req.body.esGratis === 'true' ? 0 : (precioNoNegativo(precio, 0) ?? 0),
         precioMinimo: 0,
-        esGratis: false,
+        esGratis: req.body.esGratis === true || req.body.esGratis === 'true',
         duracion: duracion || 30,
         categoria: categoria || 'Otros',
         tipoPrestador: prestador.tipo,
@@ -1629,13 +1644,14 @@ router.put('/:prestadorId/servicios/:servicioId', protectRoute, async (req, res)
 
     if (req.body.precio !== undefined) {
       const politica = await resolverPoliticaServicioPrestador(servicio);
-      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicio.nombre);
+      const esGratisLocal = req.body.esGratis === true || req.body.esGratis === 'true';
+      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicio.nombre, esGratisLocal);
       if (precioValidado.error) {
         return res.status(400).json({ message: precioValidado.error });
       }
       req.body.precio = precioValidado.precio;
       servicio.precioMinimo = politica.precioMinimo;
-      servicio.esGratis = politica.esGratis;
+      servicio.esGratis = precioValidado.esGratis;
     }
     
     // Actualizar los campos permitidos
@@ -1682,6 +1698,18 @@ router.delete('/:prestadorId/servicios/:servicioId', protectRoute, async (req, r
     const servicio = await Servicio.findOne({ _id: servicioId, prestadorId: prestadorId });
     if (!servicio) {
       return res.status(404).json({ message: 'Servicio no encontrado' });
+    }
+
+    const pacientesAtendidos = await Cita.countDocuments({
+      prestador: prestadorId,
+      servicio: servicioId,
+      estado: 'Completada',
+    });
+
+    if (pacientesAtendidos > 0) {
+      return res.status(409).json({
+        message: 'No se puede eliminar este servicio porque ya tiene pacientes atendidos'
+      });
     }
     
     // eliminar el servicio

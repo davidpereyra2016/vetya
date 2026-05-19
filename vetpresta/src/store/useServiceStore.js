@@ -202,7 +202,7 @@ const useServiceStore = create((set, get) => ({
       if (result.success) {
         // Actualizar el servicio en la lista
         const services = get().services.map(service => 
-          service.id === serviceId ? result.data : service
+          (service._id || service.id) === serviceId ? result.data : service
         );
         
         set({ 

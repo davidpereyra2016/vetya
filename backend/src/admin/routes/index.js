@@ -415,7 +415,8 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
         citas: citas.length,
         emergencias: emergencias.length
       },
-      error: null
+      error: req.query.error || null,
+      success: req.query.success || null
     });
   } catch (error) {
     console.error('Error general en dashboard:', error.message);
@@ -710,6 +711,22 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
     });
     
     // Calcular estadísticas
+    const serviciosConPacientes = await Promise.all(servicios.map(async (servicio) => {
+      const servicioObj = servicio.toObject ? servicio.toObject() : servicio;
+      const pacientesAtendidos = await Cita.countDocuments({
+        prestador: req.params.id,
+        servicio: servicio._id,
+        estado: 'Completada',
+      });
+
+      return {
+        ...servicioObj,
+        pacientesAtendidos,
+        puedeEditar: pacientesAtendidos === 0,
+        puedeEliminar: pacientesAtendidos === 0,
+      };
+    }));
+
     const estadisticas = {
       totalCitas: citas.length,
       citasPendientes: citas.filter(c => c.estado === 'Pendiente').length,
@@ -733,8 +750,8 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
       promedioCalificaciones: valoraciones.length > 0 
         ? (valoraciones.reduce((sum, v) => sum + v.calificacion, 0) / valoraciones.length).toFixed(1)
         : 0,
-      totalServicios: servicios.length,
-      serviciosActivos: servicios.filter(s => s.activo !== false).length
+      totalServicios: serviciosConPacientes.length,
+      serviciosActivos: serviciosConPacientes.filter(s => s.activo !== false).length
     };
     
     console.log('Estadísticas:', estadisticas);
@@ -745,7 +762,7 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
       emergencias,
       pagos: pagosConFinanzas,
       valoraciones,
-      servicios,
+      servicios: serviciosConPacientes,
       disponibilidades,
       notificaciones,
       validacion,
@@ -760,6 +777,77 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
       error: 'Error al cargar detalle de prestador: ' + error.message,
       prestadores: []
     });
+  }
+});
+
+router.post('/prestadores/:prestadorId/servicios/:servicioId/editar', isAuthenticated, async (req, res) => {
+  const { prestadorId, servicioId } = req.params;
+  try {
+    const servicio = await Servicio.findOne({ _id: servicioId, prestadorId });
+    if (!servicio) {
+      return res.redirect(`/admin/prestadores/${prestadorId}?error=Servicio no encontrado`);
+    }
+
+    const pacientesAtendidos = await Cita.countDocuments({
+      prestador: prestadorId,
+      servicio: servicioId,
+      estado: 'Completada',
+    });
+
+    if (pacientesAtendidos > 0) {
+      return res.redirect(`/admin/prestadores/${prestadorId}?error=No se puede editar un servicio con pacientes atendidos`);
+    }
+
+    let precioMinimo = Number(servicio.precioMinimo ?? 0) || 0;
+    let servicioGratisGlobal = false;
+
+    if (servicio.servicioBaseId) {
+      const servicioBase = await Servicio.findById(servicio.servicioBaseId).select('precio precioMinimo esGratis').lean();
+      if (servicioBase) {
+        precioMinimo = Number(servicioBase.precioMinimo ?? servicioBase.precio ?? 0) || 0;
+        servicioGratisGlobal = servicioBase.esGratis === true;
+      }
+    }
+
+    const esGratis = req.body.esGratis === 'on' || req.body.esGratis === 'true' || servicioGratisGlobal;
+    const precio = esGratis ? 0 : Number(req.body.precio);
+
+    if (!esGratis && (!Number.isFinite(precio) || precio < precioMinimo)) {
+      return res.redirect(`/admin/prestadores/${prestadorId}?error=El precio no puede ser menor al minimo configurado`);
+    }
+
+    servicio.precio = precio;
+    servicio.precioMinimo = precioMinimo;
+    servicio.esGratis = esGratis;
+    servicio.duracion = Number(req.body.duracion) || servicio.duracion || 30;
+    servicio.activo = req.body.activo === 'on' || req.body.activo === 'true';
+
+    await servicio.save();
+    res.redirect(`/admin/prestadores/${prestadorId}?success=Servicio actualizado correctamente`);
+  } catch (error) {
+    console.error('Error al editar servicio del prestador desde admin:', error);
+    res.redirect(`/admin/prestadores/${prestadorId}?error=No se pudo actualizar el servicio`);
+  }
+});
+
+router.post('/prestadores/:prestadorId/servicios/:servicioId/eliminar', isAuthenticated, async (req, res) => {
+  const { prestadorId, servicioId } = req.params;
+  try {
+    const pacientesAtendidos = await Cita.countDocuments({
+      prestador: prestadorId,
+      servicio: servicioId,
+      estado: 'Completada',
+    });
+
+    if (pacientesAtendidos > 0) {
+      return res.redirect(`/admin/prestadores/${prestadorId}?error=No se puede eliminar un servicio con pacientes atendidos`);
+    }
+
+    await Servicio.deleteOne({ _id: servicioId, prestadorId });
+    res.redirect(`/admin/prestadores/${prestadorId}?success=Servicio eliminado correctamente`);
+  } catch (error) {
+    console.error('Error al eliminar servicio del prestador desde admin:', error);
+    res.redirect(`/admin/prestadores/${prestadorId}?error=No se pudo eliminar el servicio`);
   }
 });
 

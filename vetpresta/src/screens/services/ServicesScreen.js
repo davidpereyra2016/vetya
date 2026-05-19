@@ -136,6 +136,7 @@ const ServicesScreen = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [priceInput, setPriceInput] = useState('');
   const [durationInput, setDurationInput] = useState('');
+  const [serviceIsFree, setServiceIsFree] = useState(false);
   const [emergencyPriceInput, setEmergencyPriceInput] = useState('');
   const [emergencyAvailable, setEmergencyAvailable] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
@@ -241,7 +242,9 @@ const ServicesScreen = ({ navigation }) => {
     // Asegurarnos de que estamos almacenando la información completa del servicio
     console.log('Servicio seleccionado:', service);
     setSelectedService(service);
-    setPriceInput(isServicioGratis(service) ? '0' : (service.precio ?? service.precioMinimo ?? 0).toString());
+    const gratis = isServicioGratis(service);
+    setServiceIsFree(gratis);
+    setPriceInput(gratis ? '0' : (service.precio ?? service.precioMinimo ?? 0).toString());
     setDurationInput(service.duracion ? service.duracion.toString() : '0');
     setModalidadAtencion(
       Array.isArray(service.modalidadAtencion) && service.modalidadAtencion.length > 0
@@ -285,11 +288,11 @@ const ServicesScreen = ({ navigation }) => {
     }
     
     // Validación de la duración
-    if (isServicioGratis(selectedService) && precio !== 0) {
+    if (serviceIsFree && precio !== 0) {
       Alert.alert('Servicio gratuito', 'Este servicio fue marcado como gratuito por administración y debe quedar en $0.');
       return;
     }
-    if (!isServicioGratis(selectedService) && precio < precioMinimo) {
+    if (!serviceIsFree && precio < precioMinimo) {
       Alert.alert('Precio mínimo requerido', `Este servicio no puede publicarse por menos de ${formatPrice(precioMinimo)}.`);
       return;
     }
@@ -329,7 +332,8 @@ const ServicesScreen = ({ navigation }) => {
       
       const serviceData = {
         servicioId: serviceId,
-        precio: precio,
+        precio: serviceIsFree ? 0 : precio,
+        esGratis: serviceIsFree,
         duracion: duracion,
         modalidadAtencion: modalidadAtencion,
         activo: true
@@ -373,11 +377,11 @@ const ServicesScreen = ({ navigation }) => {
     }
     
     // Validación de la duración
-    if (isServicioGratis(selectedService) && precio !== 0) {
+    if (serviceIsFree && precio !== 0) {
       Alert.alert('Servicio gratuito', 'Este servicio fue marcado como gratuito por administración y debe quedar en $0.');
       return;
     }
-    if (!isServicioGratis(selectedService) && precio < precioMinimo) {
+    if (!serviceIsFree && precio < precioMinimo) {
       Alert.alert('Precio mínimo requerido', `Este servicio no puede publicarse por menos de ${formatPrice(precioMinimo)}.`);
       return;
     }
@@ -403,7 +407,8 @@ const ServicesScreen = ({ navigation }) => {
       });
       
       const serviceData = {
-        precio: precio,
+        precio: serviceIsFree ? 0 : precio,
+        esGratis: serviceIsFree,
         duracion: duracion,
         modalidadAtencion: modalidadAtencion
       };
@@ -1053,12 +1058,25 @@ const ServicesScreen = ({ navigation }) => {
                           keyboardType="numeric"
                           value={priceInput}
                           onChangeText={setPriceInput}
-                          editable={!isServicioGratis(selectedService)}
+                          editable={!serviceIsFree}
                         />
+                      </View>
+                      <View style={styles.switchContainer}>
+                        <Text style={styles.switchLabel}>Ofrecer gratis</Text>
+                        <TouchableOpacity
+                          style={[styles.toggleButton, serviceIsFree ? styles.toggleButtonActive : {}]}
+                          onPress={() => {
+                            const nextValue = !serviceIsFree;
+                            setServiceIsFree(nextValue);
+                            setPriceInput(nextValue ? '0' : String(Math.max(getPrecioMinimo(selectedService), Number(priceInput) || 0)));
+                          }}
+                        >
+                          <View style={[styles.toggleDot, serviceIsFree ? styles.toggleDotActive : {}]} />
+                        </TouchableOpacity>
                       </View>
                       
                       <Text style={styles.priceHint}>
-                        {isServicioGratis(selectedService)
+                        {serviceIsFree
                           ? 'Este servicio fue marcado como gratuito por administración.'
                           : `Precio mínimo permitido: ${formatPrice(getPrecioMinimo(selectedService))}. Puedes cobrar ese monto o más.`}
                       </Text>
