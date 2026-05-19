@@ -69,6 +69,10 @@ const citaSchema = new mongoose.Schema({
   costoEstimado: {
     type: Number
   },
+  esGratis: {
+    type: Boolean,
+    default: false
+  },
   metodoPago: {
     type: String,
     enum: ['Efectivo', 'Tarjeta', 'Transferencia', 'MercadoPago', 'Por definir'],

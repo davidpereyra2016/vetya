@@ -5,7 +5,29 @@ import protectRoute from "../middleware/auth.middleware.js";
 import { getPagination, paginatedResponse } from "../utils/routePerformance.js";
 
 const router = express.Router();
-const SERVICE_FIELDS = "_id nombre descripcion icono color precio duracion categoria tipoPrestador disponibleParaTipos requiereAprobacion modalidadAtencion activo esServicioPredefinido prestadorId createdAt";
+const SERVICE_FIELDS = "_id nombre descripcion icono color precio precioMinimo esGratis servicioBaseId duracion categoria tipoPrestador disponibleParaTipos requiereAprobacion modalidadAtencion activo esServicioPredefinido prestadorId createdAt";
+
+function normalizarPrecioServicio(body) {
+  const esGratis = body.esGratis === true || body.esGratis === "true";
+  if (esGratis) {
+    return { precio: 0, precioMinimo: 0, esGratis: true };
+  }
+
+  const precio = body.precio !== undefined && body.precio !== "" ? Number(body.precio) : 0;
+  const precioMinimo = body.precioMinimo !== undefined && body.precioMinimo !== ""
+    ? Number(body.precioMinimo)
+    : precio;
+
+  if (!Number.isFinite(precio) || precio < 0 || !Number.isFinite(precioMinimo) || precioMinimo < 0) {
+    return { error: "El precio y el precio mínimo deben ser números válidos no negativos" };
+  }
+
+  return {
+    precio: Math.max(precio, precioMinimo),
+    precioMinimo,
+    esGratis: false,
+  };
+}
 
 router.get("/", async (req, res) => {
   try {
@@ -69,7 +91,7 @@ router.get("/:id", async (req, res) => {
 
 router.post("/", protectRoute, async (req, res) => {
   try {
-    const { nombre, descripcion, icono, color, precio, duracion, categoria, tipoPrestador, disponibleParaTipos, requiereAprobacion, activo, esServicioPredefinido, modalidadAtencion } = req.body;
+    const { nombre, descripcion, icono, color, duracion, categoria, tipoPrestador, disponibleParaTipos, requiereAprobacion, activo, esServicioPredefinido, modalidadAtencion } = req.body;
 
     if (!nombre || !descripcion) {
       return res.status(400).json({ message: "El nombre y la descripcion son obligatorios" });
@@ -85,12 +107,19 @@ router.post("/", protectRoute, async (req, res) => {
       }
     }
 
+    const precioConfig = normalizarPrecioServicio(req.body);
+    if (precioConfig.error) {
+      return res.status(400).json({ message: precioConfig.error });
+    }
+
     const nuevoServicio = await Servicio.create({
       nombre,
       descripcion,
       icono: icono || "medkit-outline",
       color: color || "#1E88E5",
-      precio: precio || 0,
+      precio: precioConfig.precio,
+      precioMinimo: precioConfig.precioMinimo,
+      esGratis: precioConfig.esGratis,
       duracion: duracion || 30,
       categoria: categoria || "Consulta general",
       tipoPrestador,
@@ -129,11 +158,43 @@ router.put("/:id", protectRoute, async (req, res) => {
       }
     }
 
+    const updateData = { ...req.body };
+    if (req.body.precio !== undefined || req.body.precioMinimo !== undefined || req.body.esGratis !== undefined) {
+      const precioConfig = normalizarPrecioServicio(req.body);
+      if (precioConfig.error) {
+        return res.status(400).json({ message: precioConfig.error });
+      }
+      updateData.precio = precioConfig.precio;
+      updateData.precioMinimo = precioConfig.precioMinimo;
+      updateData.esGratis = precioConfig.esGratis;
+    }
+
     const servicioActualizado = await Servicio.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     ).select(SERVICE_FIELDS).lean();
+
+    if (servicioActualizado?.esServicioPredefinido && !servicioActualizado.prestadorId) {
+      await Servicio.updateMany(
+        {
+          _id: { $ne: servicioActualizado._id },
+          esServicioPredefinido: false,
+          $or: [
+            { servicioBaseId: servicioActualizado._id },
+            { nombre: new RegExp(`^${servicioActualizado.nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s\\([a-f0-9]{6}\\)$`, "i") },
+            { nombre: servicioActualizado.nombre },
+          ],
+        },
+        {
+          $set: {
+            precioMinimo: servicioActualizado.precioMinimo || 0,
+            esGratis: servicioActualizado.esGratis === true,
+            ...(servicioActualizado.esGratis ? { precio: 0 } : {}),
+          },
+        }
+      );
+    }
 
     res.status(200).json(servicioActualizado);
   } catch (error) {

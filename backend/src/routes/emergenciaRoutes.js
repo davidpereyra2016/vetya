@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import Emergencia from "../models/Emergencia.js";
 import Mascota from "../models/Mascota.js";
 import Prestador from "../models/Prestador.js";
+import Servicio from "../models/Servicio.js";
 import User from "../models/User.js";
 import Notificacion from "../models/Notificacion.js";
 import Pago from "../models/Pago.js";
@@ -25,6 +26,39 @@ import {
 
 const router = express.Router();
 const MARKETPLACE_PERCENTAGE = 0.3;
+
+async function obtenerPoliticaEmergencia() {
+  const servicioEmergencia = await Servicio.findOne({
+    tipoPrestador: "Veterinario",
+    esServicioPredefinido: true,
+    activo: true,
+    $or: [
+      { categoria: "Urgencias" },
+      { nombre: /emergencia|urgencia/i },
+    ],
+  }).select("precio precioMinimo esGratis").lean();
+
+  return {
+    precioMinimo: Number(servicioEmergencia?.precioMinimo ?? servicioEmergencia?.precio ?? 0) || 0,
+    esGratis: servicioEmergencia?.esGratis === true,
+  };
+}
+
+async function resolverCostoEmergencia(prestador) {
+  const politica = await obtenerPoliticaEmergencia();
+  const prestadorGratis = prestador?.emergenciaGratisAdmin === true;
+
+  if (prestadorGratis || politica.esGratis) {
+    return { costo: 0, esGratis: true, precioMinimo: 0 };
+  }
+
+  const precioPrestador = Number(prestador?.precioEmergencia ?? 0) || 0;
+  return {
+    costo: Math.max(precioPrestador, politica.precioMinimo),
+    esGratis: false,
+    precioMinimo: politica.precioMinimo,
+  };
+}
 
 async function notificarAsignacionEmergencia(emergencia, veterinarioId) {
   try {
@@ -180,16 +214,20 @@ async function completarPagoEfectivoEmergencia(emergencia) {
   }).sort({ createdAt: -1 });
 
   if (!pago) {
-    const prestador = await Prestador.findById(emergencia.veterinario).select('_id precioEmergencia');
+    const prestador = await Prestador.findById(emergencia.veterinario).select('_id precioEmergencia emergenciaGratisAdmin');
 
     if (!prestador) {
       throw new Error('No se encontró el prestador para completar el pago en efectivo');
     }
 
-    const monto = emergencia.costoTotal || prestador.precioEmergencia || 0;
+    const pricingEmergencia = await resolverCostoEmergencia(prestador);
+    const monto = emergencia.costoTotal ?? pricingEmergencia.costo;
 
     if (monto <= 0) {
-      throw new Error('No se pudo determinar el monto del pago en efectivo');
+      emergencia.pagado = true;
+      emergencia.esGratis = true;
+      await emergencia.save();
+      return null;
     }
 
     pago = new Pago({
@@ -1938,10 +1976,18 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
     // 💰 CREAR REGISTRO DE PAGO SEGÚN MÉTODO
     let preferenciaMP = null;
     let pagoCreado = null;
-    const prestador = await Prestador.findById(emergencia.veterinario).select("+mercadoPago.accessToken +mercadoPago.refreshToken");
-    const monto = prestador.precioEmergencia || 5000;
+    const prestador = await Prestador.findById(emergencia.veterinario).select("+mercadoPago.accessToken +mercadoPago.refreshToken precioEmergencia emergenciaGratisAdmin");
+    const pricingEmergencia = await resolverCostoEmergencia(prestador);
+    const monto = pricingEmergencia.costo;
+    emergencia.costoTotal = monto;
+    emergencia.esGratis = pricingEmergencia.esGratis;
+    if (pricingEmergencia.esGratis) {
+      emergencia.metodoPago = "Por definir";
+      emergencia.pagado = true;
+      await emergencia.save();
+    }
     
-    if (emergencia.metodoPago === 'Efectivo') {
+    if (!pricingEmergencia.esGratis && emergencia.metodoPago === 'Efectivo') {
       // 💵 CREAR PAGO EN EFECTIVO
       try {
         console.log('💵 [CONFIRMAR LLEGADA] Creando registro de pago en efectivo para emergencia:', emergencia._id);
@@ -1977,7 +2023,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
         });
         // No bloqueamos el flujo
       }
-    } else if (emergencia.metodoPago === 'MercadoPago') {
+    } else if (!pricingEmergencia.esGratis && emergencia.metodoPago === 'MercadoPago') {
       // 💳 CREAR PREFERENCIA DE MERCADO PAGO
       try {
         console.log('💳 [CONFIRMAR LLEGADA] Creando preferencia de Mercado Pago para emergencia:', emergencia._id);
@@ -2264,6 +2310,11 @@ router.patch("/:id/confirmar", protectRoute, async (req, res) => {
       emergencia.expirada = false;
       veterinarioAsignadoEnEstaConfirmacion = true;
     }
+
+    const veterinarioPago = await Prestador.findById(veterinarioFinalId).select("precioEmergencia emergenciaGratisAdmin");
+    const pricingEmergencia = await resolverCostoEmergencia(veterinarioPago);
+    emergencia.costoTotal = pricingEmergencia.costo;
+    emergencia.esGratis = pricingEmergencia.esGratis;
     
     // Verificar estado válido para confirmar
     const estadosValidos = ["Solicitada", "Asignada"];
@@ -2279,13 +2330,16 @@ router.patch("/:id/confirmar", protectRoute, async (req, res) => {
     // El estado cambiará a "Asignada" cuando el veterinario acepte la emergencia
     // emergencia.estado = "Asignada"; // ❌ ELIMINADO
     
-    if (metodoPago) {
+    if (pricingEmergencia.esGratis) {
+      emergencia.metodoPago = "Por definir";
+      emergencia.pagado = true;
+    } else if (metodoPago) {
       emergencia.metodoPago = metodoPago;
     } else {
       emergencia.metodoPago = "Efectivo"; // Valor por defecto
     }
 
-    if (emergencia.metodoPago === "Efectivo") {
+    if (!pricingEmergencia.esGratis && emergencia.metodoPago === "Efectivo") {
       await assertPrestadorCanAcceptCash(veterinarioFinalId);
     }
     

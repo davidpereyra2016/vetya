@@ -152,6 +152,10 @@ const emergenciaSchema = new mongoose.Schema({
   costoTotal: {
     type: Number
   },
+  esGratis: {
+    type: Boolean,
+    default: false
+  },
   metodoPago: {
     type: String,
     enum: ['Efectivo', 'MercadoPago', 'Tarjeta', 'Transferencia', 'Por definir'],

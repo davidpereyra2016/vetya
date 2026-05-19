@@ -1041,6 +1041,8 @@ router.post("/", protectRoute, async (req, res) => {
     // 2. Obtener duración del servicio
     const servicioObj = await Servicio.findById(servicio);
     const duracion = servicioObj.duracion || 30;
+    const esServicioGratis = servicioObj.esGratis === true || Number(servicioObj.precio || 0) === 0;
+    const costoServicio = esServicioGratis ? 0 : Number(servicioObj.precio || 0);
     console.log('Servicio encontrado:', servicioObj.nombre, '- Duración:', duracion, 'minutos');
 
     // 3. Calcular horaFin automáticamente
@@ -1063,7 +1065,7 @@ router.post("/", protectRoute, async (req, res) => {
     let estaDisponible = false;
     let prestadorObj = null;
 
-    if (metodoPago === "Efectivo") {
+    if (!esServicioGratis && metodoPago === "Efectivo") {
       await assertPrestadorCanAcceptCash(prestador);
     }
     
@@ -1169,8 +1171,10 @@ router.post("/", protectRoute, async (req, res) => {
       motivo,
       ubicacion: ubicacion || "Clínica",
       usuario: req.user._id,
-      costoEstimado: servicioObj.precio || 0,
-      metodoPago: metodoPago || "Por definir",
+      costoEstimado: costoServicio,
+      esGratis: esServicioGratis,
+      metodoPago: esServicioGratis ? "Por definir" : (metodoPago || "Por definir"),
+      pagado: esServicioGratis,
       disponibilidad: disponibilidad._id
     });
 

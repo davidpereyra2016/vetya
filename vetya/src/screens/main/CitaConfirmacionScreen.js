@@ -37,6 +37,8 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   const { createAppointment, reprogramAppointment } = useCitaStore();
   const providerId = provider?._id || appointmentData?.prestador;
   const initialCanAcceptCash = provider?.canAcceptCash ?? provider?.can_accept_cash ?? true;
+  const servicePrice = Number(service?.precio ?? appointmentData?.costoEstimado ?? 0) || 0;
+  const isFreeService = service?.esGratis === true || servicePrice === 0;
   const canUseCash = isRescheduling || (cashStatus?.canAcceptCash ?? initialCanAcceptCash) !== false;
 
   useEffect(() => {
@@ -149,7 +151,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       if (!nuevaCita) {
         const citaResult = await createAppointment({
           ...appointmentData,
-          metodoPago: 'Efectivo',
+          metodoPago: isFreeService ? 'Por definir' : 'Efectivo',
           estado: 'Pendiente',
         });
 
@@ -194,7 +196,9 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
 
       Alert.alert(
         'Reserva enviada',
-        'Tu cita quedara pendiente de aprobacion del prestador. Si la acepta, la veras como confirmada. El pago en efectivo se realiza al momento de la consulta.',
+        isFreeService
+          ? 'Tu cita gratuita quedara pendiente de aprobacion del prestador. Si la acepta, la veras como confirmada.'
+          : 'Tu cita quedara pendiente de aprobacion del prestador. Si la acepta, la veras como confirmada. El pago en efectivo se realiza al momento de la consulta.',
         [{ text: 'OK', onPress: () => navigation.navigate('MainTabs', { screen: 'Citas' }) }]
       );
     } catch (error) {
@@ -208,6 +212,10 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
 
   const handleMercadoPagoPayment = async () => {
     if (paymentSubmissionRef.current) return;
+    if (isFreeService) {
+      await handleEfectivoPayment();
+      return;
+    }
     paymentSubmissionRef.current = true;
     if (!appointmentData) {
       paymentSubmissionRef.current = false;
@@ -404,6 +412,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
           </View>
           
           {/* Sección de método de pago */}
+          {!isFreeService ? (
           <View style={styles.paymentSection}>
             <Text style={styles.paymentTitle}>Método de Pago</Text>
             <Text style={styles.paymentSubtitle}>Selecciona cómo deseas pagar el servicio</Text>
@@ -467,6 +476,12 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               )}
             </TouchableOpacity>
           </View>
+          ) : (
+            <View style={styles.paymentSection}>
+              <Text style={styles.paymentTitle}>Servicio gratuito</Text>
+              <Text style={styles.paymentSubtitle}>No necesitás seleccionar método de pago para esta reserva.</Text>
+            </View>
+          )}
           
           <View style={styles.actionsContainer}>
             <TouchableOpacity 
@@ -479,18 +494,18 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
             <TouchableOpacity 
               style={[
                 styles.actionButton, 
-                selectedPaymentMethod === 'MercadoPago' ? styles.mercadoPagoButton : styles.secondaryButton
+                selectedPaymentMethod === 'MercadoPago' && !isFreeService ? styles.mercadoPagoButton : styles.secondaryButton
               ]}
-              onPress={isRescheduling ? handleReschedule : (selectedPaymentMethod === 'MercadoPago' ? handleMercadoPagoPayment : handleEfectivoPayment)}
+              onPress={isRescheduling ? handleReschedule : (isFreeService ? handleEfectivoPayment : (selectedPaymentMethod === 'MercadoPago' ? handleMercadoPagoPayment : handleEfectivoPayment))}
               disabled={processingPayment}
             >
               {processingPayment ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text style={[
-                  selectedPaymentMethod === 'MercadoPago' ? styles.mercadoPagoButtonText : styles.secondaryButtonText
+                  selectedPaymentMethod === 'MercadoPago' && !isFreeService ? styles.mercadoPagoButtonText : styles.secondaryButtonText
                 ]}>
-                  {isRescheduling ? 'Confirmar Reprogramación' : (selectedPaymentMethod === 'MercadoPago' ? 'Pagar con Mercado Pago' : 'Enviar Reserva')}
+                  {isRescheduling ? 'Confirmar Reprogramación' : (isFreeService ? 'Enviar Reserva Gratuita' : (selectedPaymentMethod === 'MercadoPago' ? 'Pagar con Mercado Pago' : 'Enviar Reserva'))}
                 </Text>
               )}
             </TouchableOpacity>

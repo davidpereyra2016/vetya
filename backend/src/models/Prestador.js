@@ -191,6 +191,10 @@ const prestadorSchema = new Schema({
     type: Number,
     default: 0
   },
+  emergenciaGratisAdmin: {
+    type: Boolean,
+    default: false
+  },
   radio: {
     type: Number, // Radio de cobertura en kilómetros
     default: 1 // Cambiado a 1 km para proteger la privacidad del prestador

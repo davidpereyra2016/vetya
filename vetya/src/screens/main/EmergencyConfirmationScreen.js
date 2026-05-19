@@ -86,7 +86,10 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
   const animalInfo = esOtroAnimal ? otroAnimalInfo : petInfo;
   
   // Costo y tiempo estimado
-  const emergencyCost = vetInfo?.precioEmergencia ?? vetInfo?.price ?? emergency?.precioEmergencia ?? 0;
+  const emergencyCost = vetInfo?.emergenciaGratis || vetInfo?.emergenciaGratisAdmin
+    ? 0
+    : (vetInfo?.precioEmergencia ?? vetInfo?.price ?? emergency?.precioEmergencia ?? 0);
+  const isFreeEmergency = emergencyDetails?.esGratis === true || vetInfo?.emergenciaGratis === true || vetInfo?.emergenciaGratisAdmin === true || Number(emergencyCost || 0) === 0;
   const estimatedTime = initialVetInfo?.estimatedTime || emergencyDetails?.tiempoEstimado?.texto || vetInfo?.tiempoEstimado?.texto || 'Calculando...';
   const emergencyAddress = emergencyDetails?.ubicacion?.direccion || emergency?.ubicacion?.direccion || emergencyData?.ubicacion?.direccion || 'Tu ubicación actual';
   
@@ -271,7 +274,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
               </View>
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Costo de la consulta</Text>
-                <Text style={styles.infoValue}>${typeof emergencyCost === 'number' ? emergencyCost.toLocaleString() : emergencyCost}</Text>
+                <Text style={styles.infoValue}>{isFreeEmergency ? 'Gratis' : `$${typeof emergencyCost === 'number' ? emergencyCost.toLocaleString() : emergencyCost}`}</Text>
               </View>
             </View>
             
@@ -289,7 +292,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
           </View>
           
           {/* Selección de método de pago */}
-          {emergencyStatus === 'Solicitada' && (
+          {emergencyStatus === 'Solicitada' && !isFreeEmergency && (
             <View style={styles.paymentMethodCard}>
               <Text style={styles.paymentMethodTitle}>Método de Pago</Text>
               <Text style={styles.paymentMethodSubtitle}>Selecciona cómo deseas pagar el servicio</Text>
@@ -413,7 +416,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                   // o si ya está 'Asignada' (por algún otro flujo o re-entrada a la pantalla),
                   // procedemos a confirmar el servicio.
                   if ((currentEmergencyStatus === 'Solicitada' && vetInfo) || currentEmergencyStatus === 'Asignada' || currentEmergencyStatus === 'En camino') {
-                    if (selectedPaymentMethod === 'Efectivo' && !canUseCash) {
+                    if (!isFreeEmergency && selectedPaymentMethod === 'Efectivo' && !canUseCash) {
                       Alert.alert('Efectivo no disponible', 'Este veterinario debe regularizar comisiones pendientes y por ahora solo puede recibir pagos con Mercado Pago.');
                       return;
                     }
@@ -422,7 +425,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                     const veterinarianId = vetInfo?._id || vetInfo?.id;
                     const result = await emergenciaService.confirmEmergencyService(
                       finalEmergencyId,
-                      selectedPaymentMethod,
+                      isFreeEmergency ? 'Por definir' : selectedPaymentMethod,
                       veterinarianId
                     );
                     

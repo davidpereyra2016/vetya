@@ -109,7 +109,10 @@ const useEmergencyStore = create((set, get) => ({
             distanceValue: adjustedDistanceKm,
             estimatedTime: displayTime,
             estimatedTimeValue: displayMinutes,
-            price: vet.precioEmergencia || 0,
+            price: vet.emergenciaGratis ? 0 : (vet.precioEmergencia || 0),
+            precioEmergencia: vet.emergenciaGratis ? 0 : (vet.precioEmergencia || 0),
+            emergenciaGratis: vet.emergenciaGratis === true,
+            emergenciaGratisAdmin: vet.emergenciaGratisAdmin === true,
             image: vet.imagen || null,
             coordinate: vet.ubicacionActual?.coordenadas ? {
               latitude: vet.ubicacionActual.coordenadas.lat,

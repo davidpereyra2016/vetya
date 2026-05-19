@@ -83,6 +83,84 @@ function obtenerCoordenadasNormalizadas(coordenadas) {
   return { lat, lng };
 }
 
+const precioNoNegativo = (value, fallback = 0) => {
+  if (value === undefined || value === null || value === "") return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
+const obtenerPrecioMinimoServicio = (servicio) => {
+  if (!servicio) return { precioMinimo: 0, esGratis: false };
+  return {
+    precioMinimo: Number(servicio.precioMinimo ?? servicio.precio ?? 0) || 0,
+    esGratis: servicio.esGratis === true,
+  };
+};
+
+async function resolverPoliticaServicioPrestador(servicio) {
+  if (!servicio) return { precioMinimo: 0, esGratis: false };
+  if (servicio.servicioBaseId) {
+    const base = await Servicio.findById(servicio.servicioBaseId).select("precio precioMinimo esGratis").lean();
+    if (base) return obtenerPrecioMinimoServicio(base);
+  }
+
+  const nombreBase = String(servicio.nombre || "").replace(/\s\([a-f0-9]{6}\)$/i, "");
+  const basePorNombre = await Servicio.findOne({
+    nombre: nombreBase,
+    tipoPrestador: servicio.tipoPrestador,
+    esServicioPredefinido: true,
+    prestadorId: { $exists: false },
+  }).select("precio precioMinimo esGratis").lean();
+
+  return basePorNombre ? obtenerPrecioMinimoServicio(basePorNombre) : obtenerPrecioMinimoServicio(servicio);
+}
+
+async function obtenerPoliticaEmergencia() {
+  const servicioEmergencia = await Servicio.findOne({
+    tipoPrestador: "Veterinario",
+    esServicioPredefinido: true,
+    activo: true,
+    $or: [
+      { categoria: "Urgencias" },
+      { nombre: /emergencia|urgencia/i },
+    ],
+  }).select("precio precioMinimo esGratis").lean();
+
+  return {
+    precioMinimo: Number(servicioEmergencia?.precioMinimo ?? servicioEmergencia?.precio ?? 0) || 0,
+    esGratis: servicioEmergencia?.esGratis === true,
+  };
+}
+
+function aplicarPoliticaEmergenciaPrestador(prestador, politica) {
+  if (!prestador || prestador.tipo !== "Veterinario") return prestador;
+  const esGratis = prestador.emergenciaGratisAdmin === true || politica.esGratis === true;
+  const precioMinimo = esGratis ? 0 : politica.precioMinimo;
+  const precioActual = Number(prestador.precioEmergencia || 0);
+  return {
+    ...prestador,
+    emergenciaGratis: esGratis,
+    precioEmergenciaMinimo: precioMinimo,
+    precioEmergencia: esGratis ? 0 : Math.max(precioActual, precioMinimo),
+  };
+}
+
+function validarPrecioContraPolitica(precioDeseado, politica, nombreServicio) {
+  const precio = precioNoNegativo(precioDeseado, politica.esGratis ? 0 : politica.precioMinimo);
+  if (precio === null) {
+    return { error: "El precio debe ser un número válido y no negativo" };
+  }
+  if (politica.esGratis) {
+    return { precio: 0 };
+  }
+  if (precio < politica.precioMinimo) {
+    return {
+      error: `El precio de ${nombreServicio || "este servicio"} no puede ser menor a $${politica.precioMinimo}`,
+    };
+  }
+  return { precio };
+}
+
 // CAMBIO: Se actualizó esta ruta para que filtre por tipo si se proporciona como query param.
 router.get('/', async (req, res) => {
   try {
@@ -209,13 +287,14 @@ router.get('/emergencias', async (req, res) => {
       tipo: 'Veterinario',
       disponibleEmergencias: true,
       activo: true
-    }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia ubicacionActual radio wallet')
+    }).select('nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia emergenciaGratisAdmin ubicacionActual radio wallet')
       .populate('usuario', 'profilePicture')
       .lean();
     
     // Mapear los resultados para incluir profilePicture como imagen
+    const politicaEmergencia = await obtenerPoliticaEmergencia();
     const prestadores = prestadoresDb.map(prestador => {
-      const prestadorObj = { ...prestador };
+      const prestadorObj = aplicarPoliticaEmergenciaPrestador({ ...prestador }, politicaEmergencia);
 
       const coordsActuales = obtenerCoordenadasNormalizadas(prestadorObj.ubicacionActual?.coordenadas);
       if (coordsActuales) {
@@ -379,7 +458,7 @@ router.get('/emergencias/ubicacion', async (req, res) => {
     console.log(`📊 [BACKEND] Con ubicacionActual.lat: ${conUbicacion}`);
     
     const prestadores = await Prestador.find(query).select(
-      'nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia radio ubicacionActual wallet'
+      'nombre tipo especialidades imagen direccion rating disponibleEmergencias precioEmergencia emergenciaGratisAdmin radio ubicacionActual wallet'
     ).lean();
     
     console.log(`✅ [BACKEND] Prestadores encontrados con coords válidas: ${prestadores.length}`);
@@ -400,8 +479,9 @@ router.get('/emergencias/ubicacion', async (req, res) => {
     }
     
     // Si se proporcionaron coordenadas del cliente, calcular distancia y tiempo estimado
+    const politicaEmergencia = await obtenerPoliticaEmergencia();
     let resultado = prestadores.map(prestador => {
-      const prestadorObj = { ...prestador };
+      const prestadorObj = aplicarPoliticaEmergenciaPrestador({ ...prestador }, politicaEmergencia);
       const cashDebt = Number(prestadorObj.wallet?.cashDebt || 0);
       prestadorObj.canAcceptCash = cashDebt <= 0 && prestadorObj.wallet?.canAcceptCash !== false;
       prestadorObj.can_accept_cash = prestadorObj.canAcceptCash;
@@ -530,6 +610,12 @@ router.get('/:id', async (req, res) => {
     
     if (!prestador) {
       return res.status(404).json({ message: 'Prestador no encontrado' });
+    }
+
+    if (prestador.tipo === 'Veterinario') {
+      const politicaEmergencia = await obtenerPoliticaEmergencia();
+      prestador.precioEmergenciaMinimo = prestador.emergenciaGratisAdmin || politicaEmergencia.esGratis ? 0 : politicaEmergencia.precioMinimo;
+      prestador.emergenciaGratis = prestador.emergenciaGratisAdmin || politicaEmergencia.esGratis || Number(prestador.precioEmergencia || 0) === 0;
     }
     
     res.json(prestador);
@@ -691,9 +777,19 @@ router.patch('/:id/precio-emergencia', protectRoute, async (req, res) => {
       return res.status(400).json({ message: 'Solo los veterinarios pueden configurar servicios de emergencia' });
     }
     
+    const politicaEmergencia = await obtenerPoliticaEmergencia();
+    const esGratis = prestador.emergenciaGratisAdmin === true || politicaEmergencia.esGratis;
+
+    if (precioEmergencia !== undefined && !esGratis && Number(precioEmergencia) < politicaEmergencia.precioMinimo) {
+      return res.status(400).json({
+        message: `El precio de emergencia no puede ser menor a $${politicaEmergencia.precioMinimo}`,
+        precioMinimo: politicaEmergencia.precioMinimo,
+      });
+    }
+
     // Actualizar los campos
     if (precioEmergencia !== undefined) {
-      prestador.precioEmergencia = precioEmergencia;
+      prestador.precioEmergencia = esGratis ? 0 : precioEmergencia;
     }
     
     if (disponibleEmergencias !== undefined) {
@@ -753,6 +849,8 @@ router.patch('/:id/emergencia', protectRoute, async (req, res) => {
       prestador: {
         _id: prestador._id,
         precioEmergencia: prestador.precioEmergencia,
+        precioEmergenciaMinimo: esGratis ? 0 : politicaEmergencia.precioMinimo,
+        emergenciaGratisAdmin: prestador.emergenciaGratisAdmin,
         disponibleEmergencias: prestador.disponibleEmergencias
       }
     });
@@ -1022,13 +1120,22 @@ router.post('/:id/servicios', protectRoute, async (req, res) => {
         return res.status(404).json({ message: 'Servicio no encontrado en el catálogo' });
       }
       
+      const politica = obtenerPrecioMinimoServicio(servicioBase);
+      const precioValidado = validarPrecioContraPolitica(precio, politica, servicioBase.nombre);
+      if (precioValidado.error) {
+        return res.status(400).json({ message: precioValidado.error });
+      }
+
       // Crear una nueva instancia personalizada del servicio para el prestador
       nuevoServicio = new Servicio({
         nombre: servicioBase.nombre,
         descripcion: servicioBase.descripcion,
         icono: servicioBase.icono,
         color: servicioBase.color,
-        precio: precio || servicioBase.precio,
+        precio: precioValidado.precio,
+        precioMinimo: politica.precioMinimo,
+        esGratis: politica.esGratis,
+        servicioBaseId: servicioBase._id,
         duracion: duracion || servicioBase.duracion,
         categoria: servicioBase.categoria,
         tipoPrestador: servicioBase.tipoPrestador,
@@ -1050,9 +1157,11 @@ router.post('/:id/servicios', protectRoute, async (req, res) => {
         descripcion,
         icono: otrosDatos.icono || 'default-icon',
         color: otrosDatos.color || '#3498db',
-        precio: precio || 0,
+        precio: precioNoNegativo(precio, 0) ?? 0,
+        precioMinimo: 0,
+        esGratis: false,
         duracion: duracion || 30,
-        categoria: otrosDatos.categoria || 'General',
+        categoria: otrosDatos.categoria || 'Otros',
         tipoPrestador: prestador.tipo,
         disponibleParaTipos: otrosDatos.disponibleParaTipos || ['Perro', 'Gato'],
         requiereAprobacion: otrosDatos.requiereAprobacion || false,
@@ -1098,6 +1207,17 @@ router.put('/:id/servicios/:servicioId', protectRoute, async (req, res) => {
     
     if (!servicio) {
       return res.status(404).json({ message: 'Servicio no encontrado o no pertenece al prestador' });
+    }
+
+    if (req.body.precio !== undefined) {
+      const politica = await resolverPoliticaServicioPrestador(servicio);
+      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicio.nombre);
+      if (precioValidado.error) {
+        return res.status(400).json({ message: precioValidado.error });
+      }
+      req.body.precio = precioValidado.precio;
+      servicio.precioMinimo = politica.precioMinimo;
+      servicio.esGratis = politica.esGratis;
     }
     
     // Actualizar los campos del servicio
@@ -1398,6 +1518,12 @@ router.post('/:prestadorId/servicios', protectRoute, async (req, res) => {
       
       // Crear una copia personalizada del servicio para este prestador con nombre único
       // Agregando un sufijo único al nombre para evitar duplicados con el índice existente
+      const politica = obtenerPrecioMinimoServicio(servicioCatalogo);
+      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicioCatalogo.nombre);
+      if (precioValidado.error) {
+        return res.status(400).json({ message: precioValidado.error });
+      }
+
       const nombreUnico = `${servicioCatalogo.nombre} (${prestadorId.substring(0, 6)})`;
       
       const servicioNuevo = new Servicio({
@@ -1405,7 +1531,10 @@ router.post('/:prestadorId/servicios', protectRoute, async (req, res) => {
         descripcion: servicioCatalogo.descripcion,
         icono: servicioCatalogo.icono,
         color: servicioCatalogo.color,
-        precio: req.body.precio || servicioCatalogo.precio,
+        precio: precioValidado.precio,
+        precioMinimo: politica.precioMinimo,
+        esGratis: politica.esGratis,
+        servicioBaseId: servicioCatalogo._id,
         duracion: req.body.duracion || servicioCatalogo.duracion,
         categoria: servicioCatalogo.categoria,
         tipoPrestador: prestador.tipo,
@@ -1438,7 +1567,9 @@ router.post('/:prestadorId/servicios', protectRoute, async (req, res) => {
         descripcion,
         icono: icono || 'medkit-outline',
         color: color || '#1E88E5',
-        precio: precio || 0,
+        precio: precioNoNegativo(precio, 0) ?? 0,
+        precioMinimo: 0,
+        esGratis: false,
         duracion: duracion || 30,
         categoria: categoria || 'Otros',
         tipoPrestador: prestador.tipo,
@@ -1494,6 +1625,17 @@ router.put('/:prestadorId/servicios/:servicioId', protectRoute, async (req, res)
     const servicio = await Servicio.findOne({ _id: servicioId, prestadorId: prestadorId });
     if (!servicio) {
       return res.status(404).json({ message: 'Servicio no encontrado' });
+    }
+
+    if (req.body.precio !== undefined) {
+      const politica = await resolverPoliticaServicioPrestador(servicio);
+      const precioValidado = validarPrecioContraPolitica(req.body.precio, politica, servicio.nombre);
+      if (precioValidado.error) {
+        return res.status(400).json({ message: precioValidado.error });
+      }
+      req.body.precio = precioValidado.precio;
+      servicio.precioMinimo = politica.precioMinimo;
+      servicio.esGratis = politica.esGratis;
     }
     
     // Actualizar los campos permitidos

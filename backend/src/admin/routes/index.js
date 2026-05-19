@@ -958,17 +958,43 @@ router.get('/servicios', isAuthenticated, async (req, res) => {
                       response.data?.data ? response.data.data : [];
     
     console.log('Total servicios encontrados:', servicios.length);
+    const prestadoresEmergencia = await Prestador.find({ tipo: 'Veterinario' })
+      .select('nombre email precioEmergencia emergenciaGratisAdmin disponibleEmergencias')
+      .sort({ nombre: 1 })
+      .lean();
     
     res.render('servicios/index', { 
       servicios: servicios,
+      prestadoresEmergencia,
       error: null
     });
   } catch (error) {
     console.error('Error al cargar servicios:', error.message);
     res.render('servicios/index', { 
       error: 'Error al cargar servicios', 
-      servicios: [] 
+      servicios: [],
+      prestadoresEmergencia: []
     });
+  }
+});
+
+router.post('/servicios/prestadores/:id/emergencia-gratis', isAuthenticated, async (req, res) => {
+  try {
+    const prestador = await Prestador.findById(req.params.id);
+    if (!prestador || prestador.tipo !== 'Veterinario') {
+      return res.status(404).json({ message: 'Veterinario no encontrado' });
+    }
+
+    prestador.emergenciaGratisAdmin = req.body.emergenciaGratisAdmin === 'true' || req.body.emergenciaGratisAdmin === true;
+    if (prestador.emergenciaGratisAdmin) {
+      prestador.precioEmergencia = 0;
+    }
+    await prestador.save();
+
+    res.redirect('/admin/servicios');
+  } catch (error) {
+    console.error('Error al actualizar emergencia gratuita:', error.message);
+    res.redirect('/admin/servicios?error=No se pudo actualizar emergencia gratuita');
   }
 });
 

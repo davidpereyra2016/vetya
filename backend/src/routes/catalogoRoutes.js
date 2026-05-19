@@ -4,7 +4,7 @@ import Prestador from "../models/Prestador.js";
 import { serviciosPorTipo } from "../data/serviciosPredefinidos.js";
 
 const router = express.Router();
-const SERVICE_FIELDS = "_id nombre descripcion icono color precio duracion categoria tipoPrestador disponibleParaTipos requiereAprobacion modalidadAtencion activo esServicioPredefinido prestadorId";
+const SERVICE_FIELDS = "_id nombre descripcion icono color precio precioMinimo esGratis servicioBaseId duracion categoria tipoPrestador disponibleParaTipos requiereAprobacion modalidadAtencion activo esServicioPredefinido prestadorId";
 
 /**
  * Devuelve el catalogo de servicios predefinidos por tipo de prestador.
@@ -39,6 +39,8 @@ router.get("/servicios/:tipoPrestador", async (req, res) => {
             ...servicio,
             tipoPrestador,
             esServicioPredefinido: true,
+            precioMinimo: servicio.precioMinimo ?? servicio.precio ?? 0,
+            esGratis: servicio.esGratis || false,
             disponibleParaTipos: servicio.disponibleParaTipos || ["Perro", "Gato"],
             activo: true,
           },

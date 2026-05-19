@@ -93,6 +93,10 @@ const getSafeIconName = (iconName) => {
   return 'medical-outline';
 };
 
+const getPrecioMinimo = (service) => Number(service?.precioMinimo ?? service?.precio ?? 0) || 0;
+const isServicioGratis = (service) => service?.esGratis === true || (getPrecioMinimo(service) === 0 && Number(service?.precio || 0) === 0);
+const formatPrice = (value) => `$${Number(value || 0).toLocaleString('es-AR')}`;
+
 const ServicesScreen = ({ navigation }) => {
   // Estado global con Zustand
   const provider = useAuthStore(state => state.provider);
@@ -173,7 +177,7 @@ const ServicesScreen = ({ navigation }) => {
       
       if (result) {
         // Inicializar los estados de emergencia
-        setEmergencyPriceInput(result.precioEmergencia ? result.precioEmergencia.toString() : '0');
+        setEmergencyPriceInput(result.emergenciaGratisAdmin ? '0' : (result.precioEmergencia ? result.precioEmergencia.toString() : '0'));
         setEmergencyAvailable(result.disponibleEmergencias || false);
         console.log('Datos de emergencia cargados - Precio:', result.precioEmergencia, 'Disponible:', result.disponibleEmergencias);
       } else {
@@ -237,7 +241,7 @@ const ServicesScreen = ({ navigation }) => {
     // Asegurarnos de que estamos almacenando la información completa del servicio
     console.log('Servicio seleccionado:', service);
     setSelectedService(service);
-    setPriceInput(service.precio ? service.precio.toString() : '0');
+    setPriceInput(isServicioGratis(service) ? '0' : (service.precio ?? service.precioMinimo ?? 0).toString());
     setDurationInput(service.duracion ? service.duracion.toString() : '0');
     setModalidadAtencion(
       Array.isArray(service.modalidadAtencion) && service.modalidadAtencion.length > 0
@@ -274,12 +278,22 @@ const ServicesScreen = ({ navigation }) => {
     
     // Validación del precio
     const precio = Number(priceInput);
+    const precioMinimo = getPrecioMinimo(selectedService);
     if (isNaN(precio) || precio < 0) {
       Alert.alert('Error', 'El precio debe ser un número válido');
       return;
     }
     
     // Validación de la duración
+    if (isServicioGratis(selectedService) && precio !== 0) {
+      Alert.alert('Servicio gratuito', 'Este servicio fue marcado como gratuito por administración y debe quedar en $0.');
+      return;
+    }
+    if (!isServicioGratis(selectedService) && precio < precioMinimo) {
+      Alert.alert('Precio mínimo requerido', `Este servicio no puede publicarse por menos de ${formatPrice(precioMinimo)}.`);
+      return;
+    }
+
     const duracion = Number(durationInput);
     if (isNaN(duracion) || duracion < 0) {
       Alert.alert('Error', 'La duración debe ser un número válido');
@@ -352,12 +366,22 @@ const ServicesScreen = ({ navigation }) => {
     
     // Validación del precio
     const precio = Number(priceInput);
+    const precioMinimo = getPrecioMinimo(selectedService);
     if (isNaN(precio) || precio < 0) {
       Alert.alert('Error', 'El precio debe ser un número válido');
       return;
     }
     
     // Validación de la duración
+    if (isServicioGratis(selectedService) && precio !== 0) {
+      Alert.alert('Servicio gratuito', 'Este servicio fue marcado como gratuito por administración y debe quedar en $0.');
+      return;
+    }
+    if (!isServicioGratis(selectedService) && precio < precioMinimo) {
+      Alert.alert('Precio mínimo requerido', `Este servicio no puede publicarse por menos de ${formatPrice(precioMinimo)}.`);
+      return;
+    }
+
     const duracion = Number(durationInput);
     if (isNaN(duracion) || duracion < 0) {
       Alert.alert('Error', 'La duración debe ser un número válido');
@@ -466,11 +490,22 @@ const ServicesScreen = ({ navigation }) => {
     
     // Validar precio
     const precioEmergencia = Number(emergencyPriceInput);
+    const emergenciaGratis = prestadorDetails.emergenciaGratisAdmin === true;
+    const precioEmergenciaMinimo = Number(prestadorDetails.precioEmergenciaMinimo || 0);
     if (isNaN(precioEmergencia) || precioEmergencia < 0) {
       Alert.alert('Error', 'El precio de emergencia debe ser un número válido');
       return;
     }
     
+    if (emergenciaGratis && precioEmergencia !== 0) {
+      Alert.alert('Emergencia gratuita', 'Administración marcó tus emergencias como gratuitas. El precio debe quedar en $0.');
+      return;
+    }
+    if (!emergenciaGratis && precioEmergencia < precioEmergenciaMinimo) {
+      Alert.alert('Precio mínimo requerido', `El precio de emergencia no puede ser menor a ${formatPrice(precioEmergenciaMinimo)}.`);
+      return;
+    }
+
     try {
       setIsRefreshing(true);
       
@@ -616,7 +651,7 @@ const ServicesScreen = ({ navigation }) => {
           <View style={styles.serviceDetailsRow}>
             <View style={styles.serviceDetail}>
               <Ionicons name="cash-outline" size={14} color={COLORS.dark} />
-              <Text style={styles.serviceDetailText}>${item.precio}</Text>
+              <Text style={styles.serviceDetailText}>{isServicioGratis(item) ? 'Gratis' : formatPrice(item.precio)}</Text>
             </View>
             
             <View style={styles.serviceDetail}>
@@ -710,7 +745,7 @@ const ServicesScreen = ({ navigation }) => {
       
       <View style={styles.catalogServiceDetails}>
         <Text style={styles.catalogServicePrice}>
-          {item.precio > 0 ? `$${item.precio}` : 'Personalizable'}
+          {isServicioGratis(item) ? 'Gratis' : `Mín. ${formatPrice(getPrecioMinimo(item))}`}
         </Text>
         
         <Text style={styles.catalogServiceDuration}>
@@ -1018,11 +1053,14 @@ const ServicesScreen = ({ navigation }) => {
                           keyboardType="numeric"
                           value={priceInput}
                           onChangeText={setPriceInput}
+                          editable={!isServicioGratis(selectedService)}
                         />
                       </View>
                       
                       <Text style={styles.priceHint}>
-                        Establece el precio que cobrarás por este servicio
+                        {isServicioGratis(selectedService)
+                          ? 'Este servicio fue marcado como gratuito por administración.'
+                          : `Precio mínimo permitido: ${formatPrice(getPrecioMinimo(selectedService))}. Puedes cobrar ese monto o más.`}
                       </Text>
                       
                       {/* Campo de duración */}
@@ -1204,11 +1242,14 @@ const ServicesScreen = ({ navigation }) => {
                         keyboardType="numeric"
                         value={emergencyPriceInput}
                         onChangeText={setEmergencyPriceInput}
+                        editable={prestadorDetails?.emergenciaGratisAdmin !== true}
                       />
                     </View>
                     
                     <Text style={styles.priceHint}>
-                      Establece el precio que cobrarás por atender una emergencia a domicilio
+                      {prestadorDetails?.emergenciaGratisAdmin
+                        ? 'Administración marcó tus emergencias como gratuitas.'
+                        : `Precio mínimo permitido: ${formatPrice(prestadorDetails?.precioEmergenciaMinimo || 0)}. Puedes cobrar ese monto o más.`}
                     </Text>
                   </View>
                 </ScrollView>

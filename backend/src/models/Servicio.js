@@ -24,7 +24,22 @@ const servicioSchema = new mongoose.Schema({
     default: "#1E88E5" // Color predeterminado
   },
   precio: {
-    type: Number
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  precioMinimo: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  esGratis: {
+    type: Boolean,
+    default: false
+  },
+  servicioBaseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Servicio'
   },
   duracion: {
     type: Number, // Duración en minutos
