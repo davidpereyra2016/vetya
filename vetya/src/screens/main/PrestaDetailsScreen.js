@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
-  Alert,
   Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,54 +35,56 @@ const PrestaDetailsScreen = ({ navigation }) => {
   // Estados para control de UI
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTipo, setSelectedTipo] = useState('Todos');
+  const isMountedRef = useRef(true);
 
   // Estados desde los stores
-  const { 
+  const {
     prestadores,
     fetchAllPrestadores,
-    clearPrestadores,
     isLoading: loadingPrestadores,
-    error: prestadoresError 
+    error: prestadoresError
   } = usePrestadoresStore();
-  
-  const { 
+
+  const {
     fetchEstadisticasPrestador
   } = useValoracionesStore();
-  
-  const { 
+
+  const {
     fetchTotalPacientes
   } = useCountPacientesStore();
-  
+
   // Estado para almacenar prestadores con estadísticas completas
   const [prestadoresConStats, setPrestadoresConStats] = useState([]);
   // Estado para almacenar prestadores filtrados por tipo y ordenados por rating
   const [prestadoresFiltrados, setPrestadoresFiltrados] = useState([]);
   // Estado para controlar si los datos están listos
   const [datosListos, setDatosListos] = useState(false);
-  
+
   // Cargar todos los prestadores al montar el componente
   useEffect(() => {
+    isMountedRef.current = true;
     const inicializar = async () => {
-      // Limpiar datos previos
-      clearPrestadores();
       setDatosListos(false);
       setPrestadoresConStats([]);
       setPrestadoresFiltrados([]);
-      
+
       // Cargar prestadores
       await loadPrestadores();
-      setDatosListos(true);
+      if (isMountedRef.current) setDatosListos(true);
     };
-    
+
     inicializar();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
-  
+
   // Cargar las estadísticas de valoraciones y pacientes para cada prestador
   useEffect(() => {
     const cargarEstadisticasPrestadores = async () => {
       // Solo procesar si los datos están listos
       if (!datosListos || !prestadores?.length) return;
-      
+
       const listaConStats = await Promise.all(
         prestadores.map(async (prestador) => {
           try {
@@ -102,7 +103,6 @@ const PrestaDetailsScreen = ({ navigation }) => {
               pacientesAtendidos: pacientes
             };
           } catch (error) {
-            console.error(`Error al cargar estadísticas para prestador ${prestador._id}:`, error);
             return {
               ...prestador,
               rating: 0,
@@ -112,14 +112,16 @@ const PrestaDetailsScreen = ({ navigation }) => {
           }
         })
       );
-      
+
       // Actualizar el estado con todos los prestadores ordenados por rating (de mayor a menor)
       const ordenados = listaConStats.sort((a, b) => b.rating - a.rating);
-      setPrestadoresConStats(ordenados);
-      // Inicialmente mostrar todos
-      setPrestadoresFiltrados(ordenados);
+      if (isMountedRef.current) {
+        setPrestadoresConStats(ordenados);
+        // Inicialmente mostrar todos
+        setPrestadoresFiltrados(ordenados);
+      }
     };
-    
+
     cargarEstadisticasPrestadores();
   }, [datosListos, prestadores, fetchEstadisticasPrestador, fetchTotalPacientes]);
 
@@ -141,10 +143,9 @@ const PrestaDetailsScreen = ({ navigation }) => {
     try {
       await fetchAllPrestadores();
     } catch (error) {
-      console.error('Error al cargar prestadores:', error);
-      Alert.alert('Error', 'No se pudieron cargar los prestadores destacados');
+      // Error recuperable: el store expone el estado para reintentar sin ensuciar el test con console.error.
     } finally {
-      setRefreshing(false);
+      if (isMountedRef.current) setRefreshing(false);
     }
   };
 
@@ -158,7 +159,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
     const prestadorPacientes = ensureNumber(item.pacientesAtendidos, 0);
     const prestadorImagen = item.imagen;
     const defaultImage = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=250&q=80';
-    
+
     return (
       <View style={styles.prestadorCard}>
         {/* Área tappable que lleva al detalle del prestador */}
@@ -169,9 +170,9 @@ const PrestaDetailsScreen = ({ navigation }) => {
         {/* Hero mini del prestador */}
         <View style={styles.cardHero}>
           <View style={styles.cardImageWrapper}>
-            <Image 
-              source={{ uri: prestadorImagen || defaultImage }} 
-              style={styles.cardImage} 
+            <Image
+              source={{ uri: prestadorImagen || defaultImage }}
+              style={styles.cardImage}
             />
             <View style={styles.cardVerifiedBadge}>
               <Ionicons name="checkmark-circle" size={12} color="#FFF" />
@@ -227,7 +228,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
         </View>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.agendarButton}
           onPress={() => navigation.navigate('AgendarCita', { selectedVet: item })}
           activeOpacity={0.9}
@@ -283,7 +284,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
       </View>
 
       {/* Filtros de tipo */}
-      <ScrollView 
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.tiposScrollView}
@@ -298,7 +299,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
             ]}
             onPress={() => setSelectedTipo(tipo)}
           >
-            <Text 
+            <Text
               style={[
                 styles.tipoButtonText,
                 selectedTipo === tipo && styles.tipoButtonTextSelected
@@ -336,7 +337,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
           <Text style={styles.emptyText}>
             No hay prestadores{selectedTipo !== 'Todos' ? ` de tipo ${selectedTipo}` : ''} disponibles
           </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.reloadButton}
             onPress={loadPrestadores}
           >

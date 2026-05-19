@@ -23,7 +23,6 @@ const usePrestadoresStore = create((set, get) => ({
       set({ prestadores, isLoading: false });
       return prestadores;
     } catch (error) {
-      console.error('Error en fetchAllPrestadores:', error);
       set({ error: error.message, isLoading: false });
       return [];
     }
@@ -46,7 +45,6 @@ const usePrestadoresStore = create((set, get) => ({
       set({ prestadoresDestacados, isLoading: false });
       return prestadoresDestacados;
     } catch (error) {
-      console.error('Error en fetchPrestadoresDestacados:', error);
       set({ error: error.message, isLoading: false });
       return [];
     }
@@ -63,7 +61,6 @@ const usePrestadoresStore = create((set, get) => ({
       set({ prestadorActual: prestador, isLoading: false });
       return prestador;
     } catch (error) {
-      console.error(`Error al obtener prestador ${id}:`, error);
       set({ error: error.message, isLoading: false });
       return null;
     }
@@ -81,7 +78,6 @@ const usePrestadoresStore = create((set, get) => ({
       set({ prestadorCercanos: cercanos, isLoading: false });
       return cercanos;
     } catch (error) {
-      console.error('Error al obtener prestadores cercanos:', error);
       set({ error: error.message, isLoading: false });
       return [];
     }
@@ -98,7 +94,6 @@ const usePrestadoresStore = create((set, get) => ({
       set({ prestadores: response, isLoading: false });
       return response;
     } catch (error) {
-      console.error(`Error al obtener prestadores de tipo ${tipo}:`, error);
       set({ error: error.message, isLoading: false });
       return [];
     }
@@ -115,7 +110,6 @@ const usePrestadoresStore = create((set, get) => ({
       set({ prestadores: veterinarios, isLoading: false });
       return veterinarios;
     } catch (error) {
-      console.error('Error al obtener veterinarios disponibles:', error);
       set({ error: error.message, isLoading: false });
       return [];
     }
@@ -144,7 +138,6 @@ const usePrestadoresStore = create((set, get) => ({
       set({ isLoading: false });
       return stats;
     } catch (error) {
-      console.error(`Error al obtener estadísticas del prestador ${id}:`, error);
       set({ error: error.message, isLoading: false });
       return null;
     }

@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import Valoracion from "../models/Valoracion.js";
 import Prestador from "../models/Prestador.js";
 import Cita from "../models/Cita.js";
@@ -8,6 +9,55 @@ import protectRoute from "../middleware/auth.middleware.js";
 import { enviarNotificacionPush, esTokenValido } from "../utils/notificacionesUtils.js";
 
 const router = express.Router();
+
+// Obtener estadísticas agregadas de valoraciones de un prestador
+router.get("/estadisticas/:prestadorId", async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.prestadorId)) {
+      return res.status(400).json({ message: "ID de prestador invalido" });
+    }
+
+    const stats = await Valoracion.aggregate([
+      {
+        $match: {
+          prestador: new mongoose.Types.ObjectId(req.params.prestadorId),
+          visible: true,
+        },
+      },
+      {
+        $group: {
+          _id: "$calificacion",
+          total: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const distribucion = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let total = 0;
+    let suma = 0;
+
+    stats.forEach((item) => {
+      const rating = Number(item._id);
+      const count = Number(item.total) || 0;
+      if (rating >= 1 && rating <= 5) {
+        distribucion[rating] = count;
+        total += count;
+        suma += rating * count;
+      }
+    });
+
+    res.status(200).json({
+      promedio: total > 0 ? Number((suma / total).toFixed(1)) : 0,
+      total,
+      distribucion,
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.error("ERROR al obtener estadísticas de valoraciones:", error.message);
+    }
+    res.status(500).json({ message: "Error al obtener estadísticas de valoraciones" });
+  }
+});
 
 // Obtener todas las valoraciones de un prestador
 router.get("/veterinario/:veterinarioId", async (req, res) => {

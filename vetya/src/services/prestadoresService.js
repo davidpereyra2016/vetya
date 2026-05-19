@@ -1,6 +1,13 @@
 // prestadoresService.js - Servicio para comunicación con API de prestadores
 import axios from '../config/axios';
 
+const getApiErrorMessage = (error, fallback) => {
+  if (error.code === 'ECONNABORTED') {
+    return 'El servidor tardó demasiado en responder.';
+  }
+  return error.response?.data?.message || fallback;
+};
+
 /**
  * Obtiene lista de todos los prestadores (de cualquier tipo)
  * @param {Object} params - Parámetros opcionales de filtrado
@@ -11,7 +18,7 @@ export const getAllPrestadores = async (params = {}) => {
     const response = await axios.get('/prestadores', { params });
     return response.data;
   } catch (error) {
-    console.error('Error al obtener prestadores:', error);
+    error.message = getApiErrorMessage(error, 'Error al obtener prestadores');
     throw error;
   }
 };
@@ -23,15 +30,15 @@ export const getAllPrestadores = async (params = {}) => {
  */
 export const getFeaturedPrestadores = async (limit = 4) => {
   try {
-    const response = await axios.get('/prestadores', { 
-      params: { 
+    const response = await axios.get('/prestadores', {
+      params: {
         destacado: true,
         limit
-      } 
+      }
     });
     return response.data;
   } catch (error) {
-    console.error('Error al obtener prestadores destacados:', error);
+    error.message = getApiErrorMessage(error, 'Error al obtener prestadores destacados');
     throw error;
   }
 };
@@ -46,7 +53,7 @@ export const getPrestadorById = async (id) => {
     const response = await axios.get(`/prestadores/${id}`);
     return response.data;
   } catch (error) {
-    console.error(`Error al obtener prestador con ID ${id}:`, error);
+    error.message = getApiErrorMessage(error, 'Error al obtener prestador');
     throw error;
   }
 };
@@ -68,7 +75,7 @@ export const getNearbyPrestadores = async (coords, radius = 10) => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error al obtener prestadores cercanos:', error);
+    error.message = getApiErrorMessage(error, 'Error al obtener prestadores cercanos');
     throw error;
   }
 };
@@ -86,7 +93,7 @@ export const getAllVeterinarios = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error al obtener veterinarios:', error);
+    error.message = getApiErrorMessage(error, 'Error al obtener veterinarios');
     throw error;
   }
 };
@@ -104,7 +111,7 @@ export const getAllCentrosVeterinarios = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error al obtener centros veterinarios:', error);
+    error.message = getApiErrorMessage(error, 'Error al obtener centros veterinarios');
     throw error;
   }
 };
@@ -119,7 +126,7 @@ export const getPrestadorStats = async (id) => {
     const response = await axios.get(`/prestadores/${id}/stats`);
     return response.data;
   } catch (error) {
-    console.error(`Error al obtener estadísticas del prestador ${id}:`, error);
+    error.message = getApiErrorMessage(error, 'Error al obtener estadísticas del prestador');
     throw error;
   }
 };

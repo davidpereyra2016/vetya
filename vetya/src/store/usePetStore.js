@@ -29,7 +29,6 @@ const usePetStore = create((set, get) => ({
       });
       return { success: true, data: mascotas };
     } catch (error) {
-      console.error('Error al obtener mascotas:', error);
       const errorMessage = error.response?.data?.message || 'Error al obtener las mascotas';
       set({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
