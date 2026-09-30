@@ -1,4 +1,4 @@
-import axios from '../config/axios'; // Usar la instancia configurada con tokens automáticos
+import axios, { setAuthToken } from '../config/axios'; // Usar la instancia configurada con tokens automáticos
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
@@ -64,7 +64,7 @@ export const authService = {
       };
     }
   },
-  
+
   // Solicitar recuperación de contraseña
   forgotPassword: async (email) => {
     try {
@@ -91,10 +91,10 @@ export const authService = {
   // Restablecer contraseña con código de 6 dígitos
   resetPassword: async (email, code, newPassword) => {
     try {
-      const response = await axios.post('/auth/reset-password', { 
-        email, 
-        code, 
-        newPassword 
+      const response = await axios.post('/auth/reset-password', {
+        email,
+        code,
+        newPassword
       });
       return {
         success: true,
@@ -221,7 +221,7 @@ export const prestadorService = {
       };
     }
   },
-  
+
   // Actualizar la ubicación del prestador en tiempo real
   actualizarUbicacion: async (id, lat, lng) => {
     try {
@@ -311,7 +311,7 @@ export const prestadorService = {
       };
     }
   },
-  
+
 
 
   // Agregar servicio a un prestador
@@ -331,7 +331,7 @@ export const prestadorService = {
       };
     }
   },
-  
+
   // Actualizar disponibilidad para emergencias
   updateEmergencyAvailability: async (id, isAvailable) => {
     try {
@@ -535,7 +535,7 @@ export const emergenciaService = {
       };
     }
   },
-  
+
   // Verificar si una emergencia ha expirado o está por expirar
   checkEmergencyExpiration: async (emergenciaId) => {
     try {
@@ -824,7 +824,7 @@ export const mascotaService = {
 
       // Convertir la URI a base64 para enviar al servidor
       const base64Image = await convertImageToBase64(result.assets[0].uri);
-      
+
       return {
         success: true,
         data: {
@@ -945,7 +945,7 @@ export const userService = {
       // Elegir el endpoint correcto según el tipo de usuario
       const endpoint = isPrestador ? '/prestadores/profile-picture' : '/users/profile-picture';
       console.log(`Subiendo imagen a ${endpoint}...`);
-      
+
       const response = await axios.post(endpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -953,7 +953,7 @@ export const userService = {
       });
 
       console.log('Imagen subida exitosamente:', response.data);
-      
+
       return {
         success: true,
         data: response.data
@@ -985,7 +985,7 @@ export const servicioService = {
       };
     }
   },
-  
+
   // Obtener servicios predefinidos del catálogo por tipo de prestador
   getCatalogServices: async (tipoPrestador) => {
     try {
@@ -1003,7 +1003,7 @@ export const servicioService = {
       };
     }
   },
-  
+
   // Obtener servicios de un prestador específico
   getProviderServices: async (prestadorId) => {
     try {
@@ -1021,7 +1021,7 @@ export const servicioService = {
       };
     }
   },
-  
+
   // Obtener servicios disponibles por tipo de prestador
   getByProviderType: async (tipoPrestador) => {
     try {
@@ -1039,7 +1039,7 @@ export const servicioService = {
       };
     }
   },
-  
+
   // Añadir un servicio del catálogo al prestador
   addServiceFromCatalog: async (prestadorId, servicioId, datos) => {
     try {
@@ -1161,7 +1161,7 @@ export const servicioService = {
   updateAvailability: async (providerId, serviceId, availabilityData) => {
     try {
       const response = await axios.put(
-        `/prestadores/${providerId}/servicios/${serviceId}/disponibilidad`, 
+        `/prestadores/${providerId}/servicios/${serviceId}/disponibilidad`,
         availabilityData
       );
       return {
@@ -1275,7 +1275,7 @@ export const validacionService = {
       if (indice !== null) {
         url += `?indice=${indice}`;
       }
-      
+
       const response = await axios.delete(url);
       return {
         success: true,
@@ -1406,15 +1406,11 @@ export const pagoService = {
   }
 };
 
-// Función simplificada - la instancia de axios ya maneja tokens automáticamente
+// Configurar token activo para las peticiones autenticadas.
 export const setupAxiosInterceptors = (token, logoutCallback) => {
-  // La instancia de axios configurada en config/axios.js ya maneja los tokens automáticamente
-  // desde AsyncStorage, por lo que esta función ya no es necesaria para configurar tokens
-  console.log('setupAxiosInterceptors llamada - usando configuración automática de tokens');
-  
-  // Solo guardamos el callback de logout si es necesario para otras funciones
+  setAuthToken(token);
+
   if (logoutCallback && typeof logoutCallback === 'function') {
-    // Podrías guardar el callback globalmente si es necesario
-    console.log('Callback de logout configurado');
+    // El callback se registra desde el store en config/axios.js.
   }
 };

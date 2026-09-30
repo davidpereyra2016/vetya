@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
   Switch,
   Image,
   FlatList,
   RefreshControl,
   Alert,
-  Dimensions,
   ActivityIndicator,
   StatusBar as RNStatusBar,
   Platform,
@@ -32,7 +30,6 @@ import {
   onEmergencyUpdated
 } from '../../services/socketService';
 
-const { width } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
 
@@ -40,13 +37,13 @@ const HomeScreen = ({ navigation }) => {
   const { providerCitas, fetchProviderCitas } = useCitaStore();
   const { prestador } = usePrestadorStore();
   const { fetchValoraciones } = useValoracionStore();
-  
+
   // Estados
   const [availableForEmergencies, setAvailableForEmergencies] = useState(false);
   const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
   const [isVeterinarian, setIsVeterinarian] = useState(false);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
-  
+
   // Estadísticas
   const [stats, setStats] = useState({
     emergenciasAtendidas: prestador?.cantidadEmergenciasAtendidas || 0,
@@ -54,7 +51,7 @@ const HomeScreen = ({ navigation }) => {
     citasPendientes: 0,
     valoracionPromedio: 4.8
   });
-  
+
   // Emergencias y ubicación
   const [activeEmergencies, setActiveEmergencies] = useState([]);
   const [loadingEmergencies, setLoadingEmergencies] = useState(false);
@@ -62,7 +59,7 @@ const HomeScreen = ({ navigation }) => {
   const [locationPermission, setLocationPermission] = useState(false);
   const [, setIsUpdatingLocation] = useState(false);
   const [, setLocationError] = useState(null);
-  
+
   // Referencias
   const locationUpdateTimerRef = useRef(null);
   const user = useAuthStore(state => state.user);
@@ -71,12 +68,12 @@ const HomeScreen = ({ navigation }) => {
   // Procesar y ordenar citas
   const upcomingAppointments = useMemo(() => {
     if (!providerCitas) return [];
-    
+
     const allAppointments = [
       ...(providerCitas.pendientes || []),
       ...(providerCitas.confirmadas || [])
     ];
-    
+
     // Ordenar por fecha y hora
     return allAppointments.sort((a, b) => {
       const dateA = new Date(`${a.fecha}T${a.horaInicio}`);
@@ -89,9 +86,9 @@ const HomeScreen = ({ navigation }) => {
   const loadValoraciones = async () => {
     if (provider?._id) {
       const result = await fetchValoraciones(provider._id);
-      
+
       if (result.success && result.estadisticas) {
-       
+
         setStats(prev => ({
           ...prev,
           valoracionPromedio: result.estadisticas.promedio || 0
@@ -115,23 +112,23 @@ const HomeScreen = ({ navigation }) => {
       // Obtener la fecha actual LOCAL (no UTC) en formato YYYY-MM-DD
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      
+
       // console.log(`📅 Fecha LOCAL hoy: ${today}`);
-      
+
       // Filtrar solo las citas confirmadas de HOY (fecha local)
       const citasConfirmadasHoy = providerCitas.confirmadas?.filter(app => {
         if (!app.fecha) return false;
-        
+
         // Convertir la fecha de la cita a fecha local
         const citaDate = new Date(app.fecha);
         const citaLocalDate = `${citaDate.getFullYear()}-${String(citaDate.getMonth() + 1).padStart(2, '0')}-${String(citaDate.getDate()).padStart(2, '0')}`;
-        
+
         const esHoy = citaLocalDate === today;
         // console.log(`  Cita: ${app.fecha} -> Local: ${citaLocalDate} -> Es hoy: ${esHoy}`);
-        
+
         return esHoy;
       }).length || 0;
-      
+
       // console.log(`✅ Total citas confirmadas HOY: ${citasConfirmadasHoy}`);
 
       setStats(prev => ({
@@ -141,7 +138,7 @@ const HomeScreen = ({ navigation }) => {
       }));
     }
   }, [prestador, providerCitas]);
-  
+
   // Cargar valoraciones cuando se monta el componente o cambia el provider
   useEffect(() => {
     if (provider?._id) {
@@ -188,33 +185,33 @@ const HomeScreen = ({ navigation }) => {
           }
         }
       };
-      
+
       loadData();
     }, [provider?._id, isVeterinarian]) // ✅ Usar provider._id como dependencia
   );
-  
+
 
 
   // Función para renderizar elementos de cita
   const renderAppointmentItem = ({ item, onPress }) => {
     // Extraer la hora de manera segura
     const hora = item.fechaHora ? item.fechaHora.split(' ')[1] : item.horaInicio;
-    
+
     // console.log('Renderizando cita completa:', item);
-    
+
     // Acceder a los datos anidados de forma segura (como en AppointmentDetailsScreen)
     const servicioNombre = typeof item.servicio === 'object' && item.servicio !== null
       ? item.servicio.nombre : (item.servicio || 'Servicio no especificado');
-      
+
     const mascotaNombre = item.mascota?.nombre || item.mascotaNombre || 'Mascota';
     const mascotaTipo = item.mascota?.tipo || item.tipoMascota || 'No especificado';
-    
-    const usuarioNombre = item.usuario?.nombre || item.usuario?.username || 
+
+    const usuarioNombre = item.usuario?.nombre || item.usuario?.username ||
                           item.usuarioNombre || 'Cliente';
-    
+
     return (
-    <TouchableOpacity 
-      style={styles.appointmentCard} 
+    <TouchableOpacity accessibilityRole="button"
+      style={styles.appointmentCard}
       onPress={onPress}
       activeOpacity={0.8}
     >
@@ -234,13 +231,13 @@ const HomeScreen = ({ navigation }) => {
           </Text>
         </View>
       </View>
-      
+
       <View style={styles.appointmentContent}>
         <View style={styles.appointmentInfo}>
           <Text style={styles.appointmentTitle}>
             {servicioNombre}
           </Text>
-          
+
           <View style={{flexDirection: 'row', marginBottom: 4}}>
             <Text style={{marginRight: 5}}>
               <Ionicons name="paw" size={14} color="#666" />
@@ -249,7 +246,7 @@ const HomeScreen = ({ navigation }) => {
               {mascotaNombre} ({mascotaTipo})
             </Text>
           </View>
-          
+
           <View style={{flexDirection: 'row'}}>
             <Text style={{marginRight: 5}}>
               <Ionicons name="person" size={14} color="#666" />
@@ -259,7 +256,7 @@ const HomeScreen = ({ navigation }) => {
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.appointmentActions}>
           <Text>
             <Ionicons name="chevron-forward" size={20} color="#1E88E5" />
@@ -269,15 +266,15 @@ const HomeScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
   }
-  
-  
+
+
   // Configuración inicial del prestador
   useEffect(() => {
     if (provider) {
       // console.log('📋 Configurando prestador:', provider.tipo, 'Disponible:', provider.disponibleEmergencias);
       setIsVeterinarian(provider.tipo === 'Veterinario');
       setAvailableForEmergencies(provider.disponibleEmergencias || false);
-      
+
       // Solo verificar permisos si es veterinario, pero NO iniciar tracking aquí
       // El tracking se iniciará automáticamente en el useEffect de tracking
       if (provider.tipo === 'Veterinario' && provider.disponibleEmergencias) {
@@ -285,14 +282,14 @@ const HomeScreen = ({ navigation }) => {
       }
     }
   }, [provider?._id, provider?.tipo]);
-  
+
   // Sincronizar estado local cuando cambie disponibleEmergencias en el provider (desde otra pantalla)
   useEffect(() => {
     if (provider?.disponibleEmergencias !== undefined) {
       setAvailableForEmergencies(provider.disponibleEmergencias);
     }
   }, [provider?.disponibleEmergencias]);
-  
+
   // Efecto para iniciar o detener el seguimiento de ubicación según disponibilidad
   useEffect(() => {
     // console.log('🔄 useEffect tracking - Estado actual:', {
@@ -300,10 +297,10 @@ const HomeScreen = ({ navigation }) => {
     //   availableForEmergencies,
     //   locationPermission
     // });
-    
+
     // Detener tracking existente primero para evitar duplicados
     stopLocationTracking();
-    
+
     // Verificar TODAS las condiciones antes de iniciar
     if (isVeterinarian && availableForEmergencies && locationPermission) {
       // console.log('✅ Todas las condiciones cumplidas, programando inicio de tracking...');
@@ -316,7 +313,7 @@ const HomeScreen = ({ navigation }) => {
           console.log('⚠️ Disponibilidad cambió durante delay, NO iniciando tracking');
         }
       }, 100);
-      
+
       return () => {
         clearTimeout(timer);
         stopLocationTracking();
@@ -324,28 +321,28 @@ const HomeScreen = ({ navigation }) => {
     } else {
       console.log('❌ No se cumplen condiciones para tracking');
     }
-    
+
     return () => {
       stopLocationTracking();
     };
   }, [isVeterinarian, availableForEmergencies, locationPermission]);
-  
+
   // Solicitar y verificar permisos de ubicación
   const checkLocationPermission = async () => {
     try {
       // Verificar si ya tenemos permisos
       let { status } = await Location.getForegroundPermissionsAsync();
-      
+
       // Si no tenemos permisos, solicitarlos
       if (status !== 'granted') {
         const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
         status = newStatus;
       }
-      
+
       // Actualizar estado de permisos
       setLocationPermission(status === 'granted');
       setLocationError(status !== 'granted' ? 'Se requiere permiso de ubicación para el servicio de emergencias' : null);
-      
+
       return status === 'granted';
     } catch (error) {
       console.error('Error al verificar permisos de ubicación:', error);
@@ -354,7 +351,7 @@ const HomeScreen = ({ navigation }) => {
       return false;
     }
   };
-  
+
   // Iniciar seguimiento de ubicación periódico
   const startLocationTracking = async () => {
     try {
@@ -363,29 +360,29 @@ const HomeScreen = ({ navigation }) => {
         // console.log('⏸️ No iniciando tracking: no disponible para emergencias');
         return;
       }
-      
+
       if (!isVeterinarian) {
         // console.log('⏸️ No iniciando tracking: no es veterinario');
         return;
       }
-      
+
       if (!locationPermission) {
         // console.log('⚠️ No iniciando tracking: sin permisos de ubicación');
         return;
       }
-      
+
       // Verificar si ya hay un temporizador activo y detenerlo
       if (locationUpdateTimerRef.current) {
         // console.log('🔄 Limpiando temporizador anterior...');
         clearInterval(locationUpdateTimerRef.current);
         locationUpdateTimerRef.current = null;
       }
-      
+
       // console.log('🚀 Iniciando seguimiento de ubicación...');
-      
+
       // Actualizar ubicación inmediatamente
       await updateCurrentLocation();
-      
+
       // Configurar actualización periódica cada 5 minutos (300000 ms)
       // En producción, ajustar este intervalo según necesidades y consumo de batería
       locationUpdateTimerRef.current = setInterval(async () => {
@@ -397,14 +394,14 @@ const HomeScreen = ({ navigation }) => {
           stopLocationTracking();
         }
       }, 300000); // 5 minutos
-      
+
       // console.log('✅ Seguimiento de ubicación iniciado correctamente');
     } catch (error) {
       // console.error('❌ Error al iniciar seguimiento de ubicación:', error);
       setLocationError('Error al iniciar seguimiento de ubicación');
     }
   };
-  
+
   // Detener seguimiento de ubicación
   const stopLocationTracking = () => {
     if (locationUpdateTimerRef.current) {
@@ -416,7 +413,7 @@ const HomeScreen = ({ navigation }) => {
       // console.log('✅ Seguimiento de ubicación detenido correctamente');
     }
   };
-  
+
   // Obtener ubicación actual y enviarla al servidor
   const updateCurrentLocation = async () => {
     // Verificación temprana: no intentar actualizar si no está disponible
@@ -425,43 +422,43 @@ const HomeScreen = ({ navigation }) => {
       stopLocationTracking(); // Detener tracking por seguridad
       return;
     }
-    
+
     if (!provider || !provider._id) {
       // console.error('❌ No se pudo identificar el prestador');
       return;
     }
-    
+
     if (!isVeterinarian) {
       // console.log('⏸️ No actualizando ubicación: no es veterinario');
       return;
     }
-    
+
     try {
       setIsUpdatingLocation(true);
-      
+
       // Obtener ubicación actual
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
         timeInterval: 5000, // Esperar máximo 5 segundos
         distanceInterval: 0 // Obtener ubicación incluso si no hay movimiento
       });
-      
+
       const { latitude, longitude } = location.coords;
       // console.log(`📍 Ubicación actual: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-      
+
       // Verificar nuevamente antes de enviar (por si cambió durante la obtención de GPS)
       if (!availableForEmergencies) {
         // console.log('⏸️ Cancelando actualización: disponibilidad cambió durante obtención de GPS');
         return;
       }
-      
+
       // Enviar ubicación al servidor
       const result = await prestadorService.actualizarUbicacion(
         provider._id,
         latitude,
         longitude
       );
-      
+
       if (result.success) {
         // console.log('✅ Ubicación actualizada correctamente');
         setLocationError(null);
@@ -496,20 +493,20 @@ const HomeScreen = ({ navigation }) => {
 
     try {
       setIsUpdatingAvailability(true);
-      
+
       // Obtener el precio de emergencia actual (o usar 0 si no hay)
       const precioEmergencia = provider.precioEmergencia || 0;
-      
+
       // Llamar al servicio para actualizar en la base de datos
       const result = await prestadorService.actualizarPrecioEmergencia(
-        provider._id, 
-        precioEmergencia, 
+        provider._id,
+        precioEmergencia,
         newStatus
       );
-      
+
       if (result.success) {
         // console.log('✅ Disponibilidad actualizada en BD:', newStatus);
-        
+
         // Recargar datos del prestador desde la BD para asegurar sincronización
         try {
           const providerData = await prestadorService.getById(provider._id);
@@ -530,7 +527,7 @@ const HomeScreen = ({ navigation }) => {
           useAuthStore.getState().updateProvider({ disponibleEmergencias: newStatus });
           setAvailableForEmergencies(newStatus);
         }
-        
+
         return true;
       } else {
         Alert.alert('Error', result.error || 'Error al actualizar disponibilidad');
@@ -549,20 +546,20 @@ const HomeScreen = ({ navigation }) => {
   const toggleAvailability = async () => {
     if (!isVeterinarian) {
       Alert.alert(
-        'No disponible', 
+        'No disponible',
         'Solo los veterinarios pueden configurar la disponibilidad para emergencias.'
       );
       return;
     }
-    
+
     // Nuevo estado de disponibilidad
     const newStatus = !availableForEmergencies;
-    
+
     // Si se está activando la disponibilidad, verificar permisos de ubicación
     if (newStatus) {
       // Verificar permisos de ubicación
       const hasPermission = await checkLocationPermission();
-      
+
       if (!hasPermission) {
         Alert.alert(
           'Permiso de ubicación requerido',
@@ -593,16 +590,16 @@ const HomeScreen = ({ navigation }) => {
         return;
       }
     }
-    
+
     // Actualizar en la base de datos
     const success = await updateEmergencyAvailability(newStatus);
-    
+
     if (success) {
       // Mensaje para el usuario
       Alert.alert(
         newStatus ? 'Modo Disponible' : 'Modo No Disponible',
-        newStatus 
-          ? 'Ahora recibirás solicitudes de emergencias cercanas' 
+        newStatus
+          ? 'Ahora recibirás solicitudes de emergencias cercanas'
           : 'Ya no recibirás solicitudes de emergencias',
         [{ text: 'Entendido' }]
       );
@@ -616,24 +613,24 @@ const HomeScreen = ({ navigation }) => {
       console.log('No cargando emergencias: no es veterinario o falta ID de prestador');
       return;
     }
-    
+
     try {
       setLoadingEmergencies(true);
       const { fetchEmergencies } = useEmergencyStore.getState();
       const result = await fetchEmergencies();
-      
+
       if (result.success) {
         console.log(`📥 Emergencias recibidas del backend: ${result.data.length}`);
-        
+
         // FILTRAR solo emergencias activas (excluir historial)
         // HomeScreen solo debe mostrar emergencias que se pueden aceptar/rechazar o están en proceso
-        const emergenciasActivas = result.data.filter(emergency => 
+        const emergenciasActivas = result.data.filter(emergency =>
           ['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'En atención'].includes(emergency.estado)
         );
-        
+
         console.log(`✅ Emergencias ACTIVAS filtradas para HomeScreen: ${emergenciasActivas.length}`);
         console.log(`   Estados: ${emergenciasActivas.map(e => e.estado).join(', ')}`);
-        
+
         // Convertir los datos de la API al formato esperado por el componente
         const formattedEmergencies = emergenciasActivas.map(emergency => {
           // Construir ubicación legible
@@ -643,19 +640,19 @@ const HomeScreen = ({ navigation }) => {
             const direccion = emergency.ubicacion.direccion || '';
             ubicacionTexto = [ciudad, direccion].filter(Boolean).join(', ') || 'Ubicación no disponible';
           }
-          
+
           // Formatear distancia (viene calculada del backend)
           let distanciaTexto = 'Calculando...';
           if (emergency.distancia !== null && emergency.distancia !== undefined) {
             distanciaTexto = `${emergency.distancia.toFixed(1)} km`;
           }
-          
+
           // Formatear tiempo estimado (viene calculado del backend)
           let tiempoTexto = 'Calculando...';
           if (emergency.tiempoEstimado !== null && emergency.tiempoEstimado !== undefined) {
             tiempoTexto = `${emergency.tiempoEstimado} min`;
           }
-          
+
           return {
             id: emergency._id,
             usuarioNombre: emergency.usuario?.username || 'Cliente',
@@ -673,7 +670,7 @@ const HomeScreen = ({ navigation }) => {
             original: emergency
           };
         });
-        
+
         setActiveEmergencies(formattedEmergencies);
       } else {
         console.error('Error al cargar emergencias asignadas:', result.error);
@@ -686,9 +683,9 @@ const HomeScreen = ({ navigation }) => {
       setLoadingEmergencies(false);
     }
   };
-  
+
   // Eliminamos la función loadNearbyEmergencies redundante, ya que loadAssignedEmergencies hace lo mismo
-  
+
   // Función para manejar la aceptación de una emergencia
   useEffect(() => {
     let unsubscribeUpdates = () => {};
@@ -739,14 +736,14 @@ const HomeScreen = ({ navigation }) => {
               // Usar el store para aceptar la emergencia
               const { acceptEmergency } = useEmergencyStore.getState();
               const result = await acceptEmergency(emergency.id);
-              
+
               if (result.success) {
                 // Remover de la lista de emergencias activas (actualización optimista)
                 setActiveEmergencies(prev => prev.filter(e => e.id !== emergency.id));
-                
+
                 // Mostrar mensaje de éxito y luego recargar y navegar
                 Alert.alert(
-                  'Emergencia aceptada', 
+                  'Emergencia aceptada',
                   'Has aceptado atender esta emergencia. Se te mostrará la ubicación y detalles del paciente.',
                   [
                     {
@@ -756,16 +753,16 @@ const HomeScreen = ({ navigation }) => {
                           await loadAssignedEmergencies(); // Recargar para asegurar consistencia
                           // Navegar a la pantalla de detalles con los datos completos y actualizados
                           // Es importante que result.data sea la emergencia actualizada del backend
-                          navigation.navigate('EmergencyDetails', { 
+                          navigation.navigate('EmergencyDetails', {
                             emergencyId: emergency.id, // o result.data._id si es más fiable
-                            emergency: result.data 
+                            emergency: result.data
                           });
                         } catch (loadError) {
                           console.error('Error al recargar emergencias después de aceptar:', loadError);
                           // Incluso si falla la recarga, intentar navegar con los datos disponibles
-                          navigation.navigate('EmergencyDetails', { 
+                          navigation.navigate('EmergencyDetails', {
                             emergencyId: emergency.id,
-                            emergency: result.data 
+                            emergency: result.data
                           });
                         }
                       }
@@ -781,7 +778,7 @@ const HomeScreen = ({ navigation }) => {
               console.error('Error al aceptar emergencia:', error);
               Alert.alert('Error', 'Ocurrió un error al procesar tu solicitud');
               // Considerar recargar también en caso de error general para mantener la UI consistente
-              await loadAssignedEmergencies(); 
+              await loadAssignedEmergencies();
             }
           },
         },
@@ -807,13 +804,13 @@ const HomeScreen = ({ navigation }) => {
               // Usar el store para rechazar la emergencia
               const { rejectEmergency } = useEmergencyStore.getState();
               const result = await rejectEmergency(emergency.id);
-              
+
               if (result.success) {
                 // Remover de la lista de emergencias activas (actualización optimista)
                 setActiveEmergencies(
                   activeEmergencies.filter(item => item.id !== emergency.id)
                 );
-                
+
                 // Mostrar mensaje y luego recargar
                 Alert.alert('Emergencia rechazada', 'Has rechazado esta solicitud de emergencia.');
                 await loadAssignedEmergencies(); // Recargar para asegurar consistencia
@@ -840,10 +837,10 @@ const HomeScreen = ({ navigation }) => {
   // Función para confirmar una cita pendiente
   const handleConfirmAppointment = (appointment) => {
     // Obtener información del usuario y mascota de forma segura
-    const nombreUsuario = appointment.usuario?.nombre || appointment.usuario?.username || 
+    const nombreUsuario = appointment.usuario?.nombre || appointment.usuario?.username ||
                           appointment.usuarioNombre || 'cliente';
     const nombreMascota = appointment.mascota?.nombre || appointment.mascotaNombre || 'mascota';
-    
+
     Alert.alert(
       'Confirmar Cita',
       `¿Confirmar cita con ${nombreUsuario} para ${nombreMascota}?`,
@@ -858,11 +855,11 @@ const HomeScreen = ({ navigation }) => {
             try {
               // Mostrar indicador de carga
               setLoadingAppointments(true);
-              
+
               // Llamar a la API real a través del store de citas
               const { updateCitaStatus } = useCitaStore.getState();
               const result = await updateCitaStatus(provider._id, appointment._id, 'Confirmada');
-              
+
               if (result.success) {
                 // Actualizar las citas después de la confirmación
                 await loadPendingAppointments();
@@ -924,7 +921,7 @@ const HomeScreen = ({ navigation }) => {
   // Función para actualizar datos
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    
+
     try {
       if (provider && provider._id) {
           // Actualizar datos del prestador
@@ -935,7 +932,7 @@ const HomeScreen = ({ navigation }) => {
 
           // Actualizar citas
           await loadPendingAppointments();
-          
+
           // Actualizar valoraciones
           await loadValoraciones();
 
@@ -943,7 +940,7 @@ const HomeScreen = ({ navigation }) => {
           if (isVeterinarian) {
             await loadAssignedEmergencies();
           }
-          
+
           // Actualizar ubicación si es necesario
           if (isVeterinarian && availableForEmergencies && locationPermission) {
             await updateCurrentLocation();
@@ -987,12 +984,12 @@ const HomeScreen = ({ navigation }) => {
               </View>
             </View>
           </View>
-          <View style={[styles.urgencyBadge, 
-            item.urgencia === 'alta' ? styles.highUrgency : 
-            item.urgencia === 'media' ? styles.mediumUrgency : 
+          <View style={[styles.urgencyBadge,
+            item.urgencia === 'alta' ? styles.highUrgency :
+            item.urgencia === 'media' ? styles.mediumUrgency :
             styles.lowUrgency]}>
             <Text style={styles.urgencyText}>
-              {item.urgencia === 'alta' ? 'URGENTE' : 
+              {item.urgencia === 'alta' ? 'URGENTE' :
                item.urgencia === 'media' ? 'MEDIA' : 'BAJA'}
             </Text>
           </View>
@@ -1000,14 +997,14 @@ const HomeScreen = ({ navigation }) => {
 
         <View style={styles.emergencyDetails}>
           <Text style={styles.emergencyDescription}>{item.descripcion}</Text>
-          
+
           <View style={styles.locationContainer}>
             <Text style={{marginRight: 4}}>
               <Ionicons name="location" size={16} color="#F44336" />
             </Text>
             <Text style={styles.locationText}>{item.ubicacion}</Text>
           </View>
-          
+
           <View style={styles.distanceTimeContainer}>
             <View style={styles.distanceTime}>
               <Text style={{marginRight: 4}}>
@@ -1028,7 +1025,7 @@ const HomeScreen = ({ navigation }) => {
           {isAccepted ? (
             // Si la emergencia ya está aceptada, mostrar un solo botón para ver detalles
             <>
-              <View style={[styles.estadoBadge, 
+              <View style={[styles.estadoBadge,
                 item.estado === 'Confirmada' && styles.estadoConfirmada,
                 item.estado === 'Asignada' && styles.estadoAsignada,
                 item.estado === 'En camino' && styles.estadoEnCamino,
@@ -1036,7 +1033,7 @@ const HomeScreen = ({ navigation }) => {
               ]}>
                 <Text style={styles.estadoText}>{item.estado}</Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={[styles.acceptButton, { flex: 1 }]}
                 onPress={navigateToEmergencyDetail}
               >
@@ -1046,13 +1043,13 @@ const HomeScreen = ({ navigation }) => {
           ) : (
             // Si no está aceptada, mostrar los botones de aceptar y rechazar
             <>
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.rejectButton}
                 onPress={() => handleRejectEmergency(item)}
               >
                 <Text style={styles.rejectButtonText}>Rechazar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.acceptButton}
                 onPress={() => handleAcceptEmergency(item)}
               >
@@ -1068,7 +1065,7 @@ const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.statusBarBackground}>
-        <ExpoStatusBar 
+        <ExpoStatusBar
           backgroundColor="transparent" //Color de la barra de estado
           barStyle="light-content" //Color del texto de la barra de estado
           translucent={true} //Transparencia de la barra de estado
@@ -1077,28 +1074,28 @@ const HomeScreen = ({ navigation }) => {
       {/* Encabezado y control de disponibilidad */}
       {/* Header extendido */}
       <View style={[
-        styles.header, 
-        { 
-          paddingTop: Platform.OS === 'ios' ? 50 : (RNStatusBar.currentHeight || 0) + 20,
+        styles.header,
+        {
+          paddingTop: 16,
           borderBottomLeftRadius: 30,
           borderBottomRightRadius: 30,
           overflow: 'hidden' // Para que el borde redondeado funcione correctamente
-          
+
         }
       ]}>
         <View style={styles.headerContent}>
-          <View>
+          <View style={styles.headerInfo}>
             <Text style={styles.welcome}>¡Bienvenido a VetPresta!</Text>
             <Text style={styles.providerName}>{provider?.nombre || user?.username || 'Prestador'}</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={styles.profileButton}
             onPress={() => navigation.navigate('Perfil')}
           >
             {(provider?.profilePicture || user?.profilePicture) ? (
-              <Image 
-                source={{ uri: provider?.profilePicture || user?.profilePicture }} 
-                style={styles.profileImage} 
+              <Image
+                source={{ uri: provider?.profilePicture || user?.profilePicture }}
+                style={styles.profileImage}
                 resizeMode="cover"
               />
             ) : (
@@ -1108,7 +1105,7 @@ const HomeScreen = ({ navigation }) => {
             )}
           </TouchableOpacity>
         </View>
-        
+
         {/* Solo mostrar control de disponibilidad para veterinarios */}
         {isVeterinarian && (
           <View style={styles.availabilityContainer}>
@@ -1131,7 +1128,7 @@ const HomeScreen = ({ navigation }) => {
         )}
       </View>
 
-      <ScrollView 
+      <FlatList
         style={styles.scrollContainer}
         refreshControl={
           <RefreshControl
@@ -1140,7 +1137,14 @@ const HomeScreen = ({ navigation }) => {
             colors={["#1E88E5"]}
           />
         }
-      >
+
+        data={isVeterinarian && !loadingEmergencies ? activeEmergencies : []}
+        keyExtractor={item => String(item.id || item._id)}
+        renderItem={({ item }) => (
+          <View style={[styles.sectionContainer, { marginTop: 0 }]}>{renderEmergencyItem({ item })}</View>
+        )}
+        ListHeaderComponent={<>
+
         {/* Tarjeta de estadísticas con margen superior */}
         <View style={[styles.statsContainer, { marginTop: 10 }]}>
           {/* Estadística de Emergencias - SOLO PARA VETERINARIOS */}
@@ -1153,7 +1157,7 @@ const HomeScreen = ({ navigation }) => {
               <View style={styles.statDivider} />
             </>
           )}
-          
+
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{stats.citasHoy}</Text>
             <Text style={styles.statLabel}>Citas hoy</Text>
@@ -1183,12 +1187,12 @@ const HomeScreen = ({ navigation }) => {
         <ValidationStatusBanner navigation={navigation} />
 
         {/* Emergencias asignadas - SOLO PARA VETERINARIOS */}
-        {isVeterinarian && (
-          <View style={styles.sectionContainer}>
+
+          {isVeterinarian && <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Emergencias asignadas</Text>
-              <TouchableOpacity 
-                style={styles.viewAllButton} 
+              <TouchableOpacity accessibilityRole="button"
+                style={styles.viewAllButton}
                 onPress={() => navigation.navigate('EmergencyList')}
               >
                 <Text style={{ marginRight: 4 }}>
@@ -1197,66 +1201,51 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={styles.viewAllText}>Ver todas</Text>
               </TouchableOpacity>
             </View>
-            {loadingEmergencies ? (
-              <View style={styles.loadingContainer}>
+            {loadingEmergencies ? <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#1E88E5" />
                 <Text style={styles.loadingText}>Cargando emergencias...</Text>
-              </View>
-            ) : activeEmergencies.length > 0 ? (
-              <FlatList
-                data={activeEmergencies}
-                renderItem={renderEmergencyItem}
-                keyExtractor={item => item.id}
-                scrollEnabled={false}
-              />
-            ) : (
-              <View style={styles.emptyStateContainer}>
+              </View> : activeEmergencies.length === 0 ? <View style={styles.emptyStateContainer}>
                 <Text>
                   <Ionicons name="alert-circle" size={50} color="#ccc" />
                 </Text>
                 <Text style={styles.emptyStateText}>No hay emergencias asignadas</Text>
-              </View>
-            )}
-          </View>
-        )}
+              </View> : null}
+          </View>}
+        </>}
+        ListFooterComponent={<>
 
         {/* Próximas Citas - AHORA DINÁMICAS */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Próximas Citas</Text>
             {upcomingAppointments.length > 0 && (
-              <TouchableOpacity 
-                style={styles.viewAllButton} 
+              <TouchableOpacity accessibilityRole="button"
+                style={styles.viewAllButton}
                 onPress={() => navigation.navigate('Appointments')}
               >
                 <Text style={styles.viewAllText}>Ver todas</Text>
               </TouchableOpacity>
             )}
           </View>
-          
+
           {loadingAppointments ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#1E88E5" />
               <Text style={styles.loadingText}>Cargando citas...</Text>
             </View>
           ) : upcomingAppointments.length > 0 ? (
-            <FlatList
-              data={upcomingAppointments.slice(0, 3)}
-              renderItem={({item}) => renderAppointmentItem({
-                item, 
-                onPress: () => navigation.navigate('AppointmentDetails', {appointment: item})
-              })}
-              keyExtractor={item => item._id}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{height: 12}} />}
-            />
+            <View>{upcomingAppointments.slice(0, 3).map((item, index) => (
+              <View key={item._id} style={index > 0 ? { marginTop: 12 } : undefined}>
+                {renderAppointmentItem({ item, onPress: () => navigation.navigate('AppointmentDetails', { appointment: item }) })}
+              </View>
+            ))}</View>
           ) : (
             <View style={styles.emptyStateContainer}>
               <Text>
                 <Ionicons name="calendar-outline" size={50} color="#ccc" />
               </Text>
               <Text style={styles.emptyStateText}>No hay citas programadas</Text>
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={[styles.quickActionButton, {width: '100%', marginTop: 15}]}
                 onPress={() => navigation.navigate('Availability')}
               >
@@ -1268,38 +1257,40 @@ const HomeScreen = ({ navigation }) => {
 
         {/* Botones de acceso rápido */}
         <View style={styles.quickActionsContainer}>
-          <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate('Services')}>
+          <TouchableOpacity accessibilityRole="button" style={styles.quickActionButton} onPress={() => navigation.navigate('Services')}>
             <Text>
               <Ionicons name="list" size={24} color="#1E88E5" />
             </Text>
             <Text style={styles.quickActionText}>Mis Servicios</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate('Appointments')}>
+          <TouchableOpacity accessibilityRole="button" style={styles.quickActionButton} onPress={() => navigation.navigate('Appointments')}>
             <Text>
               <Ionicons name="calendar" size={24} color="#1E88E5" />
             </Text>
             <Text style={styles.quickActionText}>Mis Citas</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate('Availability')}>
+          <TouchableOpacity accessibilityRole="button" style={styles.quickActionButton} onPress={() => navigation.navigate('Availability')}>
             <Text>
               <Ionicons name="time" size={24} color="#4CAF50" />
             </Text>
             <Text style={styles.quickActionText}>Disponibilidad</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton} onPress={() => navigation.navigate('Reviews')}>
+          <TouchableOpacity accessibilityRole="button" style={styles.quickActionButton} onPress={() => navigation.navigate('Reviews')}>
             <Text>
               <Ionicons name="star" size={24} color="#FFC107" />
             </Text>
             <Text style={styles.quickActionText}>Valoraciones</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </>}
+      />
     </View>
   );
 };
 
 // *** No analizar solo en el caso de modificar los estilos. ***
 const styles = StyleSheet.create({
+  headerInfo: { flex: 1, minWidth: 0, paddingRight: 12 },
 
   statusBarBackground: {
     height: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 0) : 0,
@@ -1317,7 +1308,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#1E88E5',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 16,
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
     overflow: 'hidden', // Para que el borde redondeado funcione correctamente
@@ -1351,6 +1342,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   availabilityTitle: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 16,
     fontWeight: '500',
@@ -1359,6 +1351,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statsContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     backgroundColor: '#FFF',
     marginHorizontal: 20,
@@ -1377,6 +1371,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statValue: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
@@ -1409,12 +1404,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sectionHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
   },
   sectionTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
@@ -1436,6 +1434,7 @@ const styles = StyleSheet.create({
     padding: 5
   },
   viewAllText: {
+    flexShrink: 1,
     color: '#1E88E5',
     fontSize: 14,
     fontWeight: '500',
@@ -1449,6 +1448,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   emergencyHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1474,6 +1475,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   petName: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#666',
     marginLeft: 5,
@@ -1522,12 +1524,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   locationText: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#333',
     marginLeft: 5,
     flex: 1,
   },
   distanceTimeContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'flex-start',
   },
@@ -1537,11 +1542,14 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   distanceTimeText: {
+    flexShrink: 1,
     fontSize: 13,
     color: '#666',
     marginLeft: 4,
   },
   emergencyActions: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
@@ -1608,6 +1616,8 @@ const styles = StyleSheet.create({
     borderLeftColor: '#1E88E5', // Color primario de tu app
   },
   appointmentHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1638,6 +1648,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   appointmentTime: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
     color: '#1E88E5',
@@ -1727,7 +1738,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   quickActionButton: {
-    width: (width - 60) / 2,
+    width: '48%',
     backgroundColor: '#FFF',
     paddingVertical: 15,
     paddingHorizontal: 10,

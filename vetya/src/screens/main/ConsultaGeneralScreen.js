@@ -32,15 +32,15 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
   const [pets, setPets] = useState([]);
   const [isLoading, setIsLoading] = useState(false); // General loading for initial data
   const [isLoadingProviders, setIsLoadingProviders] = useState(false); // Specific loading for providers
-  
+
   // Animaciones
   // Zustand store selectors - usando selectores individuales para evitar re-renders innecesarios
-  const fetchConsultaGeneralProviders = useCitaStore(useCallback(state => state.fetchConsultaGeneralProviders, [])); 
-  const consultaGeneralProviders = useCitaStore(useCallback(state => state.consultaGeneralProviders, [])); 
-  const isLoadingStoreProviders = useCitaStore(useCallback(state => state.isLoading, [])); 
-  const errorStoreProviders = useCitaStore(useCallback(state => state.error, [])); 
+  const fetchConsultaGeneralProviders = useCitaStore(useCallback(state => state.fetchConsultaGeneralProviders, []));
+  const consultaGeneralProviders = useCitaStore(useCallback(state => state.consultaGeneralProviders, []));
+  const isLoadingStoreProviders = useCitaStore(useCallback(state => state.isLoading, []));
+  const errorStoreProviders = useCitaStore(useCallback(state => state.error, []));
   const resetCitaStoreState = useCitaStore(useCallback(state => state.resetCitaState, []));
-  
+
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(1)).current;
@@ -53,7 +53,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
         // Cargar mascotas del usuario desde el store
         const { fetchPets } = usePetStore.getState();
         const petsResult = await fetchPets();
-        
+
         if (petsResult.success) {
           setPets(petsResult.data.map(pet => ({
             id: pet._id,
@@ -73,20 +73,20 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
         setIsLoading(false);
       }
     };
-    
+
     loadPets();
   }, []); // Sin dependencias pues solo carga una vez al montar
 
   // Efecto separado para cargar proveedores solo una vez al montar
   useEffect(() => {
     let isMounted = true; // Para evitar actualizaciones tras desmontaje
-    
+
     const loadProviders = async () => {
       try {
         setIsLoadingProviders(true);
         // Llamar una sola vez para cargar prestadores de consulta general
         await fetchConsultaGeneralProviders();
-        
+
         // Verificar que el componente sigue montado antes de actualizar estados
         if (isMounted) {
           setIsLoadingProviders(false);
@@ -98,15 +98,15 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
         }
       }
     };
-    
+
     loadProviders();
-    
+
     // Limpieza
     return () => {
       isMounted = false;
     };
   }, [fetchConsultaGeneralProviders]);  // Añadimos la dependencia
-  
+
   // Memoizamos la función fetchAvailableDates usando useCallback para evitar recrearla en cada render
   const fetchAvailableDates = useCallback(async (prestadorId) => {
     const { fetchAvailableDates } = useCitaStore.getState();
@@ -121,13 +121,13 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
       setSelectedDate(null);
       setSelectedTime(null);
       setAvailableTimes([]);
-      
+
       const loadDatesForProvider = async () => {
         try {
           setIsLoading(true);
           // Usamos la función memoizada
-          const datesResult = await fetchAvailableDates(selectedVet._id); 
-          
+          const datesResult = await fetchAvailableDates(selectedVet._id);
+
           if (datesResult && datesResult.success) {
             setAvailableDates(datesResult.data);
           } else {
@@ -141,11 +141,11 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
           setIsLoading(false);
         }
       };
-      
+
       loadDatesForProvider();
     }
   }, [selectedVet, fetchAvailableDates]); // Dependencias correctas
-  
+
   // Cargar horarios disponibles cuando se selecciona una fecha
   useEffect(() => {
     if (selectedDate) {
@@ -153,7 +153,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
         try {
           const { fetchAvailableTimes } = useCitaStore.getState();
           const result = await fetchAvailableTimes(selectedDate.id);
-          
+
           if (result.success) {
             setAvailableTimes(result.data);
           } else {
@@ -165,13 +165,13 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
           setAvailableTimes([]);
         }
       };
-      
+
       loadAvailableTimes();
     } else {
       setAvailableTimes([]);
     }
   }, [selectedDate]);
-  
+
   // Efectos de presión para el botón
   const handlePressIn = () => {
     Animated.spring(buttonScale, {
@@ -188,7 +188,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
       useNativeDriver: false
     }).start();
   };
-  
+
   // Función para agendar la consulta
   const handleScheduleConsultation = async () => {
     // Validaciones
@@ -196,29 +196,29 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
       Alert.alert('Información requerida', 'Por favor selecciona una mascota');
       return;
     }
-    
+
     if (!selectedDate) {
       Alert.alert('Información requerida', 'Por favor selecciona una fecha');
       return;
     }
-    
+
     if (!selectedTime) {
       Alert.alert('Información requerida', 'Por favor selecciona un horario');
       return;
     }
-    
+
     if (!selectedVet) {
       Alert.alert('Información requerida', 'Por favor selecciona un prestador');
       return;
     }
-    
+
     if (!reasonForVisit.trim()) {
       Alert.alert('Información requerida', 'Por favor describe el motivo de la consulta');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const serializableDate = selectedDate ? {
         id: selectedDate.id,
@@ -233,20 +233,20 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
           day: 'numeric'
         })
       } : null;
-      
+
       const consultationData = {
-        mascota: selectedPet.id, 
-        fecha: serializableDate.dateString, 
-        hora: selectedTime, 
-        veterinario: selectedVet._id, 
-        servicioNombre: 'Consulta General', 
+        mascota: selectedPet.id,
+        fecha: serializableDate.dateString,
+        hora: selectedTime,
+        veterinario: selectedVet._id,
+        servicioNombre: 'Consulta General',
         motivo: reasonForVisit,
-        tipoCita: 'Consulta General', 
+        tipoCita: 'Consulta General',
       };
-      
+
       const { createAppointment } = useCitaStore.getState();
       const result = await createAppointment(consultationData);
-      
+
       if (result.success) {
         // Navegar a la pantalla de confirmación con los datos adecuados
         const navParams = {
@@ -256,10 +256,10 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
           reason: reasonForVisit,
           appointmentId: result.data.id
         };
-        
+
         // Añadir el veterinario seleccionado
         navParams.vet = selectedVet;
-        
+
         navigation.navigate('ConsultaConfirmacion', navParams);
       } else {
         Alert.alert('Error', result.error || 'No se pudo agendar la consulta');
@@ -275,25 +275,25 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
   // Renderizar cada item de mascota
   const renderPetItem = (pet) => {
     const isSelected = selectedPet && selectedPet.id === pet.id;
-    
+
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         key={pet.id}
         style={[styles.petItem, isSelected && styles.selectedPetItem]}
         onPress={() => setSelectedPet(pet)}
       >
         <View style={styles.petIconContainer}>
           {pet.imagen ? (
-            <Image 
-              source={{ uri: pet.imagen }} 
-              style={styles.petItemImage} 
+            <Image
+              source={{ uri: pet.imagen }}
+              style={styles.petItemImage}
               resizeMode="cover"
             />
           ) : (
-            <Ionicons 
-              name={(pet.tipo || '').toLowerCase() === 'perro' ? 'paw' : 'paw-outline'} 
-              size={24} 
-              color={isSelected ? '#fff' : '#1E88E5'} 
+            <Ionicons
+              name={(pet.tipo || '').toLowerCase() === 'perro' ? 'paw' : 'paw-outline'}
+              size={24}
+              color={isSelected ? '#fff' : '#1E88E5'}
             />
           )}
         </View>
@@ -315,9 +315,9 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
   // Renderizar fechas disponibles (DISPONIBILIDAD)
   const renderDateItem = ({ item }) => {
     const isSelected = selectedDate && selectedDate.id === item.id;
-    
+
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={[styles.dateItem, isSelected && styles.selectedDateItem]}
         onPress={() => setSelectedDate(item)}
       >
@@ -337,20 +337,20 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
   // Renderizar horarios disponibles (DISPONIBILIDAD)
   const renderTimeItem = ({ item }) => {
     const isSelected = selectedTime && selectedTime.id === item.id;
-    
+
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={[
-          styles.timeItem, 
+          styles.timeItem,
           !item.available && styles.unavailableTimeItem,
           isSelected && styles.selectedTimeItem
         ]}
         onPress={() => item.available && setSelectedTime(item)}
         disabled={!item.available}
       >
-        <Text 
+        <Text
           style={[
-            styles.timeText, 
+            styles.timeText,
             !item.available && styles.unavailableTimeText,
             isSelected && styles.selectedTimeText
           ]}
@@ -371,19 +371,19 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
       console.log('Item inválido:', item);
       return null;
     }
-    
+
     const isSelected = selectedVet && selectedVet._id === item._id;
-    
+
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         key={item._id}
         style={[styles.providerItem, isSelected && styles.selectedProviderItem, {width: 280}]}
         onPress={() => setSelectedVet(item)}
       >
         {/* Imagen del prestador */}
         {item.imagen ? (
-          <Image 
-            source={{ uri: item.imagen }} 
+          <Image
+            source={{ uri: item.imagen }}
             style={styles.providerImage}
           />
         ) : (
@@ -391,21 +391,21 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
             <Ionicons name="person" size={28} color={isSelected ? "#1E88E5" : "#888"} />
           </View>
         )}
-        
+
         {/* Información del prestador */}
         <View style={styles.providerInfo}>
           <Text style={[styles.providerName, isSelected && styles.selectedProviderText]}>
             {item.nombre || 'Sin nombre'}
           </Text>
-          
+
           <Text style={[styles.providerType, isSelected && styles.selectedProviderText]}>
             {item.tipo || 'Prestador'}
           </Text>
-          
+
           {/* Dirección con verificación de estructura */}
           {item.direccion ? (
             <Text style={[styles.providerAddress, isSelected && styles.selectedProviderText]} numberOfLines={1} ellipsizeMode="tail">
-              {typeof item.direccion === 'object' 
+              {typeof item.direccion === 'object'
                 ? `${item.direccion.calle || ''} ${item.direccion.numero || ''}, ${item.direccion.ciudad || ''}`.trim() || 'Dirección no disponible'
                 : typeof item.direccion === 'string' ? item.direccion : 'Dirección no disponible'}
             </Text>
@@ -414,7 +414,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
               Dirección no disponible
             </Text>
           )}
-          
+
           {/* Rating */}
           <View style={styles.ratingContainer}>
             <Ionicons name="star" size={16} color={isSelected ? "#fff" : "#FFD700"} />
@@ -423,7 +423,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
             </Text>
           </View>
         </View>
-        
+
         {/* Indicador de selección */}
         {isSelected && (
           <View style={{position: 'absolute', top: 8, right: 8}}>
@@ -433,7 +433,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
       </TouchableOpacity>
     );
   };
-  
+
   const renderSectionItem = ({ item }) => {
     switch (item.id) {
       case 'info':
@@ -539,7 +539,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
         return (
           <React.Fragment key="section-button">
             <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.scheduleButton}
                 onPress={handleScheduleConsultation}
                 onPressIn={handlePressIn}
@@ -566,7 +566,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
         return null;
     }
   };
-  
+
   // Efecto para cleanup cuando el componente se desmonta
   useEffect(() => {
     return () => {
@@ -581,17 +581,17 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
       setPets([]);
     };
   }, []);
-  
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
@@ -599,15 +599,17 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Consulta General</Text>
       </View>
-      
+
       {/* Usamos Animated.View para envolver el contenido con animaciones */}
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.animatedContainer, 
+          styles.animatedContainer,
           { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
         ]}
       >
         <FlatList
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           data={[
             { id: 'info' },
             { id: 'pets' },
@@ -631,6 +633,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F2F5',
   },
   toggleContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -753,6 +757,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   selectedProviderText: {
+    flexShrink: 1,
     color: '#fff',
   },
   noProvidersText: {
@@ -773,7 +778,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E88E5',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 15,
     paddingHorizontal: 15,
   },
@@ -781,6 +786,9 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
@@ -812,6 +820,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   infoText: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#0D47A1',
     fontSize: 14,
     flex: 1,
@@ -843,12 +853,9 @@ const styles = StyleSheet.create({
     color: '#777',
     marginBottom: 4,
   },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
+
   providerRating: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#444',
     marginLeft: 5,
@@ -901,8 +908,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   dateItem: {
+    minHeight: 90,
     width: 70,
-    height: 90,
+
     borderRadius: 10,
     marginRight: 10,
     backgroundColor: '#fff',
@@ -938,8 +946,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   timeItem: {
+    minHeight: 60,
     width: 90,
-    height: 60,
+
     borderRadius: 10,
     marginRight: 10,
     backgroundColor: '#fff',

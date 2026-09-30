@@ -65,10 +65,39 @@ import PrivacyPolicyScreen from '../screens/settings/PrivacyPolicyScreen';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const NAV_COLORS = {
+  primary: '#1E88E5',
+  inactive: '#6B7280',
+  border: '#E5E7EB',
+  surface: '#FFFFFF',
+};
+
+const tabBarOptions = {
+  safeAreaInsets: { top: 0, bottom: 0, left: 0, right: 0 },
+  tabBarActiveTintColor: NAV_COLORS.primary,
+  tabBarInactiveTintColor: NAV_COLORS.inactive,
+  tabBarHideOnKeyboard: true,
+  tabBarStyle: {
+    height: 64,
+    paddingTop: 6,
+    paddingBottom: 8,
+    backgroundColor: NAV_COLORS.surface,
+    borderTopColor: NAV_COLORS.border,
+  },
+  tabBarLabelStyle: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  headerShown: false,
+  freezeOnBlur: true,
+};
+
 // Navegador de tabs principales
 function MainTabsNavigator() {
   return (
     <Tab.Navigator
+      detachInactiveScreens
+      backBehavior="history"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
@@ -85,16 +114,14 @@ function MainTabsNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#1E88E5', // Color de las pestañas activas
-        tabBarInactiveTintColor: 'gray', // Color de las pestañas no activas
-        headerShown: false, // Ocultar el header en todas las pestañas
+        ...tabBarOptions,
       })}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
       <Tab.Screen name="Mascotas" component={PetsScreen} />
-      <Tab.Screen 
-        name="Destacados" 
-        component={PrestaDetailsScreen} 
+      <Tab.Screen
+        name="Destacados"
+        component={PrestaDetailsScreen}
         options={{
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons name={focused ? "star" : "star-outline"} color={color} size={size} />
@@ -103,7 +130,7 @@ function MainTabsNavigator() {
       />
       <Tab.Screen name="Citas" component={AppointmentsScreen} />
       <Tab.Screen name="Perfil" component={ProfileScreen} />
-      
+
     </Tab.Navigator>
   );
 }
@@ -111,10 +138,10 @@ function MainTabsNavigator() {
 // Navegador principal (incluye tabs principales y pantallas de emergencia)
 function MainNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerStatusBarHeight: 0 }}>
       <Stack.Screen name="MainTabs" component={MainTabsNavigator} />
-      <Stack.Screen 
-        name="PetDetailScreen" 
+      <Stack.Screen
+        name="PetDetailScreen"
         component={PetDetailScreen}
         options={{
           headerShown: false,
@@ -125,8 +152,8 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="VetDetail" 
+      <Stack.Screen
+        name="VetDetail"
         component={VetDetailScreen}
         options={{
           headerShown: false,
@@ -137,8 +164,8 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="PrestaDetailsScreen" 
+      <Stack.Screen
+        name="PrestaDetailsScreen"
         component={PrestaDetailsScreen}
         options={{
           headerShown: false,
@@ -149,8 +176,8 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="AllVetsScreen" 
+      <Stack.Screen
+        name="AllVetsScreen"
         component={AllVetsScreen}
         options={{
           headerShown: false,
@@ -162,9 +189,9 @@ function MainNavigator() {
         }}
       />
       {/* Pantallas de perfil */}
-      <Stack.Screen 
-        name="EditProfile" 
-        component={EditProfileScreen} 
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -174,9 +201,9 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="ChangePassword" 
-        component={ChangePasswordScreen} 
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -186,9 +213,9 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="Addresses" 
-        component={AddressesScreen} 
+      <Stack.Screen
+        name="Addresses"
+        component={AddressesScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -198,9 +225,9 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="PaymentHistory" 
-        component={PaymentHistoryScreen} 
+      <Stack.Screen
+        name="PaymentHistory"
+        component={PaymentHistoryScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -210,9 +237,9 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="ReceiptDetail" 
-        component={ReceiptDetailScreen} 
+      <Stack.Screen
+        name="ReceiptDetail"
+        component={ReceiptDetailScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -223,9 +250,9 @@ function MainNavigator() {
         }}
       />
       {/* Pantallas de configuración / información */}
-      <Stack.Screen 
-        name="HelpSupport" 
-        component={HelpSupportScreen} 
+      <Stack.Screen
+        name="HelpSupport"
+        component={HelpSupportScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -235,9 +262,9 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="TermsConditions" 
-        component={TermsConditionsScreen} 
+      <Stack.Screen
+        name="TermsConditions"
+        component={TermsConditionsScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -247,9 +274,9 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="PrivacyPolicy" 
-        component={PrivacyPolicyScreen} 
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
         options={{
           headerShown: false,
           cardStyleInterpolator: ({ current }) => ({
@@ -259,24 +286,24 @@ function MainNavigator() {
           }),
         }}
       />
-      
-      <Stack.Screen 
-        name="EmergencyForm" 
-        component={EmergencyFormScreen} 
+
+      <Stack.Screen
+        name="EmergencyForm"
+        component={EmergencyFormScreen}
         options={{
           // Usar animación simple tipo fade para evitar conflictos
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           // Forzar modo JS para las transiciones
@@ -287,23 +314,23 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="EmergencyVetMap" 
+      <Stack.Screen
+        name="EmergencyVetMap"
         component={EmergencyVetMapScreen}
         options={{
           // Misma configuración para mantener consistencia
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -313,23 +340,23 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="EmergencyConfirmation" 
+      <Stack.Screen
+        name="EmergencyConfirmation"
         component={EmergencyConfirmationScreen}
         options={{
           // Misma configuración para mantener consistencia
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -339,22 +366,22 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="MisEmergencias" 
+      <Stack.Screen
+        name="MisEmergencias"
         component={MisEmergenciasScreen}
         options={{
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -364,10 +391,10 @@ function MainNavigator() {
           }),
         }}
       />
-      
+
       {/* Pantallas de Pagos */}
-      <Stack.Screen 
-        name="PaymentCheckout" 
+      <Stack.Screen
+        name="PaymentCheckout"
         component={PaymentCheckoutScreen}
         options={{
           headerShown: false,
@@ -379,24 +406,24 @@ function MainNavigator() {
           }),
         }}
       />
-      
+
       {/* Pantallas de Consulta General */}
-      <Stack.Screen 
-        name="ConsultaGeneral" 
+      <Stack.Screen
+        name="ConsultaGeneral"
         component={ConsultaGeneralScreen}
         options={{
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -406,22 +433,22 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="ConsultaConfirmacion" 
+      <Stack.Screen
+        name="ConsultaConfirmacion"
         component={ConsultaConfirmacionScreen}
         options={{
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -431,24 +458,24 @@ function MainNavigator() {
           }),
         }}
       />
-      
+
       {/* Pantallas de Agendar Cita */}
-      <Stack.Screen 
-        name="AgendarCita" 
+      <Stack.Screen
+        name="AgendarCita"
         component={AgendarCitaScreen}
         options={{
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -458,22 +485,22 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="CitaConfirmacion" 
+      <Stack.Screen
+        name="CitaConfirmacion"
         component={CitaConfirmacionScreen}
         options={{
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -483,24 +510,24 @@ function MainNavigator() {
           }),
         }}
       />
-      
+
       {/* Pantallas de Consejos de Salud */}
-      <Stack.Screen 
-        name="HealthTips" 
+      <Stack.Screen
+        name="HealthTips"
         component={HealthTipsScreen}
         options={{
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -510,22 +537,22 @@ function MainNavigator() {
           }),
         }}
       />
-      <Stack.Screen 
-        name="HealthTipDetail" 
+      <Stack.Screen
+        name="HealthTipDetail"
         component={HealthTipDetailScreen}
         options={{
           transitionSpec: {
-            open: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
-            close: { 
-              animation: 'timing', 
-              config: { 
-                duration: 300 
-              } 
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 300
+              }
             },
           },
           cardStyleInterpolator: ({ current: { progress } }) => ({
@@ -535,7 +562,7 @@ function MainNavigator() {
           }),
         }}
       />
-      
+
     </Stack.Navigator>
   );
 }
@@ -543,7 +570,7 @@ function MainNavigator() {
 // Navegador de autenticación
 function AuthNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerStatusBarHeight: 0 }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
@@ -556,7 +583,7 @@ function AuthNavigator() {
 // Navegador de onboarding
 function OnboardingNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerStatusBarHeight: 0 }}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
     </Stack.Navigator>
   );
@@ -569,7 +596,7 @@ function AppNavigator() {
   const token = useAuthStore(state => state.token);
   const isFirstTime = useAuthStore(state => state.isFirstTime);
   const checkAuth = useAuthStore(state => state.checkAuth);
-  
+
   // Verificar autenticación al iniciar
   useEffect(() => {
     checkAuth();

@@ -55,8 +55,7 @@ const prestadorSchema = new Schema({
   direccionGeo: {
     type: {
       type: String,
-      enum: ['Point'],
-      default: 'Point'
+      enum: ['Point']
     },
     coordinates: {
       type: [Number],
@@ -212,8 +211,7 @@ const prestadorSchema = new Schema({
   ubicacionActualGeo: {
     type: {
       type: String,
-      enum: ['Point'],
-      default: 'Point'
+      enum: ['Point']
     },
     coordinates: {
       type: [Number],
@@ -276,27 +274,27 @@ prestadorSchema.pre('deleteOne', { document: true, query: false }, async functio
   try {
     const prestadorId = this._id;
     console.log(`Eliminando en cascada todos los registros relacionados con el prestador: ${prestadorId}`);
-    
+
     // 1. Eliminar todos los servicios asociados al prestador
     const Servicio = mongoose.model('Servicio');
     const serviciosEliminados = await Servicio.deleteMany({ prestadorId });
     console.log(`- ${serviciosEliminados.deletedCount} servicios eliminados`);
-    
+
     // 2. Eliminar todas las citas asociadas al prestador (si el modelo usa prestadorId en lugar de veterinario)
     const Cita = mongoose.model('Cita');
     const citasEliminadas = await Cita.deleteMany({ veterinario: prestadorId });
     console.log(`- ${citasEliminadas.deletedCount} citas eliminadas`);
-    
+
     // 3. Actualizar emergencias (en lugar de eliminarlas, quitar la referencia al prestador)
     const Emergencia = mongoose.model('Emergencia');
     const emergenciasActualizadas = await Emergencia.updateMany(
-      { veterinario: prestadorId }, 
+      { veterinario: prestadorId },
       { $set: { veterinario: null, estado: 'Solicitada' } }
     );
     console.log(`- ${emergenciasActualizadas.modifiedCount} emergencias actualizadas`);
-    
+
     // 4. Si hay más modelos relacionados, añadir aquí su eliminación...
-    
+
     console.log('Eliminación en cascada completada con éxito');
   } catch (error) {
     console.error('Error durante la eliminación en cascada:', error);

@@ -1,40 +1,37 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   Animated,
   Easing,
-  Dimensions,
   Alert,
   ActivityIndicator,
-  Platform,
-  ScrollView
-} from 'react-native';
+  Platform} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { emergenciaService } from '../../services/api';
 import useEmergencyStore from '../../store/useEmergencyStore';
 import usePagoStore from '../../store/usePagoStore';
 
-const { width } = Dimensions.get('window');
 
 const EmergencyConfirmationScreen = ({ navigation, route }) => {
-  const { 
-    emergency, 
+  const {
+    emergency,
     emergencyData,
-    vetInfo: initialVetInfo, 
-    emergencyId, 
-    petInfo: initialPetInfo, 
-    emergencyDescription, 
-    otroAnimalInfo: initialOtroAnimalInfo, 
-    emergencyMode 
+    vetInfo: initialVetInfo,
+    emergencyId,
+    petInfo: initialPetInfo,
+    emergencyDescription,
+    otroAnimalInfo: initialOtroAnimalInfo,
+    emergencyMode
   } = route.params || {};
-  
+
   // Determinar si es una emergencia para otro animal
   const esOtroAnimal = emergencyMode === 'otroAnimal';
-  
+
   // Estados para manejar la carga y datos
   const [loading, setLoading] = useState(true);
   const [emergencyDetails, setEmergencyDetails] = useState(null);
@@ -43,7 +40,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('Efectivo');
   const [cashStatus, setCashStatus] = useState(null);
   const { obtenerEstadoEfectivoPrestador } = usePagoStore();
-  
+
   // Efecto para cargar los detalles de la emergencia
   useEffect(() => {
     const loadEmergencyDetails = async () => {
@@ -51,7 +48,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
         setLoading(false);
         return;
       }
-      
+
       try {
         const response = await emergenciaService.getEmergencyDetails(emergencyId);
         if (response.success && response.data) {
@@ -65,10 +62,10 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
         setLoading(false);
       }
     };
-    
+
     loadEmergencyDetails();
   }, [emergencyId]);
-  
+
   // Usar datos de la emergencia o valores por defecto si no están disponibles
   const petInfo = esOtroAnimal ? null : (emergencyDetails?.mascota || initialPetInfo || {});
   const otroAnimalInfo = esOtroAnimal ? (emergencyDetails?.otroAnimal || initialOtroAnimalInfo || {}) : null;
@@ -81,10 +78,10 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
   const canUseCash = (cashStatus?.canAcceptCash ?? initialCanAcceptCash) !== false;
   const emergencyStatus = emergencyDetails?.estado || 'Solicitada';
   const emergencyIdToUse = emergencyDetails?._id || emergencyId;
-  
+
   // Información del animal para mostrar (sea mascota registrada u otro animal)
   const animalInfo = esOtroAnimal ? otroAnimalInfo : petInfo;
-  
+
   // Costo y tiempo estimado
   const emergencyCost = vetInfo?.emergenciaGratis || vetInfo?.emergenciaGratisAdmin
     ? 0
@@ -92,13 +89,13 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
   const isFreeEmergency = emergencyDetails?.esGratis === true || vetInfo?.emergenciaGratis === true || vetInfo?.emergenciaGratisAdmin === true || Number(emergencyCost || 0) === 0;
   const estimatedTime = initialVetInfo?.estimatedTime || emergencyDetails?.tiempoEstimado?.texto || vetInfo?.tiempoEstimado?.texto || 'Calculando...';
   const emergencyAddress = emergencyDetails?.ubicacion?.direccion || emergency?.ubicacion?.direccion || emergencyData?.ubicacion?.direccion || 'Tu ubicación actual';
-  
+
   // Animaciones
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const rotationAnim = useRef(new Animated.Value(0)).current;
-  
+
   useEffect(() => {
     // Animación de pulso para el círculo
     Animated.loop(
@@ -117,7 +114,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
         })
       ])
     ).start();
-    
+
     // Animación de entrada para el contenido
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -162,20 +159,20 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
       setSelectedPaymentMethod('MercadoPago');
     }
   }, [canUseCash, selectedPaymentMethod]);
-  
+
   // Convertir la animación de rotación a grados
   const spin = rotationAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
   });
-  
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}
           style={styles.closeButton}
           onPress={() => navigation.popToTop()}
         >
@@ -183,26 +180,26 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Emergencia en camino</Text>
       </View>
-      
+
       {/* Contenido principal con ScrollView */}
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Círculo de estado */}
         <View style={styles.statusCircleContainer}>
-          <Animated.View 
+          <Animated.View
             style={[
               styles.pulseCircle,
-              { 
+              {
                 transform: [{ scale: pulseAnim }],
                 opacity: 0.3
               }
-            ]} 
+            ]}
           />
           <View style={styles.statusCircle}>
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.iconWrapper,
                 { transform: [{ rotate: spin }] }
@@ -212,11 +209,11 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
             </Animated.View>
           </View>
         </View>
-        
-        <Animated.View 
+
+        <Animated.View
           style={[
             styles.infoContainer,
-            { 
+            {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }]
             }
@@ -250,11 +247,11 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                 ? `La emergencia del ${animalInfo?.descripcionAnimal || 'animal'} ha sido atendida exitosamente`
                 : `La emergencia de ${animalInfo?.nombre || 'tu mascota'} ha sido atendida exitosamente`
             )}
-            {emergencyStatus === 'Cancelada' && 
+            {emergencyStatus === 'Cancelada' &&
               'La solicitud de emergencia ha sido cancelada'
             }
           </Text>
-          
+
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <View style={styles.infoIconContainer}>
@@ -265,9 +262,9 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                 <Text style={styles.infoValue}>{estimatedTime}</Text>
               </View>
             </View>
-            
+
             <View style={styles.divider} />
-            
+
             <View style={styles.infoRow}>
               <View style={styles.infoIconContainer}>
                 <Ionicons name="cash-outline" size={24} color="#1E88E5" />
@@ -277,9 +274,9 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                 <Text style={styles.infoValue}>{isFreeEmergency ? 'Gratis' : `$${typeof emergencyCost === 'number' ? emergencyCost.toLocaleString() : emergencyCost}`}</Text>
               </View>
             </View>
-            
+
             <View style={styles.divider} />
-            
+
             <View style={styles.infoRow}>
               <View style={styles.infoIconContainer}>
                 <Ionicons name="location-outline" size={24} color="#1E88E5" />
@@ -290,14 +287,14 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
               </View>
             </View>
           </View>
-          
+
           {/* Selección de método de pago */}
           {emergencyStatus === 'Solicitada' && !isFreeEmergency && (
             <View style={styles.paymentMethodCard}>
               <Text style={styles.paymentMethodTitle}>Método de Pago</Text>
               <Text style={styles.paymentMethodSubtitle}>Selecciona cómo deseas pagar el servicio</Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity accessibilityRole="button"
                 style={[
                   styles.paymentOption,
                   selectedPaymentMethod === 'Efectivo' && styles.paymentOptionSelected,
@@ -307,10 +304,10 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                 disabled={!canUseCash}
               >
                 <View style={styles.paymentOptionContent}>
-                  <Ionicons 
-                    name="cash-outline" 
-                    size={28} 
-                    color={selectedPaymentMethod === 'Efectivo' ? '#1E88E5' : '#666'} 
+                  <Ionicons
+                    name="cash-outline"
+                    size={28}
+                    color={selectedPaymentMethod === 'Efectivo' ? '#1E88E5' : '#666'}
                   />
                   <View style={styles.paymentOptionText}>
                     <Text style={[
@@ -326,8 +323,8 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                   <Ionicons name="checkmark-circle" size={24} color="#1E88E5" />
                 )}
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity accessibilityRole="button"
                 style={[
                   styles.paymentOption,
                   selectedPaymentMethod === 'MercadoPago' && styles.paymentOptionSelected
@@ -335,10 +332,10 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                 onPress={() => setSelectedPaymentMethod('MercadoPago')}
               >
                 <View style={styles.paymentOptionContent}>
-                  <Ionicons 
-                    name="card-outline" 
-                    size={28} 
-                    color={selectedPaymentMethod === 'MercadoPago' ? '#1E88E5' : '#666'} 
+                  <Ionicons
+                    name="card-outline"
+                    size={28}
+                    color={selectedPaymentMethod === 'MercadoPago' ? '#1E88E5' : '#666'}
                   />
                   <View style={styles.paymentOptionText}>
                     <Text style={[
@@ -358,9 +355,9 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
           )}
         </Animated.View>
       </ScrollView>
-      
+
       {/* Footer con botones */}
-      <Animated.View 
+      <Animated.View
         style={[
           styles.footer,
           { opacity: fadeAnim }
@@ -370,17 +367,17 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
           <ActivityIndicator size="large" color="#1E88E5" />
         ) : (
           <>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={styles.confirmButton || styles.contactButton}
               onPress={async () => {
                 if ((!emergencyIdToUse && !emergencyData) || !vetInfo) {
                   Alert.alert('Error', 'No se puede procesar la solicitud sin datos de emergencia o información del veterinario');
                   return;
                 }
-                
+
                 try {
                   setConfirming(true);
-                  
+
                   let finalEmergencyId = emergencyIdToUse;
                   // Primero verificamos el estado actual de la emergencia
                   let currentEmergencyStatus = emergencyStatus;
@@ -397,7 +394,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                     finalEmergencyId = createResult.data._id;
                     currentEmergencyStatus = createResult.data.estado || 'Solicitada';
                   }
-                  
+
                   // Si es necesario, consultamos el estado actual desde el backend
                   if (finalEmergencyId) {
                     try {
@@ -411,7 +408,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                       // Continuamos con el estado que tenemos disponible
                     }
                   }
-                  
+
                   // Si la emergencia está en estado 'Solicitada' (lo que implica que ya se seleccionó un vet en la pantalla anterior)
                   // o si ya está 'Asignada' (por algún otro flujo o re-entrada a la pantalla),
                   // procedemos a confirmar el servicio.
@@ -428,7 +425,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                       isFreeEmergency ? 'Por definir' : selectedPaymentMethod,
                       veterinarianId
                     );
-                    
+
                     if (result.success) {
                       // Actualizar el estado localmente si es necesario, o confiar en la navegación y recarga de datos.
                       // Por ahora, asumimos que la navegación a Inicio recargará los estados.
@@ -458,39 +455,39 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
               ) : (
                 <>
                   <Text style={styles.contactButtonText}>
-                    {(emergencyStatus === 'Solicitada' && vetInfo) ? 'Enviar Solicitud al Veterinario' : 
-                     (emergencyStatus === 'Asignada') ? 'Esperando Confirmación del Vet.' : 
+                    {(emergencyStatus === 'Solicitada' && vetInfo) ? 'Enviar Solicitud al Veterinario' :
+                     (emergencyStatus === 'Asignada') ? 'Esperando Confirmación del Vet.' :
                      (emergencyStatus === 'Confirmada' || emergencyStatus === 'En camino') ? 'Ver Progreso' : 'Enviar Solicitud'}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity accessibilityRole="button"
               style={styles.cancelButton}
               onPress={async () => {
                 if (!emergencyIdToUse) {
                   navigation.navigate('MainTabs', { screen: 'Inicio' });
                   return;
                 }
-                
+
                 Alert.alert(
                   'Cancelar Emergencia',
                   '¿Estás seguro de que deseas cancelar esta emergencia?',
                   [
                     { text: 'No', style: 'cancel' },
-                    { 
-                      text: 'Sí, cancelar', 
+                    {
+                      text: 'Sí, cancelar',
                       style: 'destructive',
                       onPress: async () => {
                         try {
                           setCancelingEmergency(true);
                           const { cancelEmergency } = useEmergencyStore.getState();
                           const result = await cancelEmergency(emergencyIdToUse);
-                          
+
                           if (result.success) {
                             Alert.alert(
-                              'Emergencia Cancelada', 
+                              'Emergencia Cancelada',
                               'La solicitud de emergencia ha sido cancelada.',
                               [{ text: 'OK', onPress: () => navigation.navigate('MainTabs', { screen: 'Inicio' }) }]
                             );
@@ -516,8 +513,8 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                 <Text style={styles.cancelButtonText}>Cancelar emergencia</Text>
               )}
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity accessibilityRole="button"
               style={styles.homeButton}
               onPress={() => navigation.popToTop()}
             >
@@ -540,17 +537,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E88E5',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 15,
     paddingHorizontal: 15,
     borderBottomLeftRadius: 30,//Radio de la esquina inferior izquierda
     borderBottomRightRadius: 30,//Radio de la esquina inferior derecha
-    
+
   },
   closeButton: {
     padding: 5,
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
@@ -614,7 +612,7 @@ const styles = StyleSheet.create({
   infoCard: {
     backgroundColor: '#fff',
     borderRadius: 15,
-    width: width - 40,
+    width: '100%',
     padding: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -637,6 +635,7 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   infoTextContainer: {
+    minWidth: 0,
     flex: 1,
   },
   infoLabel: {
@@ -666,10 +665,12 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   contactButton: {
+    minHeight: 50,
+    paddingVertical: 12,
     flexDirection: 'row',
     backgroundColor: '#E3F2FD',
     borderRadius: 10,
-    height: 50,
+
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
@@ -680,9 +681,11 @@ const styles = StyleSheet.create({
     color: '#1E88E5',
   },
   cancelButton: {
+    minHeight: 50,
+    paddingVertical: 12,
     backgroundColor: '#FFEBEE',
     borderRadius: 10,
-    height: 50,
+
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
@@ -698,6 +701,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   homeButtonText: {
+    flexShrink: 1,
     fontSize: 16,
     color: '#555',
   },
@@ -707,7 +711,7 @@ const styles = StyleSheet.create({
   paymentMethodCard: {
     backgroundColor: '#fff',
     borderRadius: 15,
-    width: width - 40,
+    width: '100%',
     padding: 20,
     marginTop: 20,
     marginBottom: 20,
@@ -752,6 +756,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   paymentOptionContent: {
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,

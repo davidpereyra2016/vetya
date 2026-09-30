@@ -1,14 +1,13 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   Linking,
   StyleSheet,
   Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -61,6 +60,10 @@ const globalStyles = {
     justifyContent: 'space-between'
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.white
@@ -74,7 +77,7 @@ const HelpSupportScreen = ({ navigation }) => {
     const subject = 'Consulta de Soporte - VetYa!';
     const body = 'Hola equipo de VetYa!,\n\nTengo la siguiente consulta:\n\n';
     const mailtoUrl = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
+
     try {
       const supported = await Linking.canOpenURL(mailtoUrl);
       if (supported) {
@@ -103,13 +106,13 @@ const HelpSupportScreen = ({ navigation }) => {
   ];
 
   return (
-    <SafeAreaView style={globalStyles.container}>
+    <View style={globalStyles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={globalStyles.header}>
         <View style={globalStyles.headerContent}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={{ padding: 5 }}
             onPress={() => navigation.goBack()}
           >
@@ -121,7 +124,7 @@ const HelpSupportScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        
+
         {/* Contact Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Contáctanos</Text>
@@ -129,7 +132,7 @@ const HelpSupportScreen = ({ navigation }) => {
             ¿Tienes algún problema con VetYa! o necesitas asistencia adicional? Estamos aquí para ayudarte.
           </Text>
 
-          <TouchableOpacity style={styles.contactCard} onPress={handleEmailSupport}>
+          <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.contactCard} onPress={handleEmailSupport}>
             <View style={styles.iconContainer}>
               <Ionicons name="mail" size={24} color={COLORS.primary} />
             </View>
@@ -144,7 +147,7 @@ const HelpSupportScreen = ({ navigation }) => {
         {/* FAQ Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preguntas Frecuentes</Text>
-          
+
           {faqs.map((faq, index) => (
             <View key={index} style={styles.faqCard}>
               <View style={styles.faqHeader}>
@@ -155,10 +158,10 @@ const HelpSupportScreen = ({ navigation }) => {
             </View>
           ))}
         </View>
-        
+
         <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -225,6 +228,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   faqQuestion: {
+    flexShrink: 1,
     flex: 1,
     fontSize: 15,
     fontWeight: '600',

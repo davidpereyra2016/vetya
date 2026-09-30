@@ -84,6 +84,10 @@ const emergenciaSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  llegadaConfirmada: {
+    type: Boolean,
+    default: false
+  },
   ubicacion: {
     direccion: {
       type: String,
@@ -122,9 +126,38 @@ const emergenciaSchema = new mongoose.Schema({
   fechaAsignacion: {
     type: Date
   },
+  fechaEnCamino: {
+    type: Date
+  },
+  fechaLlegadaConfirmada: {
+    type: Date
+  },
+  fechaCancelacion: {
+    type: Date
+  },
   fechaAtencion: {
     type: Date
   },
+  motivoCancelacion: {
+    type: String
+  },
+  historial: [{
+    estado: {
+      type: String,
+      enum: ['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'En atención', 'Atendida', 'Cancelada']
+    },
+    fecha: {
+      type: Date,
+      default: Date.now
+    },
+    usuario: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    notas: {
+      type: String
+    }
+  }],
   notas: {
     type: String
   },
@@ -223,7 +256,7 @@ emergenciaSchema.pre('save', function(next) {
     // this.expiraEn = undefined;
     // this.expiraRespuestaVetEn = undefined;
   }
-  
+
   next();
 });
 

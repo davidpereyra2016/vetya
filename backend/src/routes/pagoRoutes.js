@@ -1,3 +1,4 @@
+import { createServiceCheckout, notificationUrl, verifyWebhook, sellerPayment, searchSellerPayments, reconcilePayment } from '../services/mercadoPagoService.js';
 import express from "express";
 import Pago from "../models/Pago.js";
 import Cita from "../models/Cita.js";
@@ -6,11 +7,9 @@ import Prestador from "../models/Prestador.js";
 import cloudinary from "../lib/cloudinary.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import {
-  createMarketplacePreference,
   exchangeMercadoPagoCode,
   getMercadoPagoAuthorizationUrl,
   getMercadoPagoRedirectUri,
-  paymentClient,
   resolveMercadoPagoOAuthState,
 } from "../lib/mercadopago.js";
 import {
@@ -84,10 +83,7 @@ function buildMercadoPagoBackUrls() {
   };
 }
 
-function buildMercadoPagoNotificationUrl() {
-  const backendUrl = process.env.BACKEND_URL || "http://192.168.100.32:3000";
-  return `${backendUrl.replace(/\/$/, "")}/api/pagos/mercadopago/webhook`;
-}
+const buildMercadoPagoNotificationUrl = notificationUrl;
 
 function buildMercadoPagoExternalReference(referencia, usuarioId) {
   return `${referencia.tipo}_${referencia.id}_${usuarioId}`;
@@ -155,7 +151,7 @@ function getPaymentFinancials(pago) {
     ? Number(pago?.cashDebt?.platformFee || amount * CASH_COMMISSION_PERCENTAGE)
     : Number(pago?.mercadoPago?.marketplaceFee || (isMercadoPago ? amount * MARKETPLACE_PERCENTAGE : 0));
   const digitalNet = isPositive && isMercadoPago
-    ? Number(pago?.mercadoPago?.sellerNetAmount || Math.max(amount - marketplaceFee, 0))
+    ? Number(pago?.mercadoPago?.netReceivedAmount ?? 0)
     : 0;
 
   return {
@@ -206,6 +202,7 @@ async function reconciliarPagosCitasCompletadas({ usuarioId = null, prestadorId 
   let actualizados = 0;
 
   for (const cita of citas) {
+    if (cita.metodoPago === "MercadoPago") continue;
     const monto = obtenerMontoCita(cita);
     if (monto <= 0) {
       continue;
@@ -237,7 +234,7 @@ async function reconciliarPagosCitasCompletadas({ usuarioId = null, prestadorId 
       continue;
     }
 
-    if (ESTADOS_PAGO_NEGATIVOS.has(pago.estado)) {
+    if (pago.metodoPago === "MercadoPago" || ESTADOS_PAGO_NEGATIVOS.has(pago.estado)) {
       continue;
     }
 
@@ -291,7 +288,7 @@ router.get("/", protectRoute, async (req, res) => {
       .limit(pagination.limit)
       .lean();
     const total = await Pago.countDocuments({ usuario: req.user._id });
-    
+
     // Popular referencias manualmente porque son polimórficas
     for (let pago of pagos) {
       if (pago.referencia && pago.referencia.id) {
@@ -312,7 +309,7 @@ router.get("/", protectRoute, async (req, res) => {
     }
 
     console.log('✅ Pagos del cliente obtenidos:', pagos.length);
-    
+
     res.status(200).json(paginatedResponse(pagos, total, pagination));
   } catch (error) {
     console.log('❌ Error al obtener pagos del cliente:', error);
@@ -325,7 +322,7 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
   try {
     // Obtener el prestador asociado al usuario autenticado
     const prestador = await Prestador.findOne({ usuario: req.user._id }).select("_id wallet");
-    
+
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
     }
@@ -391,7 +388,7 @@ router.get("/prestador/mis-pagos", protectRoute, async (req, res) => {
       estadisticas.digitalTotal += financials.digitalNet;
       estadisticas.efectivoCobrado += financials.cashCollected;
       estadisticas.total += financials.digitalNet;
-      
+
       if (pago.estado === 'Pendiente' || pago.estado === 'Procesando') {
         estadisticas.pendiente += pago.metodoPago === 'MercadoPago' ? financials.digitalNet : 0;
       } else if (pago.estado === 'Completado' || pago.estado === 'Capturado' || pago.estado === 'Pagado') {
@@ -441,16 +438,16 @@ router.get("/:id", protectRoute, async (req, res, next) => {
     const pago = await Pago.findById(req.params.id)
       .populate("veterinario", "nombre especialidad imagen ubicacion email telefono")
       .lean();
-    
+
     if (!pago) {
       return res.status(404).json({ message: "Pago no encontrado" });
     }
-    
+
     // Verificar si el usuario actual es el propietario
     if (pago.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para ver este pago" });
     }
-    
+
     res.status(200).json(pago);
   } catch (error) {
     console.log(error);
@@ -462,15 +459,15 @@ router.get("/:id", protectRoute, async (req, res, next) => {
 router.post("/", protectRoute, async (req, res) => {
   try {
     const { concepto, referencia, veterinario, monto, metodoPago, idTransaccion, detallesPago, facturaDatos, notasAdicionales } = req.body;
-    
+
     // Validar campos obligatorios
     if (!concepto || !referencia || !veterinario || !monto || !metodoPago) {
       return res.status(400).json({ message: "Concepto, referencia, veterinario, monto y método de pago son obligatorios" });
     }
-    
+
     // Verificar que la referencia exista
     let referenciaExiste = false;
-    
+
     if (referencia.tipo === "Cita") {
       const cita = await Cita.findById(referencia.id);
       if (cita && cita.usuario.toString() === req.user._id.toString()) {
@@ -482,11 +479,11 @@ router.post("/", protectRoute, async (req, res) => {
         referenciaExiste = true;
       }
     }
-    
+
     if (!referenciaExiste) {
       return res.status(404).json({ message: "La referencia no existe o no pertenece al usuario" });
     }
-    
+
     // Procesar comprobante si se proporciona
     let comprobanteUrl = "";
     if (req.body.comprobante) {
@@ -495,7 +492,7 @@ router.post("/", protectRoute, async (req, res) => {
       });
       comprobanteUrl = uploadResponse.secure_url;
     }
-    
+
     // Crear nuevo pago
     const nuevoPago = new Pago({
       usuario: req.user._id,
@@ -511,13 +508,13 @@ router.post("/", protectRoute, async (req, res) => {
       facturaDatos: facturaDatos || {},
       notasAdicionales: notasAdicionales || ""
     });
-    
+
     await nuevoPago.save();
-    
+
     // Populate para devolver la información completa
     const pagoCompletado = await Pago.findById(nuevoPago._id)
       .populate("veterinario", "nombre especialidad imagen");
-    
+
     res.status(201).json(pagoCompletado);
   } catch (error) {
     console.log(error);
@@ -528,32 +525,34 @@ router.post("/", protectRoute, async (req, res) => {
 // Actualizar estado de un pago (ruta protegida para admin o sistema)
 router.patch("/:id/estado", protectRoute, async (req, res) => {
   try {
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Solo administradores pueden modificar pagos manuales' });
     const { estado } = req.body;
     const estados = ["Pendiente", "Procesando", "Completado", "Fallido", "Reembolsado"];
-    
+
     if (!estado || !estados.includes(estado)) {
       return res.status(400).json({ message: "Estado de pago inválido" });
     }
-    
+
     const pago = await Pago.findById(req.params.id);
-    
+
     if (!pago) {
       return res.status(404).json({ message: "Pago no encontrado" });
     }
-    
+
+    if (pago.metodoPago === 'MercadoPago') return res.status(403).json({ message: 'El estado se verifica exclusivamente con Mercado Pago' });
     // Solo actualizar si es un nuevo estado
     if (pago.estado !== estado) {
       pago.estado = estado;
-      
+
       // Si se completa el pago, actualizar la fecha
       if (estado === "Completado") {
         pago.fechaPago = new Date();
       }
-      
+
       await pago.save();
       await registerCashDebtForPayment(pago);
     }
-    
+
     res.status(200).json(pago);
   } catch (error) {
     console.log(error);
@@ -565,42 +564,42 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
 router.post("/:id/comprobante", protectRoute, async (req, res) => {
   try {
     const { comprobante } = req.body;
-    
+
     if (!comprobante) {
       return res.status(400).json({ message: "El comprobante es requerido" });
     }
-    
+
     const pago = await Pago.findById(req.params.id);
-    
+
     if (!pago) {
       return res.status(404).json({ message: "Pago no encontrado" });
     }
-    
+
     // Verificar si el usuario actual es el propietario
     if (pago.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para modificar este pago" });
     }
-    
+
     // Eliminar comprobante anterior si existe
     if (pago.comprobante && pago.comprobante.includes('cloudinary')) {
       const publicId = pago.comprobante.split('/').pop().split('.')[0];
       await cloudinary.uploader.destroy(`comprobantes_pago/${publicId}`);
     }
-    
+
     // Subir nuevo comprobante
     const uploadResponse = await cloudinary.uploader.upload(comprobante, {
       folder: "comprobantes_pago"
     });
-    
+
     pago.comprobante = uploadResponse.secure_url;
-    
+
     // Si el pago estaba pendiente, cambiarlo a procesando
     if (pago.estado === "Pendiente") {
       pago.estado = "Procesando";
     }
-    
+
     await pago.save();
-    
+
     res.status(200).json(pago);
   } catch (error) {
     console.log(error);
@@ -612,26 +611,26 @@ router.post("/:id/comprobante", protectRoute, async (req, res) => {
 router.patch("/:id/solicitar-factura", protectRoute, async (req, res) => {
   try {
     const { facturaDatos } = req.body;
-    
+
     if (!facturaDatos || !facturaDatos.nombre || !facturaDatos.direccion || !facturaDatos.correo) {
       return res.status(400).json({ message: "Los datos de facturación son incompletos" });
     }
-    
+
     const pago = await Pago.findById(req.params.id);
-    
+
     if (!pago) {
       return res.status(404).json({ message: "Pago no encontrado" });
     }
-    
+
     // Verificar si el usuario actual es el propietario
     if (pago.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para modificar este pago" });
     }
-    
+
     // Actualizar datos de facturación
     pago.facturaDatos = facturaDatos;
     await pago.save();
-    
+
     res.status(200).json(pago);
   } catch (error) {
     console.log(error);
@@ -669,7 +668,7 @@ router.get("/referencia/:tipo/:id", protectRoute, async (req, res) => {
 
     const pagos = await Pago.find(filtro)
       .populate("prestador", "nombre especialidades imagen");
-    
+
     res.status(200).json(pagos);
   } catch (error) {
     console.log(error);
@@ -710,6 +709,21 @@ router.get("/mercadopago/connect-status", protectRoute, async (req, res) => {
       message: "Error al consultar la conexion de Mercado Pago",
       error: error.message,
     });
+  }
+});
+
+router.get("/mercadopago/prestador/:prestadorId/disponible", async (req, res) => {
+  if (!/^[a-f\d]{24}$/i.test(req.params.prestadorId)) {
+    return res.status(400).json({ message: "Prestador inválido" });
+  }
+  try {
+    const prestador = await Prestador.findById(req.params.prestadorId)
+      .select("mercadoPago.conectado +mercadoPago.accessToken")
+      .lean();
+    if (!prestador) return res.status(404).json({ message: "Prestador no encontrado" });
+    return res.json({ disponible: Boolean(prestador.mercadoPago?.conectado && prestador.mercadoPago?.accessToken) });
+  } catch (error) {
+    return res.status(500).json({ message: "No se pudo consultar Mercado Pago del prestador" });
   }
 });
 
@@ -807,20 +821,16 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
 
   try {
     requireIdempotencyKey(req);
-    const { emergenciaId, citaId, monto, descripcion } = req.body;
+    const { emergenciaId, citaId, descripcion } = req.body;
+    let monto;
 
     // Validar que se proporcione una referencia
-    if (!emergenciaId && !citaId) {
-      return res.status(400).json({ 
-        message: "Debe proporcionar emergenciaId o citaId" 
+    if (Boolean(emergenciaId) === Boolean(citaId)) {
+      return res.status(400).json({
+        message: "Debe proporcionar emergenciaId o citaId"
       });
     }
 
-    if (!monto || monto <= 0) {
-      return res.status(400).json({ 
-        message: "El monto debe ser mayor a 0" 
-      });
-    }
 
     // Determinar el tipo de servicio y obtener los datos
     let referencia, referenciaObj, prestadorId, titulo, descripcionCompleta;
@@ -829,15 +839,15 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
       const emergencia = await Emergencia.findById(emergenciaId)
         .populate('usuario', 'nombre email')
         .populate('veterinario', 'nombre');
-      
+
       if (!emergencia) {
         return res.status(404).json({ message: "Emergencia no encontrada" });
       }
 
       // Verificar que el usuario sea el dueño de la emergencia
       if (emergencia.usuario._id.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ 
-          message: "No autorizado para crear pago de esta emergencia" 
+        return res.status(403).json({
+          message: "No autorizado para crear pago de esta emergencia"
         });
       }
 
@@ -853,16 +863,17 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
     } else if (citaId) {
       const cita = await Cita.findById(citaId)
         .populate('usuario', 'nombre email')
-        .populate('prestador', 'nombre');
-      
+        .populate('prestador', 'nombre')
+        .populate('servicio', 'precio');
+
       if (!cita) {
         return res.status(404).json({ message: "Cita no encontrada" });
       }
 
       // Verificar que el usuario sea el dueño de la cita
       if (cita.usuario._id.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ 
-          message: "No autorizado para crear pago de esta cita" 
+        return res.status(403).json({
+          message: "No autorizado para crear pago de esta cita"
         });
       }
 
@@ -881,6 +892,11 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
 
     if (!idempotency.isNew) {
       return replayIdempotencyResult(res, idempotency.record);
+    }
+
+    monto = Number(referenciaObj.costoTotal ?? referenciaObj.costoEstimado ?? referenciaObj.servicio?.precio);
+    if (!Number.isFinite(monto) || monto <= 0) {
+      throw Object.assign(new Error('El servicio no tiene un importe válido registrado'), { status: 409 });
     }
 
     // Verificar si ya existe un pago para esta referencia
@@ -910,14 +926,11 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
     // Obtener información del prestador
     const prestador = await Prestador.findById(prestadorId).select("+mercadoPago.accessToken +mercadoPago.refreshToken");
     if (!prestador) {
-      return res.status(404).json({ message: "Prestador no encontrado" });
+      throw Object.assign(new Error('Prestador no encontrado'), { status: 404 });
     }
 
     if (!prestador.mercadoPago?.conectado || !getPrestadorMercadoPagoAccessToken(prestador)) {
-      return res.status(409).json({
-        message: "El prestador debe conectar su cuenta de Mercado Pago antes de recibir pagos con Mercado Pago",
-        code: "MERCADOPAGO_SELLER_NOT_CONNECTED",
-      });
+      throw Object.assign(new Error('El prestador debe conectar su cuenta de Mercado Pago antes de recibir pagos con Mercado Pago'), { status: 409 });
     }
 
     console.log('=== CREAR PREFERENCIA MERCADO PAGO ===');
@@ -929,7 +942,7 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
     // URLs para Mercado Pago: usar deep links del app para volver al flujo móvil
     const backUrls = buildMercadoPagoBackUrls();
     const notificationUrl = buildMercadoPagoNotificationUrl();
-    
+
     console.log('🔗 URLs configuradas para MP:', { backUrls, notificationUrl });
 
     // Crear preferencia en Mercado Pago (estructura idéntica a emergencias)
@@ -971,43 +984,11 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
 
     // Crear preferencia en nombre del prestador conectado.
     // Mercado Pago envia el 70% al vetpresta y retiene el 30% como marketplace_fee para Vetya.
-    const { preference, split } = await createMarketplacePreference({
-      sellerAccessToken: getPrestadorMercadoPagoAccessToken(prestador),
-      preferenceData,
-      marketplacePercentage: MARKETPLACE_PERCENTAGE,
+    const { pago: nuevoPago, preference, split } = await createServiceCheckout({
+      prestador, preferenceData,
+      pagoData: { usuario: req.user._id, concepto: referencia.tipo, referencia,
+        prestador: prestadorId, monto, metodoPago: 'MercadoPago', idempotencyKey: idempotency.key },
     });
-
-    console.log('✅ Preferencia creada:', preference.id);
-    console.log('Init Point:', preference.init_point);
-
-    // Crear registro de pago en la base de datos
-    const nuevoPago = new Pago({
-      usuario: req.user._id,
-      concepto: referencia.tipo,
-      referencia: referencia,
-      prestador: prestadorId,
-      monto: monto,
-      metodoPago: 'MercadoPago',
-      estado: 'Pendiente',
-      idempotencyKey: idempotency.key,
-      mercadoPago: {
-        preferenceId: preference.id,
-        initPoint: preference.init_point,
-        status: 'pending',
-        captured: false,
-        metadata: {
-          ...preferenceData.metadata,
-          marketplace_fee: split.marketplaceFee,
-          seller_net_amount: split.netAmount,
-          marketplace_percentage: split.marketplacePercentage,
-        },
-        marketplaceFee: split.marketplaceFee,
-        sellerNetAmount: split.netAmount,
-        marketplacePercentage: split.marketplacePercentage,
-      }
-    });
-
-    await nuevoPago.save();
 
     console.log('💾 Pago registrado en BD:', nuevoPago._id);
 
@@ -1034,9 +1015,9 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
       return res.status(statusCode).json(body);
     }
 
-    res.status(error.status || 500).json({ 
+    res.status(error.status || 500).json({
       message: "Error al crear la preferencia de pago",
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -1047,103 +1028,21 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
  */
 router.post("/mercadopago/webhook", async (req, res) => {
   try {
-    console.log('=== WEBHOOK MERCADO PAGO ===');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    console.log('Query:', req.query);
-
-    const { type, data } = req.body;
-
-    // Responder rápidamente a MP
-    res.sendStatus(200);
-
-    // Procesar según el tipo de notificación
-    if (type === 'payment') {
-      const paymentId = data.id;
-      
-      console.log('💳 Notificación de pago:', paymentId);
-
-      // Obtener información del pago desde MP
-      const payment = await paymentClient.get({ id: paymentId });
-
-      console.log('Estado del pago:', payment.status);
-      console.log('External reference:', payment.external_reference);
-
-      const parsedReference = parseMercadoPagoExternalReference(payment.external_reference);
-
-      // Buscar el pago en nuestra BD por external_reference o preferenceId
-      const pago = await Pago.findOne({
-        $or: [
-          { 'mercadoPago.preferenceId': payment.preference_id },
-          { 'referencia.id': parsedReference.id }
-        ]
-      });
-
-      if (!pago) {
-        console.log('⚠️ Pago no encontrado en BD');
-        return;
-      }
-
-      console.log('📝 Actualizando pago:', pago._id);
-
-      // Actualizar información del pago
-      pago.mercadoPago.paymentId = paymentId.toString();
-      pago.mercadoPago.status = payment.status;
-      pago.mercadoPago.statusDetail = payment.status_detail;
-      pago.mercadoPago.marketplaceFee = payment.marketplace_fee ?? pago.mercadoPago.marketplaceFee;
-
-      // Actualizar estado según el status de MP
-      if (payment.status === 'approved') {
-        pago.estado = 'Pagado';
-        pago.fechaPago = new Date();
-        pago.idTransaccion = paymentId.toString();
-
-        // Guardar información de la tarjeta si está disponible
-        if (payment.payment_method_id) {
-          pago.detallesPago = {
-            ultimos4Digitos: payment.card?.last_four_digits || '',
-            tipoTarjeta: payment.payment_type_id || '',
-            bancoEmisor: payment.issuer_id || '',
-            titular: payment.payer?.first_name + ' ' + payment.payer?.last_name || ''
-          };
-        }
-
-        console.log('✅ Pago aprobado - Estado: Pagado (pendiente de captura)');
-      } else if (payment.status === 'rejected') {
-        pago.estado = 'Fallido';
-        console.log('❌ Pago rechazado');
-      } else if (payment.status === 'cancelled') {
-        pago.estado = 'Cancelado';
-        console.log('⚠️ Pago cancelado');
-      } else if (payment.status === 'in_process') {
-        pago.estado = 'Procesando';
-        console.log('⏳ Pago en proceso');
-      }
-
-      await pago.save();
-
-      // Actualizar estado de la emergencia/cita si el pago fue aprobado
-      if (payment.status === 'approved') {
-        if (pago.referencia.tipo === 'Emergencia') {
-          await Emergencia.findByIdAndUpdate(pago.referencia.id, {
-            metodoPago: 'MercadoPago',
-            costoTotal: pago.monto
-          });
-          console.log('✅ Emergencia actualizada con método de pago');
-        } else if (pago.referencia.tipo === 'Cita') {
-          // Registrar el pago, pero la cita debe seguir pendiente hasta que el prestador la acepte
-          await Cita.findByIdAndUpdate(pago.referencia.id, {
-            metodoPago: 'MercadoPago'
-          });
-          console.log('✅ Pago de cita registrado. La aprobación sigue pendiente del prestador');
-        }
-      }
-
-      console.log('💾 Pago actualizado exitosamente');
+    const id = verifyWebhook(req);
+    if (req.body.type !== 'payment') return res.sendStatus(200);
+    // user_id only selects a credential; the API result must still match the immutable charge.
+    const seller = await Prestador.findOne({ 'mercadoPago.userId': String(req.body.user_id || '') });
+    if (!seller) return res.status(404).json({ message: 'Vendedor no vinculado' });
+    const payment = await sellerPayment(seller._id, id);
+    const pago = await reconcilePayment(payment);
+    if (payment.status === 'approved' && pago.mercadoPago.paymentId === String(payment.id)) {
+      const Model = pago.referencia.tipo === 'Cita' ? Cita : Emergencia;
+      await Model.findByIdAndUpdate(pago.referencia.id, { metodoPago: 'MercadoPago' });
     }
-
+    return res.sendStatus(200);
   } catch (error) {
-    console.error('❌ Error en webhook:', error);
-    // No enviar error al webhook para evitar reintentos innecesarios
+    // Non-2xx makes MP retry; never acknowledge unpersisted changes.
+    return res.status(error.status || 503).json({ message: 'No se pudo verificar y registrar la notificación' });
   }
 });
 
@@ -1169,22 +1068,29 @@ router.post("/mercadopago/capture-payment", protectRoute, async (req, res) => {
 
     // Verificar que el usuario sea el propietario
     if (pago.usuario.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ 
-        message: "No autorizado para capturar este pago" 
+      return res.status(403).json({
+        message: "No autorizado para capturar este pago"
       });
     }
 
+    if (pago.metodoPago !== 'MercadoPago' || !pago.mercadoPago?.paymentId || !pago.mercadoPago?.verifiedAt) {
+      return res.status(409).json({ message: 'Falta verificar el pago con Mercado Pago' });
+    }
+    const providerPayment = await sellerPayment(pago.prestador, pago.mercadoPago.paymentId);
+    await reconcilePayment(providerPayment);
+    if (providerPayment.status !== 'approved') return res.status(409).json({ message: 'Mercado Pago no informa un pago aprobado' });
+
     // Verificar que el pago esté en estado Pagado
     if (pago.estado !== 'Pagado') {
-      return res.status(400).json({ 
-        message: `No se puede capturar. Estado actual: ${pago.estado}` 
+      return res.status(400).json({
+        message: `No se puede capturar. Estado actual: ${pago.estado}`
       });
     }
 
     // Verificar que no haya sido capturado ya
     if (pago.mercadoPago.captured) {
-      return res.status(400).json({ 
-        message: "Este pago ya fue capturado" 
+      return res.status(400).json({
+        message: "Este pago ya fue capturado"
       });
     }
 
@@ -1192,14 +1098,10 @@ router.post("/mercadopago/capture-payment", protectRoute, async (req, res) => {
     console.log('Pago ID:', pagoId);
     console.log('Payment ID MP:', pago.mercadoPago.paymentId);
 
-    // En Mercado Pago, los pagos se capturan automáticamente al ser aprobados
-    // Este endpoint sirve para marcar el servicio como completado
-    // Si necesitas captura manual, debes crear el pago con capture=false
+    // Checkout Pro cobra al aprobar; este endpoint confirma el servicio.
 
     // Actualizar estado del pago
-    pago.estado = 'Capturado';
-    pago.mercadoPago.captured = true;
-    pago.mercadoPago.captureDate = new Date();
+    pago.estado = 'Completado';
 
     await pago.save();
 
@@ -1217,18 +1119,18 @@ router.post("/mercadopago/capture-payment", protectRoute, async (req, res) => {
       });
     }
 
-    console.log('✅ Pago capturado exitosamente');
+    console.log('✅ Servicio confirmado con pago MP verificado');
 
     res.status(200).json({
-      message: 'Pago capturado exitosamente',
+      message: 'Servicio completado; pago verificado con Mercado Pago',
       pago
     });
 
   } catch (error) {
     console.error('❌ Error al capturar pago:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Error al capturar el pago",
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -1236,6 +1138,25 @@ router.post("/mercadopago/capture-payment", protectRoute, async (req, res) => {
 /**
  * Consultar estado de un pago en Mercado Pago
  */
+router.get('/mercadopago/preference-status/:preferenceId', protectRoute, async (req, res) => {
+  try {
+    const pago = await Pago.findOne({ 'mercadoPago.preferenceId': req.params.preferenceId });
+    if (!pago) return res.status(404).json({ message: 'Preferencia no encontrada' });
+    if (String(pago.usuario) !== String(req.user._id)) return res.status(403).json({ message: 'No autorizado' });
+    const found = await searchSellerPayments(pago.prestador, pago.mercadoPago.externalReference);
+    for (const item of found.results || []) {
+      const payment = await sellerPayment(pago.prestador, item.id);
+      if (payment.external_reference !== pago.mercadoPago.externalReference) continue;
+      await reconcilePayment(payment);
+    }
+    const current = await Pago.findById(pago._id);
+    return res.json({ pagoId: current._id, estado: current.estado, mercadoPagoStatus: current.mercadoPago.status,
+      verificado: Boolean(current.mercadoPago.verifiedAt), netoRecibidoPrestador: current.mercadoPago.netReceivedAmount ?? null });
+  } catch (error) {
+    return res.status(error.status || 503).json({ message: 'No se pudo verificar el pago con Mercado Pago' });
+  }
+});
+
 router.get("/mercadopago/payment-status/:paymentId", protectRoute, async (req, res) => {
   try {
     const { paymentId } = req.params;
@@ -1251,13 +1172,14 @@ router.get("/mercadopago/payment-status/:paymentId", protectRoute, async (req, r
 
     // Verificar autorización
     if (pago.usuario.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ 
-        message: "No autorizado para ver este pago" 
+      return res.status(403).json({
+        message: "No autorizado para ver este pago"
       });
     }
 
     // Consultar estado en Mercado Pago
-    const payment = await paymentClient.get({ id: paymentId });
+    const payment = await sellerPayment(pago.prestador, paymentId);
+    await reconcilePayment(payment);
 
     res.status(200).json({
       pago,
@@ -1272,9 +1194,9 @@ router.get("/mercadopago/payment-status/:paymentId", protectRoute, async (req, r
 
   } catch (error) {
     console.error('Error al consultar estado:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Error al consultar el estado del pago",
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -1294,15 +1216,15 @@ router.post("/mercadopago/cancel-payment", protectRoute, async (req, res) => {
 
     // Verificar autorización
     if (pago.usuario.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ 
-        message: "No autorizado para cancelar este pago" 
+      return res.status(403).json({
+        message: "No autorizado para cancelar este pago"
       });
     }
 
     // Solo se puede cancelar si está pendiente
     if (pago.estado !== 'Pendiente') {
-      return res.status(400).json({ 
-        message: `No se puede cancelar. Estado actual: ${pago.estado}` 
+      return res.status(400).json({
+        message: `No se puede cancelar. Estado actual: ${pago.estado}`
       });
     }
 
@@ -1316,9 +1238,9 @@ router.post("/mercadopago/cancel-payment", protectRoute, async (req, res) => {
 
   } catch (error) {
     console.error('Error al cancelar pago:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Error al cancelar el pago",
-      error: error.message 
+      error: error.message
     });
   }
 });

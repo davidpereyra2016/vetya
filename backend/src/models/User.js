@@ -52,6 +52,7 @@ const userSchema = new mongoose.Schema({
             default: undefined
         }
     },
+    emergencyCreateUntil: Date,
     resetPasswordToken: {
         type: String,
         default: undefined

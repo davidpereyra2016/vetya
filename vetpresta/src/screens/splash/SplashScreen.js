@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS } from '../../styles/globalStyles';
 import * as SplashScreen from 'expo-splash-screen';
@@ -7,7 +7,6 @@ import * as SplashScreen from 'expo-splash-screen';
 // Mantener visible la splash screen nativa mientras se carga nuestra splash personalizada
 SplashScreen.preventAutoHideAsync();
 
-const { width, height } = Dimensions.get('window');
 
 const AppSplashScreen = ({ onFinish }) => {
   // Animaciones
@@ -62,7 +61,7 @@ const AppSplashScreen = ({ onFinish }) => {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       <Animated.View
         style={[
           styles.logoContainer,
@@ -81,12 +80,12 @@ const AppSplashScreen = ({ onFinish }) => {
           style={styles.logo}
           resizeMode="contain"
         />
-        
+
         {/* Nombre de la app */}
         <Animated.Text style={styles.title}>
           VetPresta!
         </Animated.Text>
-        
+
         <Text style={styles.subtitle}>
           Veterinarios a domicilio
         </Text>
@@ -107,8 +106,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logo: {
-    width: width * 0.4,
-    height: width * 0.4,
+    aspectRatio: 1,
+    maxWidth: 240,
+    width: '40%',
+
     marginBottom: 20,
   },
   title: {

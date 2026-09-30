@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  TextInput, 
-  Text, 
-  TouchableOpacity 
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  Text,
+  TouchableOpacity
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const Input = ({ 
-  label, 
-  value, 
-  onChangeText, 
-  placeholder, 
-  secureTextEntry, 
-  keyboardType, 
+const Input = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry,
+  keyboardType,
   autoCapitalize,
   multiline,
   numberOfLines,
@@ -28,6 +28,10 @@ const Input = ({
   const [isFocused, setIsFocused] = useState(false);
   const [hidePassword, setHidePassword] = useState(secureTextEntry);
 
+  useEffect(() => {
+    setHidePassword(secureTextEntry);
+  }, [secureTextEntry]);
+
   return (
     <View style={[styles.container, style]}>
       {label && (
@@ -35,27 +39,27 @@ const Input = ({
           {label} {required && <Text style={styles.required}>*</Text>}
         </Text>
       )}
-      
-      <View 
+
+      <View
         style={[
-          styles.inputContainer, 
+          styles.inputContainer,
           isFocused && styles.focusedInput,
           error && styles.errorInput,
           !editable && styles.disabledInput
         ]}
       >
         {iconName && (
-          <Ionicons 
-            name={iconName} 
-            size={20} 
-            color={isFocused ? '#1E88E5' : '#888'} 
-            style={styles.icon} 
+          <Ionicons
+            name={iconName}
+            size={20}
+            color={isFocused ? '#1E88E5' : '#888'}
+            style={styles.icon}
           />
         )}
-        
+
         <TextInput
           style={[
-            styles.input, 
+            styles.input,
             multiline && styles.multilineInput,
             inputStyle
           ]}
@@ -71,22 +75,27 @@ const Input = ({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           editable={editable}
+          accessibilityLabel={label || placeholder}
+          accessibilityState={{ disabled: !editable }}
         />
-        
+
         {secureTextEntry && (
-          <TouchableOpacity 
-            style={styles.eyeIcon} 
+          <TouchableOpacity hitSlop={8}
+            style={styles.eyeIcon}
             onPress={() => setHidePassword(!hidePassword)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={hidePassword ? 'Mostrar contraseña' : 'Ocultar contraseña'}
           >
-            <Ionicons 
-              name={hidePassword ? 'eye-off-outline' : 'eye-outline'} 
-              size={20} 
-              color="#888" 
+            <Ionicons
+              name={hidePassword ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color="#888"
             />
           </TouchableOpacity>
         )}
       </View>
-      
+
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
@@ -98,6 +107,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
+    fontWeight: '600',
     color: '#333',
     marginBottom: 5,
   },
@@ -112,6 +122,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     backgroundColor: '#FFFFFF',
+    minHeight: 52,
   },
   focusedInput: {
     borderColor: '#1E88E5',
@@ -133,22 +144,30 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 48,
+    minHeight: 48,
     fontSize: 16,
     color: '#333',
+    paddingVertical: 0,
   },
   multilineInput: {
-    height: 100,
+    minHeight: 100,
+    paddingVertical: 12,
+
     textAlignVertical: 'top',
     paddingTop: 12,
   },
   eyeIcon: {
+    minHeight: 48,
+    minWidth: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 8,
   },
   errorText: {
     fontSize: 12,
     color: '#F44336',
     marginTop: 5,
+    lineHeight: 16,
   },
 });
 

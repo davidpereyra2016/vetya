@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import citaService from '../services/citaService';
+import citaServiceDefault, * as citaServiceNamed from '../services/citaService';
+
+const citaService = citaServiceDefault || citaServiceNamed;
 
 /**
  * Store para gestionar el estado de las citas y prestadores usando Zustand
@@ -17,7 +19,9 @@ const useCitaStore = create((set, get) => ({
   selectedProvider: null,
   isLoading: false,
   error: null,
-  
+  citas: [],
+  citaActual: null,
+
   // Estado para citas del prestador
   providerCitas: {
     pendientes: [],
@@ -26,6 +30,8 @@ const useCitaStore = create((set, get) => ({
     canceladas: []
   },
   dashboardSummary: null,
+
+  setCitas: (citas = []) => set({ citas }),
 
   // Obtener todas las fechas disponibles
   fetchAvailableDates: async () => {
@@ -150,7 +156,7 @@ const useCitaStore = create((set, get) => ({
 
   // Establecer el tipo de prestador seleccionado
   setSelectedProviderType: (providerType) => {
-    set({ 
+    set({
       selectedProviderType: providerType,
       providersByType: [],
       selectedProvider: null
@@ -195,6 +201,8 @@ const useCitaStore = create((set, get) => ({
     selectedProvider: null,
     isLoading: false,
     error: null,
+    citas: [],
+    citaActual: null,
     providerCitas: {
       pendientes: [],
       confirmadas: [],
@@ -203,7 +211,7 @@ const useCitaStore = create((set, get) => ({
     },
     dashboardSummary: null
   }),
-  
+
   /**
    * Obtiene las citas de un prestador filtradas por estado
    * @param {string} prestadorId - ID del prestador
@@ -214,14 +222,14 @@ const useCitaStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const result = await citaService.getCitasByProvider(prestadorId, estado);
-      
+
       if (result.success) {
         // Actualizar el estado correspondiente
         if (estado) {
           // Para actualizaciones de una sola categoría, usa el objeto completo
           set(state => {
             const updatedProviderCitas = {...state.providerCitas};
-            
+
             // Mapear el estado a la propiedad correspondiente
             let estadoKey;
             switch(estado) {
@@ -241,10 +249,11 @@ const useCitaStore = create((set, get) => ({
                 estadoKey = estado.toLowerCase() + 's';
             }
             updatedProviderCitas[estadoKey] = result.data;
-            
-            return { 
+
+            return {
+              citas: result.data,
               providerCitas: updatedProviderCitas,
-              isLoading: false 
+              isLoading: false
             };
           });
         } else {
@@ -255,13 +264,14 @@ const useCitaStore = create((set, get) => ({
             completadas: result.data.filter(c => c.estado === 'Completada'),
             canceladas: result.data.filter(c => c.estado === 'Cancelada')
           };
-          
-          set({ 
-            providerCitas: citasPorEstado, 
-            isLoading: false 
+
+          set({
+            citas: result.data,
+            providerCitas: citasPorEstado,
+            isLoading: false
           });
         }
-        
+
         return { success: true, data: result.data };
       } else {
         if (result.transient) {
@@ -278,7 +288,7 @@ const useCitaStore = create((set, get) => ({
       return { success: false, error: error.message, transient: isTransient };
     }
   },
-  
+
   /**
    * Actualiza el estado de una cita (Confirmar, Completar, Cancelar)
    * @param {string} prestadorId - ID del prestador
@@ -295,14 +305,14 @@ const useCitaStore = create((set, get) => ({
         set(state => {
           const updatedProviderCitas = {...state.providerCitas};
           let citaToMove = null;
-          
+
           // Buscar la cita en TODAS las listas (no depender de estadoAnterior)
           // Primero buscar en pendientes
           citaToMove = updatedProviderCitas.pendientes.find(c => c._id === citaId);
           if (citaToMove) {
             updatedProviderCitas.pendientes = updatedProviderCitas.pendientes.filter(c => c._id !== citaId);
           }
-          
+
           // Si no está en pendientes, buscar en confirmadas
           if (!citaToMove) {
             citaToMove = updatedProviderCitas.confirmadas.find(c => c._id === citaId);
@@ -310,7 +320,7 @@ const useCitaStore = create((set, get) => ({
               updatedProviderCitas.confirmadas = updatedProviderCitas.confirmadas.filter(c => c._id !== citaId);
             }
           }
-          
+
           // Si no está en confirmadas, buscar en completadas (por si acaso)
           if (!citaToMove) {
             citaToMove = updatedProviderCitas.completadas.find(c => c._id === citaId);
@@ -318,7 +328,7 @@ const useCitaStore = create((set, get) => ({
               updatedProviderCitas.completadas = updatedProviderCitas.completadas.filter(c => c._id !== citaId);
             }
           }
-          
+
           // Si no está en completadas, buscar en canceladas (por si acaso)
           if (!citaToMove) {
             citaToMove = updatedProviderCitas.canceladas.find(c => c._id === citaId);
@@ -326,11 +336,11 @@ const useCitaStore = create((set, get) => ({
               updatedProviderCitas.canceladas = updatedProviderCitas.canceladas.filter(c => c._id !== citaId);
             }
           }
-          
+
           // Si encontramos la cita, la añadimos a la nueva lista con su estado actualizado
           if (citaToMove) {
             const updatedCita = {...citaToMove, estado};
-            
+
             // Añadir a la lista correspondiente según el nuevo estado
             switch (estado) {
               case 'Confirmada':
@@ -346,13 +356,14 @@ const useCitaStore = create((set, get) => ({
                 break;
             }
           }
-          
+
           return {
+            citas: state.citas.map(c => c._id === citaId ? { ...c, estado } : c),
             providerCitas: updatedProviderCitas,
             isLoading: false
           };
         });
-        
+
         return { success: true, data: result.data };
       } else {
         set({ isLoading: false, error: result.error });
@@ -364,7 +375,76 @@ const useCitaStore = create((set, get) => ({
       return { success: false, error: errorMessage };
     }
   },
-  
+
+  fetchCitaById: async (citaId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await citaService.getCitaById(citaId);
+      if (result.success) {
+        set({ citaActual: result.data, isLoading: false });
+        return { success: true, data: result.data };
+      }
+
+      set({ isLoading: false, error: result.error });
+      return { success: false, error: result.error };
+    } catch (error) {
+      const errorMessage = error.message || 'Error al obtener la cita';
+      set({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  confirmCita: async (citaId, prestadorId = null) => {
+    if (prestadorId) {
+      return get().updateCitaStatus(prestadorId, citaId, 'Confirmada');
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const result = await citaService.updateCitaStatus(citaId, 'Confirmada');
+      set({ isLoading: false, error: result.success ? null : result.error });
+      return result;
+    } catch (error) {
+      const errorMessage = error.message || 'Error al confirmar cita';
+      set({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  rechazarCita: async (citaId, motivo, prestadorId = null) => {
+    if (prestadorId) {
+      return get().updateCitaStatus(prestadorId, citaId, 'Cancelada');
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const result = await citaService.updateCitaStatus(citaId, 'Cancelada', motivo);
+      set({ isLoading: false, error: result.success ? null : result.error });
+      return result;
+    } catch (error) {
+      const errorMessage = error.message || 'Error al rechazar cita';
+      set({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  completarCita: async (citaId, notas, prestadorId = null) => {
+    if (prestadorId) {
+      return get().updateCitaStatus(prestadorId, citaId, 'Completada');
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const result = await citaService.updateCitaStatus(citaId, 'Completada', notas);
+      set({ isLoading: false, error: result.success ? null : result.error });
+      return result;
+    } catch (error) {
+      const errorMessage = error.message || 'Error al completar cita';
+      set({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  },
+
   /**
    * Obtiene resumen de citas para el dashboard del prestador
    * @param {string} prestadorId - ID del prestador
@@ -386,6 +466,11 @@ const useCitaStore = create((set, get) => ({
       set({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
+  },
+
+  getDashboardSummary: async (prestadorId) => {
+    const result = await get().fetchDashboardSummary(prestadorId);
+    return result.success ? result.data : null;
   }
 }));
 

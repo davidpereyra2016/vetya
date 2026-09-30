@@ -1,18 +1,16 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef } from 'react';
-import { 
+import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Image,
   Alert,
   Linking,
   ActivityIndicator,
-  Dimensions,
   Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../styles/globalStyles';
@@ -25,12 +23,11 @@ import { connectEmergencySocket, onEmergencyUpdated } from '../../services/socke
 // En un proyecto real, importaríamos el componente de MapView
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
-const { width } = Dimensions.get('window');
 
 const EmergencyDetailsScreen = ({ navigation, route }) => {
   // Obtener la emergencia pasada como parámetro desde la pantalla anterior
   const { emergency, emergencyId } = route.params || {};
-  
+
   // Estados para el manejo de datos y UI
   const [loading, setLoading] = useState(true);
   const [emergencyDetails, setEmergencyDetails] = useState(null);
@@ -42,25 +39,25 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
   const [pagoInfo, setPagoInfo] = useState(null);
   const [loadingPago, setLoadingPago] = useState(false);
   const emergencyReferenceId = emergencyDetails?.id || emergencyDetails?._id;
-  
+
   // Obtener información del prestador desde el store
   const user = useAuthStore(state => state.user);
   const provider = useAuthStore(state => state.provider);
-  
+
   // Acceder a funciones del store de emergencias
-  const { 
-    fetchEmergencyById, 
-    setEmergencyOnWay, 
+  const {
+    fetchEmergencyById,
+    setEmergencyOnWay,
     completeEmergency,
     updateEmergencyLocation
   } = useEmergencyStore();
-  
+
   // Acceder a funciones del store de pagos
   const { obtenerPagosPorReferencia } = usePagoStore();
-  
+
   // Referencia para el mapa
   const mapRef = useRef(null);
-  
+
   // Verificar permisos de ubicación
   useEffect(() => {
     checkLocationPermission();
@@ -72,7 +69,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       }
     };
   }, []);
-  
+
   // Cargar los detalles de la emergencia cuando se monte el componente
   useEffect(() => {
     loadEmergencyDetails();
@@ -109,18 +106,18 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       unsubscribe();
     };
   }, [emergencyId, emergencyDetails?._id, emergencyDetails?.id]);
-  
+
   // Cargar información del pago
   useEffect(() => {
     if (emergencyReferenceId) {
       loadPaymentInfo();
     }
   }, [emergencyReferenceId]);
-  
+
   // Función para cargar información de pago
   const loadPaymentInfo = async () => {
     if (!emergencyReferenceId) return;
-    
+
     try {
       setLoadingPago(true);
       const result = await obtenerPagosPorReferencia('Emergencia', emergencyReferenceId);
@@ -137,7 +134,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       setLoadingPago(false);
     }
   };
-  
+
   // Verificar permisos de ubicación
   const checkLocationPermission = async () => {
     try {
@@ -145,7 +142,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       if (status === 'granted') {
         setIsLocationPermissionGranted(true);
         getCurrentLocation();
-        
+
         // Configurar un intervalo para actualizar la ubicación si el estado es "En camino"
         if (currentStatus === 'En camino' && emergencyDetails?.id) {
           if (locationUpdateIntervalRef.current) {
@@ -166,7 +163,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       console.error('Error al solicitar permisos de ubicación:', error);
     }
   };
-  
+
   // Obtener la ubicación actual
   const getCurrentLocation = async (updateServer = false) => {
     try {
@@ -176,7 +173,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
         longitude: location.coords.longitude,
       };
       setCurrentLocation(newLocation);
-      
+
       // Si estamos en camino y se solicita actualizar al servidor, enviar la ubicación
       if (updateServer && currentStatus === 'En camino' && emergencyDetails?.id) {
         await updateEmergencyLocation(
@@ -185,19 +182,19 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
           newLocation.longitude
         );
       }
-      
+
       return newLocation;
     } catch (error) {
       console.error('Error al obtener la ubicación actual:', error);
       return null;
     }
   };
-  
+
   // Función para cargar los detalles completos de la emergencia
   const loadEmergencyDetails = async () => {
     try {
       setLoading(true);
-      
+
       // Si ya tenemos los datos completos de la emergencia
       if (emergency && emergency.id && emergency.cliente && emergency.mascota) {
         setEmergencyDetails(emergency);
@@ -205,11 +202,11 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
         setLoading(false);
         return;
       }
-      
+
       // Si solo tenemos el ID, buscar los detalles completos
       if (emergencyId) {
         const result = await fetchEmergencyById(emergencyId);
-        
+
         if (result.success && result.data) {
           setEmergencyDetails(result.data);
           setCurrentStatus(result.data.estado);
@@ -217,7 +214,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
           return;
         }
       }
-      
+
       // Si no tenemos datos suficientes, mostrar un error
       if (!emergency && !emergencyId) {
         Alert.alert(
@@ -233,7 +230,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
         );
         return;
       }
-      
+
       Alert.alert('Error', 'No pudimos cargar los detalles de la emergencia');
       setLoading(false);
     } catch (error) {
@@ -242,23 +239,23 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       setLoading(false);
     }
   };
-  
+
   // Marcar emergencia como "En camino"
   const handleOnWay = async () => {
     if (!emergencyDetails?.id) return;
-    
+
     try {
       setIsUpdatingStatus(true);
       const result = await setEmergencyOnWay(emergencyDetails.id);
-      
+
       if (result.success) {
         setCurrentStatus('En camino');
         setEmergencyDetails(prev => ({ ...prev, estado: 'En camino' }));
-        
+
         // Comenzar a enviar actualizaciones de ubicación
         if (isLocationPermissionGranted) {
           getCurrentLocation(true);
-          
+
           // Configurar actualización periódica de la ubicación
           if (locationUpdateIntervalRef.current) {
             clearInterval(locationUpdateIntervalRef.current);
@@ -267,7 +264,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
             await getCurrentLocation(true);
           }, 30000); // Actualizar cada 30 segundos
         }
-        
+
         Alert.alert(
           "¡En camino!",
           "Se ha notificado que estás en camino hacia la emergencia. Tu ubicación se actualizará periódicamente."
@@ -282,7 +279,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       setIsUpdatingStatus(false);
     }
   };
-  
+
   // Marcar emergencia como "Atendida"
   const handleCompleted = async () => {
     // console.log('🔵 handleCompleted iniciado');
@@ -290,41 +287,41 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
     // console.log('   emergencyDetails.id:', emergencyDetails?.id);
     // console.log('   emergencyDetails._id:', emergencyDetails?._id);
     // console.log('   currentStatus:', currentStatus);
-    
+
     // Usar _id si id no está disponible (MongoDB devuelve _id)
     const emergencyId = emergencyDetails?.id || emergencyDetails?._id;
-    
+
     if (!emergencyId) {
       // console.log('❌ No hay ID de emergencia (ni id ni _id)');
       return;
     }
-    
+
     // Verificar que la emergencia esté en estado "En atención"
     if (currentStatus !== 'En atención') {
       // console.log('❌ Estado no válido:', currentStatus);
       Alert.alert("Error", "El cliente debe confirmar tu llegada antes de marcar como atendida");
       return;
     }
-    
+
     try {
       // console.log('🟢 Intentando completar emergencia:', emergencyId);
       setIsUpdatingStatus(true);
       const result = await completeEmergency(emergencyId);
-      
+
       // console.log('📥 Resultado de completeEmergency:', result);
-      
+
       if (result.success) {
         // console.log('✅ Emergencia completada exitosamente');
         setCurrentStatus('Atendida');
         setEmergencyDetails(prev => ({ ...prev, estado: 'Atendida' }));
         await loadPaymentInfo();
-        
+
         // Detener actualizaciones de ubicación
         if (locationUpdateIntervalRef.current) {
           clearInterval(locationUpdateIntervalRef.current);
           locationUpdateIntervalRef.current = null;
         }
-        
+
         Alert.alert(
           "Emergencia completada",
           "Has marcado esta emergencia como atendida. ¿Deseas volver a la pantalla principal?",
@@ -345,27 +342,27 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       setIsUpdatingStatus(false);
     }
   };
-  
+
   // Llamar al cliente
   const handleCallClient = () => {
     if (!emergencyDetails?.cliente?.telefono) {
       Alert.alert("Error", "No se pudo obtener el número de teléfono del cliente");
       return;
     }
-    
+
     const phoneNumber = emergencyDetails.cliente.telefono.replace(/\s/g, '');
     Linking.openURL(`tel:${phoneNumber}`);
   };
-  
+
   // Renderizado del componente
   return (
-    <SafeAreaView style={localStyles.container}>
+    <View style={localStyles.container}>
       <StatusBar style="light" />
-      
+
       {/* Encabezado */}
       <View style={localStyles.header}>
         <View style={localStyles.headerContent}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={localStyles.backButton}
             onPress={() => {
               if (navigation.canGoBack()) {
@@ -397,7 +394,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
       </View>
-      
+
       {loading ? (
         <View style={localStyles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -409,36 +406,36 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
           <View style={localStyles.sectionCard}>
             <Text style={localStyles.sectionTitle}>Cliente</Text>
             <View style={localStyles.infoRow}>
-              <Image 
-                source={{ uri: 
+              <Image
+                source={{ uri:
                   // Usar cliente.imagen si está disponible, si no, intentar usuario.profilePicture
-                  emergencyDetails.cliente?.imagen || 
-                  emergencyDetails.usuario?.profilePicture || 
-                  'https://randomuser.me/api/portraits/lego/1.jpg' 
+                  emergencyDetails.cliente?.imagen ||
+                  emergencyDetails.usuario?.profilePicture ||
+                  'https://randomuser.me/api/portraits/lego/1.jpg'
                 }}
                 style={localStyles.userImage}
               />
               <View style={localStyles.userInfo}>
                 <Text style={localStyles.userName}>
                   {/* Usar cliente.nombre si está disponible, si no, intentar usuario.username o usuario.email */}
-                  {emergencyDetails.cliente?.nombre || 
-                   emergencyDetails.usuario?.username || 
-                   emergencyDetails.usuario?.email || 
+                  {emergencyDetails.cliente?.nombre ||
+                   emergencyDetails.usuario?.username ||
+                   emergencyDetails.usuario?.email ||
                    'Cliente'}
                 </Text>
                 {(emergencyDetails.cliente?.telefono) && (
-                  <TouchableOpacity style={localStyles.phoneContainer} onPress={handleCallClient}>
+                  <TouchableOpacity accessibilityRole="button" style={localStyles.phoneContainer} onPress={handleCallClient}>
                     <Ionicons name="call" size={16} color="#1E88E5" />
                     <Text style={localStyles.phoneText}>{emergencyDetails.cliente.telefono}</Text>
                   </TouchableOpacity>
                 )}
               </View>
             </View>
-            
+
             <Text style={[localStyles.sectionTitle, { marginTop: 20 }]}>Datos de la mascota</Text>
             {emergencyDetails.mascota ? (
               <View style={localStyles.petContainer}>
-                <Image 
+                <Image
                   source={{ uri: emergencyDetails.mascota?.imagen || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60' }}
                   style={localStyles.petImage}
                 />
@@ -454,20 +451,20 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
               </View>
             )}
           </View>
-          
+
           {/* Detalles de la emergencia */}
           <View style={localStyles.sectionCard}>
             <Text style={localStyles.sectionTitle}>Detalles de la emergencia</Text>
-            
+
             <View style={localStyles.emergencyDetailsContainer}>
               <View style={localStyles.emergencyDetail}>
                 <Text style={localStyles.detailLabel}>Tipo:</Text>
                 <Text style={localStyles.detailValue}>{emergencyDetails.tipoEmergencia || 'Emergencia veterinaria'}</Text>
               </View>
-              
+
               <View style={localStyles.emergencyDetail}>
                 <Text style={localStyles.detailLabel}>Nivel de urgencia:</Text>
-                <View style={[localStyles.urgencyBadge, 
+                <View style={[localStyles.urgencyBadge,
                   emergencyDetails.nivelUrgencia === 'Alta' ? localStyles.highUrgency :
                   emergencyDetails.nivelUrgencia === 'Media' ? localStyles.mediumUrgency :
                   localStyles.lowUrgency
@@ -475,14 +472,14 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                   <Text style={localStyles.urgencyText}>{emergencyDetails.nivelUrgencia || 'Media'}</Text>
                 </View>
               </View>
-              
+
               <View style={localStyles.emergencyDetail}>
                 <Text style={localStyles.detailLabel}>Fecha y hora:</Text>
                 <Text style={localStyles.detailValue}>
                   {new Date(emergencyDetails.fechaSolicitud).toLocaleString()}
                 </Text>
               </View>
-              
+
               <View style={[localStyles.emergencyDetail, { flexDirection: 'column', alignItems: 'flex-start' }]}>
                 <Text style={localStyles.detailLabel}>Descripción:</Text>
                 <Text style={[localStyles.detailValue, { marginTop: 5 }]}>
@@ -491,23 +488,23 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
               </View>
             </View>
           </View>
-          
+
           {/* Ubicación y Mapa */}
           <View style={localStyles.sectionCard}>
             <Text style={localStyles.sectionTitle}>Ubicación</Text>
-            
+
             <View style={localStyles.locationContainer}>
               <Ionicons name="location" size={18} color="#F44336" />
               <Text style={localStyles.locationText}>{emergencyDetails.ubicacion.direccion}</Text>
             </View>
-            
+
             <View style={localStyles.distanceTimeContainer}>
               {emergencyDetails.distancia && (
                 <View style={localStyles.distanceTime}>
                   <Ionicons name="navigate" size={16} color="#666" />
                   <Text style={localStyles.distanceTimeText}>
-                    {typeof emergencyDetails.distancia === 'string' ? 
-                      emergencyDetails.distancia : 
+                    {typeof emergencyDetails.distancia === 'string' ?
+                      emergencyDetails.distancia :
                       emergencyDetails.distancia?.texto || '3.5 km'}
                   </Text>
                 </View>
@@ -516,14 +513,14 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                 <View style={localStyles.distanceTime}>
                   <Ionicons name="time" size={16} color="#666" />
                   <Text style={localStyles.distanceTimeText}>
-                    {typeof emergencyDetails.tiempoEstimado === 'string' ? 
-                      emergencyDetails.tiempoEstimado : 
+                    {typeof emergencyDetails.tiempoEstimado === 'string' ?
+                      emergencyDetails.tiempoEstimado :
                       emergencyDetails.tiempoEstimado?.texto || '10 min'} en auto
                   </Text>
                 </View>
               )}
             </View>
-            
+
             {isLocationPermissionGranted && emergencyDetails.ubicacion.coordenadas ? (
               <View style={localStyles.mapContainer}>
                 <MapView
@@ -547,7 +544,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                     description={emergencyDetails.ubicacion.direccion}
                     pinColor="red"
                   />
-                  
+
                   {/* Marcador de nuestra ubicación si está disponible */}
                   {currentLocation && (
                     <Marker
@@ -562,7 +559,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                       <Ionicons name="navigate" size={24} color="#1E88E5" />
                     </Marker>
                   )}
-                  
+
                   {/* Línea entre los dos puntos */}
                   {currentLocation && (
                     <Polyline
@@ -595,32 +592,32 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
               </View>
             )}
           </View>
-          
+
           {/* Información de Pago */}
           {pagoInfo && (
             <View style={localStyles.sectionCard}>
               <Text style={localStyles.sectionTitle}>Estado del Pago</Text>
-              
+
               {loadingPago ? (
                 <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 15 }} />
               ) : (
                 <View style={localStyles.paymentInfoContainer}>
                   <View style={localStyles.paymentStatusRow}>
                     <View style={localStyles.paymentStatusItem}>
-                      <Ionicons 
+                      <Ionicons
                         name={
                           pagoInfo.estado === 'Capturado' ? 'checkmark-circle' :
                           pagoInfo.estado === 'Pagado' ? 'time' :
                           pagoInfo.estado === 'Pendiente' ? 'hourglass' :
                           'alert-circle'
-                        } 
-                        size={24} 
+                        }
+                        size={24}
                         color={
                           pagoInfo.estado === 'Capturado' ? '#4CAF50' :
                           pagoInfo.estado === 'Pagado' ? '#FF9800' :
                           pagoInfo.estado === 'Pendiente' ? '#FFC107' :
                           '#999'
-                        } 
+                        }
                       />
                       <View style={localStyles.paymentStatusTextContainer}>
                         <Text style={localStyles.paymentStatusLabel}>Estado</Text>
@@ -632,7 +629,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                         ]}>{pagoInfo.estado}</Text>
                       </View>
                     </View>
-                    
+
                     <View style={localStyles.paymentStatusItem}>
                       <Ionicons name="cash" size={24} color={COLORS.primary} />
                       <View style={localStyles.paymentStatusTextContainer}>
@@ -643,7 +640,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                       </View>
                     </View>
                   </View>
-                  
+
                   {pagoInfo.estado === 'Pagado' && (
                     <View style={localStyles.paymentNoteContainer}>
                       <Ionicons name="information-circle" size={20} color="#FF9800" />
@@ -652,7 +649,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                       </Text>
                     </View>
                   )}
-                  
+
                   {pagoInfo.estado === 'Capturado' && (
                     <View style={[localStyles.paymentNoteContainer, { backgroundColor: '#E8F5E9' }]}>
                       <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
@@ -661,7 +658,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                       </Text>
                     </View>
                   )}
-                  
+
                   {pagoInfo.estado === 'Pendiente' && (
                     <View style={[localStyles.paymentNoteContainer, { backgroundColor: '#FFF9E6' }]}>
                       <Ionicons name="hourglass" size={20} color="#FFC107" />
@@ -674,19 +671,19 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
               )}
             </View>
           )}
-          
+
           {/* Botones de acción */}
           <View style={localStyles.actionsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={[localStyles.actionButton, localStyles.callButton]}
               onPress={handleCallClient}
             >
               <Ionicons name="call" size={20} color="#FFF" />
               <Text style={localStyles.actionButtonText}>Llamar al cliente</Text>
             </TouchableOpacity>
-            
+
             {currentStatus === 'Asignada' && (
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={[localStyles.actionButton, localStyles.onWayButton, isUpdatingStatus && localStyles.disabledButton]}
                 onPress={() => {
                   Alert.alert(
@@ -694,7 +691,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                     "¿Confirmas que estás en camino hacia la emergencia?",
                     [
                       { text: "Cancelar", style: "cancel" },
-                      { text: "Confirmar", onPress: handleOnWay }  
+                      { text: "Confirmar", onPress: handleOnWay }
                     ]
                   );
                 }}
@@ -710,9 +707,9 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                 )}
               </TouchableOpacity>
             )}
-            
+
             {currentStatus === 'En atención' && (
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={[localStyles.actionButton, localStyles.completeButton, isUpdatingStatus && localStyles.disabledButton]}
                 onPress={() => {
                   Alert.alert(
@@ -720,7 +717,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                     "¿Confirmas que has completado la atención de esta emergencia?",
                     [
                       { text: "Cancelar", style: "cancel" },
-                      { text: "Confirmar", onPress: handleCompleted }  
+                      { text: "Confirmar", onPress: handleCompleted }
                     ]
                   );
                 }}
@@ -736,7 +733,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
                 )}
               </TouchableOpacity>
             )}
-            
+
             {currentStatus === 'En camino' && (
               <View style={localStyles.waitingForClientConfirmation}>
                 <Ionicons name="time-outline" size={20} color="#FF9800" />
@@ -749,7 +746,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
         <View style={localStyles.errorContainer}>
           <Ionicons name="alert-circle" size={60} color="#F44336" />
           <Text style={localStyles.errorText}>No se pudo cargar la emergencia</Text>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={localStyles.refreshButton}
             onPress={loadEmergencyDetails}
           >
@@ -757,7 +754,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -768,7 +765,7 @@ const localStyles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
@@ -783,6 +780,9 @@ const localStyles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.white,
@@ -830,6 +830,8 @@ const localStyles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   infoRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -841,6 +843,7 @@ const localStyles = StyleSheet.create({
     backgroundColor: '#E3F2FD',
   },
   userInfo: {
+    minWidth: 0,
     flex: 1,
   },
   userName: {
@@ -854,6 +857,7 @@ const localStyles = StyleSheet.create({
     marginTop: 5,
   },
   phoneText: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#1E88E5',
     marginLeft: 5,
@@ -866,6 +870,7 @@ const localStyles = StyleSheet.create({
     backgroundColor: '#E3F2FD',
   },
   petInfo: {
+    minWidth: 0,
     flex: 1,
   },
   petName: {
@@ -895,11 +900,13 @@ const localStyles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   detailLabel: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.grey,
   },
   detailValue: {
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.dark,
   },
@@ -927,12 +934,15 @@ const localStyles = StyleSheet.create({
     marginBottom: 12,
   },
   locationText: {
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.dark,
     marginLeft: 8,
     flex: 1,
   },
   distanceTimeContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     marginBottom: 15,
   },
@@ -942,6 +952,7 @@ const localStyles = StyleSheet.create({
     marginRight: 15,
   },
   distanceTimeText: {
+    flexShrink: 1,
     fontSize: 13,
     color: COLORS.grey,
     marginLeft: 5,
@@ -986,6 +997,7 @@ const localStyles = StyleSheet.create({
     backgroundColor: '#43A047',
   },
   actionButtonText: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.white,
@@ -1003,6 +1015,7 @@ const localStyles = StyleSheet.create({
     borderRadius: 10,
   },
   waitingText: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#FF8F00',
     marginLeft: 10,
@@ -1054,11 +1067,15 @@ const localStyles = StyleSheet.create({
     marginTop: 15,
   },
   paymentStatusRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 15,
   },
   paymentStatusItem: {
+    flexBasis: 120,
+    minWidth: 0,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1089,6 +1106,7 @@ const localStyles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   paymentNoteText: {
+    flexShrink: 1,
     flex: 1,
     fontSize: 13,
     color: '#E65100',

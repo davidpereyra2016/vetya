@@ -1,11 +1,14 @@
 // config/axios.js - Configuracion centralizada de axios para toda la aplicacion
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import logger from '../utils/logger';
 
 // Callback para ejecutar logout cuando el token expire
 let onTokenExpiredCallback = null;
 // Flag para evitar multiples ejecuciones del callback
 let isHandlingExpiredToken = false;
+let cachedAuthToken = null;
+let hasLoadedTokenFromStorage = false;
 
 // Funcion para configurar el callback de logout
 export const setTokenExpiredCallback = (callback) => {
@@ -18,15 +21,42 @@ export const resetTokenExpiredFlag = () => {
   isHandlingExpiredToken = false;
 };
 
+export const setAuthToken = (token) => {
+  cachedAuthToken = token || null;
+  hasLoadedTokenFromStorage = true;
+
+  if (cachedAuthToken) {
+    axiosInstance.defaults.headers.common.Authorization = `Bearer ${cachedAuthToken}`;
+  } else {
+    delete axiosInstance.defaults.headers.common.Authorization;
+  }
+};
+
+const getAuthToken = async () => {
+  if (cachedAuthToken || hasLoadedTokenFromStorage) {
+    return cachedAuthToken;
+  }
+
+  try {
+    const authData = await AsyncStorage.getItem('auth-storage');
+    const parsedData = authData ? JSON.parse(authData) : null;
+    cachedAuthToken = parsedData?.state?.token || null;
+    hasLoadedTokenFromStorage = true;
+    return cachedAuthToken;
+  } catch (error) {
+    hasLoadedTokenFromStorage = true;
+    logger.warn('Error al recuperar token de autenticacion:', error);
+    return null;
+  }
+};
+
 // ============================================================
 // URL base de la API.
 // EXPO_PUBLIC_API_URL permite cambiar el backend de produccion
 // desde Expo/EAS sin volver a editar el codigo.
 // ============================================================
 const ENV_API_URL = process.env.EXPO_PUBLIC_API_URL;
-// const DEV_API_URL = 'http://192.168.137.1:3000/api';
-// const DEV_API_URL = 'http://192.168.0.16:3000/api';
-const DEV_API_URL = 'http://192.168.100.32:3000/api';
+const DEV_API_URL = 'http://192.168.1.5:3000/api';
 const PROD_API_URL = 'https://vetya-backend.onrender.com/api';
 
 export const API_URL = ENV_API_URL || (__DEV__ ? DEV_API_URL : PROD_API_URL);
@@ -41,18 +71,9 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   async (config) => {
-    try {
-      const authData = await AsyncStorage.getItem('auth-storage');
-      if (authData) {
-        const parsedData = JSON.parse(authData);
-        const { state } = parsedData;
-
-        if (state && state.token) {
-          config.headers.Authorization = `Bearer ${state.token}`;
-        }
-      }
-    } catch (error) {
-      console.error('Error al recuperar token de autenticacion:', error);
+    const token = await getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -74,7 +95,7 @@ axiosInstance.interceptors.response.use(
       }
 
       isHandlingExpiredToken = true;
-      console.log('[API Error] Token invalido o expirado - ejecutando logout automatico');
+      logger.warn('[API Error] Token invalido o expirado - ejecutando logout automatico');
 
       if (onTokenExpiredCallback) {
         onTokenExpiredCallback();
@@ -82,7 +103,7 @@ axiosInstance.interceptors.response.use(
         try {
           await AsyncStorage.removeItem('auth-storage');
         } catch (storageError) {
-          console.error('Error al limpiar storage:', storageError);
+          logger.warn('Error al limpiar storage:', storageError);
         }
       }
     }

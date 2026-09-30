@@ -1,12 +1,12 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useCallback } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  FlatList, 
-  Modal,
-  ScrollView,
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  FlatList,
   Platform,
   ActivityIndicator,
   Alert,
@@ -64,7 +64,7 @@ const AppointmentsScreen = ({ navigation }) => {
     fetchUserAppointments,
     updateAppointmentStatus
   } = useCitaStore();
-  
+
   // useFocusEffect se ejecuta cada vez que la pantalla entra en foco
   useFocusEffect(
     useCallback(() => {
@@ -79,8 +79,8 @@ const AppointmentsScreen = ({ navigation }) => {
       "¿Estás seguro de que quieres cancelar esta cita?",
       [
         { text: "No", style: "cancel" },
-        { 
-          text: "Sí, cancelar", 
+        {
+          text: "Sí, cancelar",
           style: "destructive",
           onPress: async () => {
             const result = await updateAppointmentStatus(appointmentId, 'Cancelada');
@@ -90,7 +90,7 @@ const AppointmentsScreen = ({ navigation }) => {
             if (modalVisible) {
                 setModalVisible(false);
             }
-          } 
+          }
         }
       ]
     );
@@ -100,7 +100,7 @@ const AppointmentsScreen = ({ navigation }) => {
     // Aquí puedes navegar a la pantalla de agendar, pasando datos si es necesario
     setModalVisible(false);
     navigation.navigate('AgendarCita', {
-      reschedulingAppointment: appointment 
+      reschedulingAppointment: appointment
     });
   };
 
@@ -140,7 +140,7 @@ const AppointmentsScreen = ({ navigation }) => {
     const direccion = ensureString(item.direccion, '');
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity accessibilityRole="button"
         style={styles.cardUpcoming}
         activeOpacity={0.9}
         onPress={() => openDetails(item)}
@@ -211,7 +211,7 @@ const AppointmentsScreen = ({ navigation }) => {
     const ubicacion = ensureString(item.ubicacion, 'Clínica');
 
     return (
-      <TouchableOpacity 
+      <TouchableOpacity accessibilityRole="button"
         style={[styles.cardPast, { backgroundColor: cardBg, borderColor: cardBorder }]}
         activeOpacity={0.9}
         onPress={() => openDetails(item)}
@@ -243,7 +243,7 @@ const AppointmentsScreen = ({ navigation }) => {
 
         <View style={styles.pastFooter}>
           <Text style={styles.pastPetText}>Mascota: {mascotaNombre}</Text>
-          <TouchableOpacity style={styles.verDetallesBtn} onPress={() => openDetails(item)}>
+          <TouchableOpacity accessibilityRole="button" style={styles.verDetallesBtn} onPress={() => openDetails(item)}>
             <Text style={styles.verDetallesText}>Ver detalles</Text>
           </TouchableOpacity>
         </View>
@@ -276,7 +276,7 @@ const AppointmentsScreen = ({ navigation }) => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Detalles de la Cita</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.modalCloseBtn}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={() => setModalVisible(false)} style={styles.modalCloseBtn}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
@@ -336,7 +336,7 @@ const AppointmentsScreen = ({ navigation }) => {
 
               {canModify && (
                 <>
-                  <TouchableOpacity 
+                  <TouchableOpacity accessibilityRole="button"
                     style={styles.rescheduleButton}
                     onPress={() => handleRescheduleAppointment(item)}
                   >
@@ -344,7 +344,7 @@ const AppointmentsScreen = ({ navigation }) => {
                     <Text style={styles.rescheduleButtonText}>Reprogramar cita</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
+                  <TouchableOpacity accessibilityRole="button"
                     style={styles.cancelButtonModal}
                     onPress={() => handleCancelAppointment(item._id)}
                   >
@@ -371,7 +371,7 @@ const AppointmentsScreen = ({ navigation }) => {
         <View style={styles.headerTop}>
           <View style={styles.headerSpacer} />
           <Text style={styles.headerTitle}>Mis Citas</Text>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Agregar" hitSlop={8}
             style={styles.headerAddButton}
             onPress={() => navigation.navigate('AgendarCita')}
           >
@@ -383,7 +383,7 @@ const AppointmentsScreen = ({ navigation }) => {
       {/* TABS */}
       <View style={styles.tabsWrapper}>
         <View style={styles.tabsContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.tabBtn, activeTab === 'upcoming' && styles.tabBtnActive]}
             onPress={() => setActiveTab('upcoming')}
           >
@@ -391,7 +391,7 @@ const AppointmentsScreen = ({ navigation }) => {
               Próximas
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.tabBtn, activeTab === 'past' && styles.tabBtnActive]}
             onPress={() => setActiveTab('past')}
           >
@@ -420,12 +420,12 @@ const AppointmentsScreen = ({ navigation }) => {
               <View style={styles.emptyContainer}>
                 <Ionicons name={activeTab === 'upcoming' ? "calendar-outline" : "time-outline"} size={60} color="#CFD8DC" />
                 <Text style={styles.emptyText}>
-                  {activeTab === 'upcoming' 
-                    ? "No tienes citas programadas próximamente." 
+                  {activeTab === 'upcoming'
+                    ? "No tienes citas programadas próximamente."
                     : "Aún no tienes historial de citas."}
                 </Text>
                 {activeTab === 'upcoming' && (
-                  <TouchableOpacity 
+                  <TouchableOpacity accessibilityRole="button"
                     style={styles.emptyButton}
                     onPress={() => navigation.navigate('AgendarCita')}
                   >
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   // ─── HEADER ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -463,6 +463,7 @@ const styles = StyleSheet.create({
   },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headerTitle: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 22,
     fontWeight: '800',
@@ -471,7 +472,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerAddButton: {
-    width: 44, height: 44,
+    minHeight: 44,
+    paddingVertical: 12,
+    width: 44,
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     justifyContent: 'center', alignItems: 'center',
@@ -556,6 +559,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.02)',
   },
   cardHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -571,6 +576,7 @@ const styles = StyleSheet.create({
   },
   statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
   statusText: {
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: 'bold',
     textTransform: 'uppercase',
@@ -597,6 +603,8 @@ const styles = StyleSheet.create({
   providerAddress: { fontSize: 12, color: '#757575', fontWeight: '500', flexShrink: 1 },
 
   petDetailsSection: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -605,7 +613,8 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: '#E0E0E0',
   },
-  petInfoRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  petInfoRow: {
+    minWidth: 0, flexDirection: 'row', alignItems: 'center', flex: 1 },
   petAvatarWrap: {
     width: 28, height: 28,
     borderRadius: 14,
@@ -658,6 +667,8 @@ const styles = StyleSheet.create({
   providerNamePast: { fontSize: 14, fontWeight: 'bold', color: '#555', marginBottom: 2 },
   providerAddressPast: { fontSize: 12, color: '#888', fontWeight: '500', flexShrink: 1 },
   pastFooter: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -665,7 +676,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   },
-  pastPetText: { fontSize: 12, fontWeight: 'bold', color: '#777' },
+  pastPetText: {
+    flexShrink: 1, fontSize: 12, fontWeight: 'bold', color: '#777' },
   verDetallesBtn: {
     backgroundColor: '#FFF',
     borderWidth: 1,
@@ -690,14 +702,19 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
   },
   modalHeader: {
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
   },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1E88E5' },
+  modalTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1, fontSize: 20, fontWeight: 'bold', color: '#1E88E5' },
   modalCloseBtn: { padding: 5 },
-  modalScroll: { marginBottom: Platform.OS === 'ios' ? 20 : 0 },
+  modalScroll: {
+    flexShrink: 1, marginBottom: Platform.OS === 'ios' ? 20 : 0 },
   modalStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -750,7 +767,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  rescheduleButtonText: { fontSize: 15, fontWeight: 'bold', color: '#FFF' },
+  rescheduleButtonText: {
+    flexShrink: 1, fontSize: 15, fontWeight: 'bold', color: '#FFF' },
   cancelButtonModal: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -762,7 +780,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 15,
   },
-  cancelButtonText: { fontSize: 15, fontWeight: 'bold', color: '#D32F2F' },
+  cancelButtonText: {
+    flexShrink: 1, fontSize: 15, fontWeight: 'bold', color: '#D32F2F' },
 });
 
 export default AppointmentsScreen;

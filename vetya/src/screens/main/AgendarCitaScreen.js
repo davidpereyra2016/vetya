@@ -1,9 +1,9 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   Platform,
@@ -12,9 +12,7 @@ import {
   Animated,
   Image,
   FlatList,
-  Alert,
-  Dimensions
-} from 'react-native';
+  Alert} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import usePetStore from '../../store/usePetStore';
@@ -23,7 +21,7 @@ import useCitaStore from '../../store/useCitaStore';
 // CAMBIO: Se actualizó el nombre del primer paso para mayor claridad.
 const Stepper = ({ currentStep }) => {
   const steps = ['Prestador', 'Mascota', 'Fecha', 'Confirmar'];
-  
+
   // Calculamos el ancho de la línea de progreso
   const progressPercentage = ((currentStep - 1) / (steps.length - 1)) * 100;
 
@@ -34,14 +32,14 @@ const Stepper = ({ currentStep }) => {
         <View style={newStyles.progressTrack} />
         {/* Línea de progreso (Azul/Verde) */}
         <View style={[newStyles.progressFill, { width: `${progressPercentage * 0.8}%` }]} />
-        
+
         {/* Contenedor de los pasos */}
         <View style={newStyles.stepsContainer}>
           {steps.map((step, index) => {
             const stepNumber = index + 1;
             const isCompleted = currentStep > stepNumber;
             const isActive = currentStep === stepNumber;
-            
+
             return (
               <View key={step} style={newStyles.stepNode}>
                 <View style={[
@@ -89,7 +87,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
   const [availableTimes, setAvailableTimes] = useState([]);
   const [pets, setPets] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Estados para proveedores y servicios
   const [providerTypes, setProviderTypes] = useState([]);
   const [selectedProviderType, setSelectedProviderType] = useState(null);
@@ -189,7 +187,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         } else {
            Alert.alert('Error', 'No se pudieron cargar los tipos de prestadores');
         }
-        
+
         const { fetchAvailableDates } = useCitaStore.getState();
         const datesResult = await fetchAvailableDates();
         if (datesResult.success) {
@@ -204,9 +202,9 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         setIsLoading(false);
       }
     };
-    
+
     loadInitialData();
-    
+
     return () => {
       useCitaStore.getState().resetCitaState();
     };
@@ -231,7 +229,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
             selectedProvider._id,
             selectedService._id
           );
-          
+
           if (result.success) {
             setAvailableTimes(result.data);
           } else {
@@ -243,7 +241,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
           setIsLoading(false);
         }
       };
-      
+
       loadAvailableTimes();
     } else {
       setAvailableTimes([]);
@@ -283,11 +281,11 @@ const AgendarCitaScreen = ({ navigation, route }) => {
     setSelectedService(null);
     setServices([]);
     setSelectedLocation(null);
-    
+
     try {
       const { fetchProvidersByType } = useCitaStore.getState();
       // Se pasa directamente el nombre del tipo (ej: 'Veterinario')
-      const result = await fetchProvidersByType(type.name); 
+      const result = await fetchProvidersByType(type.name);
       if (result.success) {
         setProviders(result.data);
       } else {
@@ -343,7 +341,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       setSelectedLocation(locationOptions.length === 1 ? locationOptions[0] : null);
     }
   }, [selectedService]);
-  
+
   // Función para preparar los datos de la cita y navegar a confirmación
   // NOTA: La cita NO se crea aquí, se crea cuando el usuario confirma el pago
   const handleScheduleAppointment = async () => {
@@ -351,7 +349,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       Alert.alert('Información requerida', 'Por favor, selecciona una ubicación y describe el motivo de la cita.');
       return;
     }
-    
+
     setIsLoading(true);
     try {
       const selectedDateTime = new Date(selectedDate.date);
@@ -370,7 +368,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         estado: 'Pendiente',
         ubicacion: selectedLocation.type
       };
-      
+
       // Pasar los DATOS para crear la cita después de seleccionar método de pago
       navigation.navigate('CitaConfirmacion', {
         appointmentData: appointmentData,
@@ -415,7 +413,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         {providerTypes.map(type => {
           const isSelected = selectedProviderType?.id === type.id;
           return (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               key={type.id}
               activeOpacity={0.85}
               style={[newStyles.chip, isSelected ? newStyles.chipActive : newStyles.chipInactive]}
@@ -439,7 +437,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
               const isSelected = selectedProvider?._id === provider._id;
               const img = provider.usuario?.profilePicture || provider.imagen;
               return (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   key={provider._id}
                   activeOpacity={0.9}
                   style={[newStyles.prestadorCard, isSelected ? newStyles.prestadorCardActive : newStyles.prestadorCardInactive]}
@@ -487,7 +485,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
           {services.map(service => {
             const isSelected = selectedService?._id === service._id;
             return (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 key={service._id}
                 activeOpacity={0.9}
                 style={[newStyles.servicioRow, isSelected ? newStyles.servicioRowActive : newStyles.servicioRowInactive]}
@@ -522,7 +520,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         {pets.map(pet => {
           const isSelected = selectedPet?.id === pet.id;
           return (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               key={pet.id}
               activeOpacity={0.9}
               style={[newStyles.mascotaCard, isSelected ? newStyles.mascotaCardActive : newStyles.mascotaCardInactive]}
@@ -559,7 +557,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         {availableDates.map(item => {
           const isSelected = selectedDate?.id === item.id;
           return (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               key={item.id}
               activeOpacity={0.85}
               style={[newStyles.fechaCard, isSelected ? newStyles.fechaCardActive : newStyles.fechaCardInactive]}
@@ -584,7 +582,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
                 const isSelected = selectedTime?.id === item.id;
                 const isDisabled = !item.available;
                 return (
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="button"
                     key={item.id}
                     activeOpacity={0.8}
                     disabled={isDisabled}
@@ -625,7 +623,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
           {locationOptions.map(loc => {
             const isSelected = selectedLocation?.id === loc.id;
             return (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 key={loc.id}
                 activeOpacity={0.85}
                 style={[
@@ -724,24 +722,24 @@ const AgendarCitaScreen = ({ navigation, route }) => {
       </View>
     );
   };
-  
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={newStyles.container}
     >
       <StatusBar style="light" />
-      
+
       <View style={newStyles.header}>
         <View style={newStyles.headerTop}>
-          <TouchableOpacity style={newStyles.headerBackButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={newStyles.headerBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={newStyles.headerTitle}>{isRescheduling ? 'Reprogramar Cita' : 'Agendar Cita'}</Text>
           <View style={newStyles.headerSpacer} />
         </View>
       </View>
-      
+
       <Stepper currentStep={currentStep} />
 
       <ScrollView ref={scrollViewRef} contentContainerStyle={newStyles.content}>
@@ -767,17 +765,17 @@ const AgendarCitaScreen = ({ navigation, route }) => {
 
       <View style={newStyles.footer}>
         {currentStep > 1 && (
-            <TouchableOpacity style={[newStyles.navButton, newStyles.prevButton]} onPress={handlePrevStep}>
+            <TouchableOpacity accessibilityRole="button" style={[newStyles.navButton, newStyles.prevButton]} onPress={handlePrevStep}>
                 <Text style={newStyles.prevButtonText}>Anterior</Text>
             </TouchableOpacity>
         )}
         {currentStep < 4 ? (
-            <TouchableOpacity style={[newStyles.navButton, newStyles.nextButton]} onPress={handleNextStep}>
+            <TouchableOpacity accessibilityRole="button" style={[newStyles.navButton, newStyles.nextButton]} onPress={handleNextStep}>
                 <Text style={newStyles.nextButtonText}>Siguiente</Text>
                 <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
             </TouchableOpacity>
         ) : (
-            <TouchableOpacity style={[newStyles.navButton, newStyles.nextButton]} onPress={handleScheduleAppointment} disabled={isLoading}>
+            <TouchableOpacity accessibilityRole="button" style={[newStyles.navButton, newStyles.nextButton]} onPress={handleScheduleAppointment} disabled={isLoading}>
                 {isLoading ? (
                     <ActivityIndicator color="#fff" />
                 ) : (
@@ -795,7 +793,6 @@ const AgendarCitaScreen = ({ navigation, route }) => {
 };
 
 // --- ESTILOS MODERNOS CONSISTENTES CON EL SISTEMA ---
-const { width } = Dimensions.get('window');
 
 const newStyles = StyleSheet.create({
   container: {
@@ -804,7 +801,7 @@ const newStyles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -822,8 +819,10 @@ const newStyles = StyleSheet.create({
     alignItems: 'center',
   },
   headerBackButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     justifyContent: 'center',
@@ -836,6 +835,8 @@ const newStyles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 22,
     fontWeight: '800',
@@ -885,8 +886,10 @@ const newStyles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   stepNode: {
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
-    width: 70,
+
   },
   stepCircle: {
     width: 40,
@@ -937,7 +940,7 @@ const newStyles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 100, // Space for footer
+    paddingBottom: 24, // Space for footer
   },
   rescheduleBanner: {
     flexDirection: 'row',
@@ -950,6 +953,7 @@ const newStyles = StyleSheet.create({
     marginBottom: 18,
   },
   rescheduleBannerText: {
+    flexShrink: 1,
     flex: 1,
     color: '#E65100',
     fontSize: 13,
@@ -968,6 +972,7 @@ const newStyles = StyleSheet.create({
     paddingVertical: 5,
   },
   card: {
+    minHeight: 110,
     backgroundColor: '#fff',
     borderRadius: 15,
     padding: 18,
@@ -975,7 +980,7 @@ const newStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: 110,
-    height: 110,
+
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1074,8 +1079,9 @@ const newStyles = StyleSheet.create({
     marginTop: 5,
   },
   dateItem: {
+    minHeight: 100,
     width: 80,
-    height: 100,
+
     borderRadius: 15,
     marginRight: 10,
     backgroundColor: '#fff',
@@ -1167,14 +1173,17 @@ const newStyles = StyleSheet.create({
     elevation: 2,
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    flexShrink: 0,
+    flexWrap: 'wrap',
+    gap: 8,
+
+
+
+
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 35 : 20,
+    paddingBottom: 16,
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
@@ -1183,6 +1192,7 @@ const newStyles = StyleSheet.create({
     elevation: 8,
   },
   navButton: {
+    minWidth: 0,
     paddingVertical: 16,
     borderRadius: 25,
     flexDirection: 'row',
@@ -1203,11 +1213,13 @@ const newStyles = StyleSheet.create({
     backgroundColor: '#1E88E5',
   },
   prevButtonText: {
+    flexShrink: 1,
     color: '#333',
     fontSize: 16,
     fontWeight: 'bold',
   },
   nextButtonText: {
+    flexShrink: 1,
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
@@ -1258,11 +1270,14 @@ const newStyles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   chipText: {
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: 'bold',
   },
-  chipTextActive: { color: '#FFF' },
-  chipTextInactive: { color: '#666' },
+  chipTextActive: {
+    flexShrink: 1, color: '#FFF' },
+  chipTextInactive: {
+    flexShrink: 1, color: '#666' },
 
   // ─── PASO 1: TARJETAS DE PRESTADORES ───
   prestadorCard: {
@@ -1315,6 +1330,7 @@ const newStyles = StyleSheet.create({
     alignItems: 'center',
   },
   ratingBadgeText: {
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: 'bold',
     color: '#666',
@@ -1349,12 +1365,15 @@ const newStyles = StyleSheet.create({
     flex: 1,
   },
   servicioHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
   },
   servicioNombre: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: 'bold',
     color: '#444',
@@ -1362,15 +1381,19 @@ const newStyles = StyleSheet.create({
     marginRight: 8,
   },
   servicioPrecio: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: '900',
     color: '#666',
   },
   servicioFooter: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
   },
   servicioTiempo: {
+    flexShrink: 1,
     fontSize: 12,
     color: '#888',
     fontWeight: '500',
@@ -1444,8 +1467,9 @@ const newStyles = StyleSheet.create({
 
   // ─── PASO 3: FECHA Y HORA ───
   fechaCard: {
+    minHeight: 92,
     width: 74,
-    height: 92,
+
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1520,10 +1544,11 @@ const newStyles = StyleSheet.create({
 
   // ─── PASO 4: UBICACIÓN ───
   ubicacionContainer: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
-    gap: 12,
+    gap: 8,
   },
   ubiCard: {
     flex: 1,
@@ -1624,18 +1649,21 @@ const newStyles = StyleSheet.create({
     resizeMode: 'cover',
   },
   resumenMainText: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: 'bold',
     color: '#FFF',
     flex: 1,
   },
   resumenPrice: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: '900',
     color: '#FFD54F',
     marginLeft: 8,
   },
   resumenSubText: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '500',
     color: '#E3F2FD',

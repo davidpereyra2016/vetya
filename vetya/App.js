@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, StatusBar, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
+import AppFrame from './src/components/common/AppFrame';
 import 'react-native-gesture-handler';
 import axios from 'axios';
 
@@ -101,21 +101,13 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar 
-        style="auto" 
-        backgroundColor="#1E88E5" 
+    <AppFrame>
+      <StatusBar
+        style="auto"
+        backgroundColor="#1E88E5"
         barStyle="light-content"
       />
       <AppNavigator />
-    </SafeAreaView>
+    </AppFrame>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  },
-});

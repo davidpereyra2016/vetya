@@ -11,31 +11,31 @@ import useNotificacionStore from '../store/useNotificacionStore';
 const NotificacionBadge = ({ size = 24, color = '#fff' }) => {
   const navigation = useNavigation();
   const { conteoNoLeidas, updateUnreadCount } = useNotificacionStore();
-  
+
   // Actualizar conteo al montar el componente
   useEffect(() => {
     const loadConteo = async () => {
       await updateUnreadCount();
     };
-    
+
     loadConteo();
-    
+
     // Actualizar cada vez que se enfoca la pantalla
     const unsubscribe = navigation.addListener('focus', () => {
       loadConteo();
     });
-    
+
     return unsubscribe;
   }, []);
-  
+
   const handlePress = () => {
     navigation.navigate('Notificaciones');
   };
-  
+
   return (
-    <TouchableOpacity onPress={handlePress} style={styles.container}>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Notificaciones" hitSlop={8} onPress={handlePress} style={styles.container}>
       <Ionicons name="notifications-outline" size={size} color={color} />
-      
+
       {conteoNoLeidas > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>

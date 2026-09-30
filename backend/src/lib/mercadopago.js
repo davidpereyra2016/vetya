@@ -108,7 +108,7 @@ export function resolveMercadoPagoOAuthState(state) {
   const [prestadorId, nonce, signature] = state.split('.');
 
   if (!prestadorId || !nonce || !signature) {
-    return { prestadorId: state };
+    throw new Error('State OAuth firmado requerido');
   }
 
   const expectedSignature = signOAuthState(prestadorId, nonce);

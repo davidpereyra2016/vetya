@@ -1,21 +1,24 @@
 import React, { useState, useRef } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  Image, 
-  TouchableOpacity, 
-  Dimensions, 
-  FlatList, 
-  Animated 
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableOpacity,
+  useWindowDimensions,
+  FlatList,
+  Animated
 } from 'react-native';
+import ScrollView from '../../components/common/AppScrollView';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
 
-const { width, height } = Dimensions.get('window');
+
 
 const OnboardingScreen = () => {
+  const { width: windowWidth } = useWindowDimensions();
+  const [width, setWidth] = useState(windowWidth);
   // Usar Zustand en lugar de AuthContext
   const setIsFirstTime = useAuthStore(state => state.setIsFirstTime);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -47,7 +50,7 @@ const OnboardingScreen = () => {
   ];
 
   const viewableItemsChanged = useRef(({ viewableItems }) => {
-    setCurrentIndex(viewableItems[0].index);
+    if (viewableItems[0]) setCurrentIndex(viewableItems[0].index);
   }).current;
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
@@ -65,19 +68,19 @@ const OnboardingScreen = () => {
       <View style={styles.dotContainer}>
         {slides.map((_, i) => {
           const inputRange = [(i - 1) * width, i * width, (i + 1) * width];
-          
+
           const dotWidth = scrollX.interpolate({
             inputRange,
             outputRange: [8, 16, 8],
             extrapolate: 'clamp'
           });
-          
+
           const opacity = scrollX.interpolate({
             inputRange,
             outputRange: [0.3, 1, 0.3],
             extrapolate: 'clamp'
           });
-          
+
           return (
             <Animated.View
               key={i}
@@ -94,21 +97,24 @@ const OnboardingScreen = () => {
 
   const renderItem = ({ item }) => {
     return (
-      <View style={styles.slide}>
+      <ScrollView style={{ width }} contentContainerStyle={styles.slide}>
         <View style={styles.iconContainer}>
           <Ionicons name={item.icon} size={80} color="#1E88E5" />
         </View>
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.description}>{item.description}</Text>
-      </View>
+      </ScrollView>
     );
   };
 
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      <View style={styles.contentContainer}>
+      <View style={styles.contentContainer} onLayout={({ nativeEvent }) => setWidth(nativeEvent.layout.width)}>
         <FlatList
+          key={width}
+          initialScrollIndex={currentIndex}
+          getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
           data={slides}
           renderItem={renderItem}
           horizontal
@@ -126,18 +132,18 @@ const OnboardingScreen = () => {
           ref={slidesRef}
         />
       </View>
-      
+
       <View style={styles.bottomContainer}>
         <DotIndicator scrollX={scrollX} />
-        <TouchableOpacity style={styles.button} onPress={scrollTo}>
+        <TouchableOpacity accessibilityRole="button" style={styles.button} onPress={scrollTo}>
           <Text style={styles.buttonText}>
             {currentIndex === slides.length - 1 ? 'Comenzar' : 'Siguiente'}
           </Text>
-          <Ionicons 
-            name="arrow-forward" 
-            size={20} 
-            color="#fff" 
-            style={styles.buttonIcon} 
+          <Ionicons
+            name="arrow-forward"
+            size={20}
+            color="#fff"
+            style={styles.buttonIcon}
           />
         </TouchableOpacity>
       </View>
@@ -151,11 +157,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   contentContainer: {
-    flex: 3,
+    flex: 1,
   },
   slide: {
-    width,
-    flex: 1,
+    flexGrow: 1,
+    minWidth: 0,
+
+
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -183,10 +191,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   bottomContainer: {
-    flex: 1,
+    paddingHorizontal: 20,
+    gap: 16,
+
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 50,
+    paddingBottom: 24,
   },
   dotContainer: {
     flexDirection: 'row',
@@ -199,6 +209,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   button: {
+    minHeight: 48,
+    maxWidth: '100%',
     flexDirection: 'row',
     backgroundColor: '#1E88E5',
     paddingVertical: 15,
@@ -208,6 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
+    flexShrink: 1,
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',

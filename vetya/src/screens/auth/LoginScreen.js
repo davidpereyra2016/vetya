@@ -1,17 +1,16 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TextInput, 
-  TouchableOpacity, 
-  Image, 
-  ScrollView,
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
@@ -20,7 +19,7 @@ const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Usar la tienda de Zustand en lugar del contexto
   const login = useAuthStore(state => state.login);
   const isLoading = useAuthStore(state => state.isLoading);
@@ -32,18 +31,18 @@ const LoginScreen = ({ navigation }) => {
       Alert.alert('Error', 'Por favor ingresa tu correo y contraseña');
       return;
     }
-    
+
     clearError();
     try {
       console.log('[LoginScreen] Iniciando login para:', email);
       const result = await login(email, password);
       console.log('[LoginScreen] Resultado login:', JSON.stringify(result));
-      
+
       if (!result.success) {
-        const needsVerification = result.requiresVerification || 
+        const needsVerification = result.requiresVerification ||
           (result.error && result.error.toLowerCase().includes('verificar'));
         console.log('[LoginScreen] needsVerification:', needsVerification, 'requiresVerification:', result.requiresVerification);
-        
+
         if (needsVerification) {
           console.log('[LoginScreen] Navegando a EmailVerification con email:', result.email || email);
           navigation.navigate('EmailVerification', { email: result.email || email });
@@ -58,9 +57,9 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
@@ -70,7 +69,7 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.logoText}>VetYa</Text>
             <Text style={styles.tagline}>Veterinaria a Domicilio</Text>
           </View>
-          
+
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
@@ -84,7 +83,7 @@ const LoginScreen = ({ navigation }) => {
                 onChangeText={setEmail}
               />
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -95,27 +94,27 @@ const LoginScreen = ({ navigation }) => {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Ionicons 
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity accessibilityRole="button"
               style={styles.forgotPasswordContainer}
               onPress={() => navigation.navigate('ForgotPassword')}
             >
               <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.loginButton} 
+
+            <TouchableOpacity accessibilityRole="button"
+              style={styles.loginButton}
               onPress={handleLogin}
               disabled={isLoading}
             >
@@ -123,21 +122,21 @@ const LoginScreen = ({ navigation }) => {
                 {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
               </Text>
             </TouchableOpacity>
-            
+
             {error ? (
               <Text style={styles.errorText}>{error}</Text>
             ) : null}
-            
+
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>¿No tienes una cuenta? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Register')}>
                 <Text style={styles.registerButtonText}>Regístrate</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -187,6 +186,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -194,14 +195,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     paddingHorizontal: 10,
-    height: 55,
+
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 8,
     flex: 1,
-    height: '100%',
+
     color: '#333',
     fontSize: 16,
   },
@@ -217,9 +221,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   loginButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -230,10 +236,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   registerContainer: {
+    flexWrap: 'wrap',
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
   },
   registerText: {
+    flexShrink: 1,
     color: '#666',
     fontSize: 14,
   },

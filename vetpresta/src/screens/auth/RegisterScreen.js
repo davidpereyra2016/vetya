@@ -1,18 +1,17 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView,
+  TextInput,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Modal,
   FlatList
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
@@ -29,14 +28,14 @@ const RegisterScreen = ({ navigation }) => {
   const [specialties, setSpecialties] = useState([]);
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showSpecialtiesModal, setShowSpecialtiesModal] = useState(false);
-  
+
   // Tipos de prestadores disponibles
   const providerTypes = [
-    'Veterinario',  
-    'Centro Veterinario', 
+    'Veterinario',
+    'Centro Veterinario',
     'Otro'
   ];
-  
+
   // Especialidades disponibles según el tipo
   const availableSpecialties = [
     'Animales exóticos',
@@ -58,7 +57,7 @@ const RegisterScreen = ({ navigation }) => {
     'Urgencias 24h',
     'Vacunación'
   ];
-  
+
   // Función para agregar una especialidad
   const addSpecialty = (specialty) => {
     if (!specialties.includes(specialty)) {
@@ -66,12 +65,12 @@ const RegisterScreen = ({ navigation }) => {
     }
     setShowSpecialtiesModal(false);
   };
-  
+
   // Función para eliminar una especialidad
   const removeSpecialty = (specialty) => {
     setSpecialties(specialties.filter(item => item !== specialty));
   };
-  
+
   // Usar la tienda de Zustand en lugar del contexto
   const registerProvider = useAuthStore(state => state.registerProvider);
   const isLoading = useAuthStore(state => state.isLoading);
@@ -80,32 +79,32 @@ const RegisterScreen = ({ navigation }) => {
 
   const handleRegister = async () => {
     clearError(); // Limpiar errores anteriores
-    
+
     if (!name || !email || !password || !confirmPassword || !phone || !providerType) {
       Alert.alert('Error', 'Por favor complete todos los campos obligatorios');
       return;
     }
-    
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Las contraseñas no coinciden');
       return;
     }
-    
+
     if (specialties.length === 0) {
       Alert.alert('Error', 'Debe seleccionar al menos una especialidad');
       return;
     }
-    
+
     const result = await registerProvider({
       name,
       email,
-      password, 
-      confirmPassword, 
-      phone, 
-      providerType, 
+      password,
+      confirmPassword,
+      phone,
+      providerType,
       specialties
     });
-    
+
     if (result.success && result.requiresVerification) {
       navigation.navigate('EmailVerification', { email: result.email || email });
     } else if (!result.success) {
@@ -114,14 +113,14 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollView}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -132,7 +131,7 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.headerText}>Crear Cuenta de Prestador</Text>
             <Text style={styles.subHeaderText}>Registra tus datos como prestador de servicios</Text>
           </View>
-          
+
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <Ionicons name="business-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
@@ -144,7 +143,7 @@ const RegisterScreen = ({ navigation }) => {
                 onChangeText={setName}
               />
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -157,7 +156,7 @@ const RegisterScreen = ({ navigation }) => {
                 onChangeText={setEmail}
               />
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="call-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -169,8 +168,8 @@ const RegisterScreen = ({ navigation }) => {
                 onChangeText={setPhone}
               />
             </View>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity accessibilityRole="button"
               style={styles.inputContainer}
               onPress={() => setShowTypeModal(true)}
             >
@@ -180,7 +179,7 @@ const RegisterScreen = ({ navigation }) => {
               </Text>
               <Ionicons name="chevron-down" size={20} color="#888" style={{marginRight: 10}} />
             </TouchableOpacity>
-            
+
             <View style={styles.specialtiesContainer}>
               <Text style={styles.specialtiesTitle}>Especialidades:</Text>
               {specialties.length > 0 ? (
@@ -188,7 +187,7 @@ const RegisterScreen = ({ navigation }) => {
                   {specialties.map((specialty, index) => (
                     <View key={index} style={styles.specialtyChip}>
                       <Text style={styles.specialtyChipText}>{specialty}</Text>
-                      <TouchableOpacity onPress={() => removeSpecialty(specialty)}>
+                      <TouchableOpacity accessibilityRole="button" hitSlop={8} onPress={() => removeSpecialty(specialty)}>
                         <Ionicons name="close-circle" size={18} color="#FFF" />
                       </TouchableOpacity>
                     </View>
@@ -197,7 +196,7 @@ const RegisterScreen = ({ navigation }) => {
               ) : (
                 <Text style={styles.noSpecialtiesText}>No hay especialidades seleccionadas</Text>
               )}
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.addSpecialtyButton}
                 onPress={() => setShowSpecialtiesModal(true)}
               >
@@ -205,7 +204,7 @@ const RegisterScreen = ({ navigation }) => {
                 <Text style={styles.addSpecialtyText}>Agregar especialidad</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -216,18 +215,18 @@ const RegisterScreen = ({ navigation }) => {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Ionicons 
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -238,20 +237,20 @@ const RegisterScreen = ({ navigation }) => {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <Ionicons 
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity 
-              style={styles.registerButton} 
+
+            <TouchableOpacity accessibilityRole="button"
+              style={styles.registerButton}
               onPress={handleRegister}
               disabled={isLoading}
             >
@@ -259,19 +258,19 @@ const RegisterScreen = ({ navigation }) => {
                 {isLoading ? 'Registrando...' : 'Registrarse como prestador'}
               </Text>
             </TouchableOpacity>
-            
+
             {error ? (
               <Text style={styles.errorText}>{error}</Text>
             ) : null}
-            
+
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>¿Ya tienes una cuenta de prestador? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.loginButtonText}>Inicia sesión</Text>
               </TouchableOpacity>
             </View>
           </View>
-          
+
           {/* Modal para seleccionar tipo de prestador */}
           <Modal
             visible={showTypeModal}
@@ -284,8 +283,8 @@ const RegisterScreen = ({ navigation }) => {
                 <Text style={styles.modalTitle}>Seleccionar tipo de prestador</Text>
                 <ScrollView>
                   {providerTypes.map((type, index) => (
-                    <TouchableOpacity 
-                      key={index} 
+                    <TouchableOpacity accessibilityRole="button"
+                      key={index}
                       style={styles.modalItem}
                       onPress={() => {
                         setProviderType(type);
@@ -296,7 +295,7 @@ const RegisterScreen = ({ navigation }) => {
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
-                <TouchableOpacity 
+                <TouchableOpacity accessibilityRole="button"
                   style={styles.modalCloseButton}
                   onPress={() => setShowTypeModal(false)}
                 >
@@ -305,7 +304,7 @@ const RegisterScreen = ({ navigation }) => {
               </View>
             </View>
           </Modal>
-          
+
           {/* Modal para seleccionar especialidades */}
           <Modal
             visible={showSpecialtiesModal}
@@ -320,8 +319,8 @@ const RegisterScreen = ({ navigation }) => {
                   {availableSpecialties
                     .filter(specialty => !specialties.includes(specialty))
                     .map((specialty, index) => (
-                      <TouchableOpacity 
-                        key={index} 
+                      <TouchableOpacity accessibilityRole="button"
+                        key={index}
                         style={styles.modalItem}
                         onPress={() => addSpecialty(specialty)}
                       >
@@ -330,7 +329,7 @@ const RegisterScreen = ({ navigation }) => {
                     ))
                   }
                 </ScrollView>
-                <TouchableOpacity 
+                <TouchableOpacity accessibilityRole="button"
                   style={styles.modalCloseButton}
                   onPress={() => setShowSpecialtiesModal(false)}
                 >
@@ -341,7 +340,7 @@ const RegisterScreen = ({ navigation }) => {
           </Modal>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -392,6 +391,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -399,14 +400,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     paddingHorizontal: 10,
-    height: 55,
+
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
+    flexShrink: 1,
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 8,
     flex: 1,
-    height: '100%',
+
     color: '#333',
     fontSize: 16,
   },
@@ -414,9 +419,11 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   registerButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
@@ -451,6 +458,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   specialtyChipText: {
+    flexShrink: 1,
     color: 'white',
     marginRight: 6,
   },
@@ -464,6 +472,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addSpecialtyText: {
+    flexShrink: 1,
     color: '#1E88E5',
     marginLeft: 5,
   },
@@ -508,10 +517,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   loginContainer: {
+    flexWrap: 'wrap',
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
   },
   loginText: {
+    flexShrink: 1,
     color: '#666',
     fontSize: 14,
   },

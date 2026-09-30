@@ -1,12 +1,12 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  FlatList, 
-  Modal,
-  ScrollView,
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  FlatList,
   Platform,
   Alert,
   ActivityIndicator,
@@ -25,13 +25,13 @@ const EmergencyDetailScreen = ({ navigation }) => {
   const [selectedEmergency, setSelectedEmergency] = useState(null);
   const [loadingPago, setLoadingPago] = useState(false);
   const [pagoInfo, setPagoInfo] = useState(null);
-  
+
   // Obtenemos las emergencias del store - ACTUALIZADO para cargar todas incluyendo historial
   const { activeEmergencies, loadAllEmergencies, isLoading, error } = useEmergencyStore();
-  
+
   // Store de pagos
   const { crearPreferencia, capturarPago, obtenerPagosPorReferencia } = usePagoStore();
-  
+
   // Estado local para organizar las emergencias
   const [emergencies, setEmergencies] = useState({
     active: [],
@@ -79,7 +79,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
   const processEmergencies = (emergenciesData) => {
     const active = [];
     const history = [];
-    
+
     // Separar las emergencias según su estado
     emergenciesData.forEach(emergency => {
       // Formatear la fecha y hora
@@ -89,13 +89,13 @@ const EmergencyDetailScreen = ({ navigation }) => {
         month: 'long',
         year: 'numeric'
       });
-      
+
       // Formatear la hora
       const horaFormateada = fecha.toLocaleTimeString('es-ES', {
         hour: '2-digit',
         minute: '2-digit'
       });
-      
+
       // Procesar la emergencia
       const processedEmergency = {
         id: emergency._id,
@@ -112,22 +112,22 @@ const EmergencyDetailScreen = ({ navigation }) => {
         lastUpdate: emergency.ultimaActualizacion,
         originalData: emergency // Guardamos los datos originales para referencia
       };
-      
+
       // Clasificar según estado
       // Activas: en proceso o pendientes de atención
       if (['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'En atención'].includes(emergency.estado)) {
         active.push(processedEmergency);
-      } 
+      }
       // Historial: completadas o canceladas
       else if (['Atendida', 'Cancelada', 'Expirada'].includes(emergency.estado)) {
         history.push(processedEmergency);
       }
     });
-    
+
     // Ordenar por fecha (más reciente primero)
     active.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     history.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
+
     setEmergencies({ active, history });
   };
 
@@ -180,7 +180,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
   // Función para manejar el pago con Mercado Pago
   const handlePagar = async () => {
     if (!selectedEmergency) return;
-    
+
     // Verificar si ya existe una preferencia de pago
     if (pagoInfo && pagoInfo.mercadoPago?.initPoint) {
       // Ya existe una preferencia, abrir el link de pago
@@ -195,7 +195,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
               try {
                 const url = pagoInfo.mercadoPago.initPoint;
                 const canOpen = await Linking.canOpenURL(url);
-                
+
                 if (canOpen) {
                   await Linking.openURL(url);
                   // Informar al usuario
@@ -231,7 +231,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
       Alert.alert('Error', 'No se encontró información del pago');
       return;
     }
-    
+
     Alert.alert(
       'Confirmar Servicio',
       '¿Confirmas que el servicio fue completado satisfactoriamente? El pago será procesado.',
@@ -241,11 +241,11 @@ const EmergencyDetailScreen = ({ navigation }) => {
           text: 'Sí, confirmar',
           onPress: async () => {
             setLoadingPago(true);
-            
+
             const result = await capturarPago(pagoInfo._id);
-            
+
             setLoadingPago(false);
-            
+
             if (result.success) {
               Alert.alert(
                 'Pago Procesado',
@@ -270,8 +270,8 @@ const EmergencyDetailScreen = ({ navigation }) => {
   };
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.appointmentCard} 
+    <TouchableOpacity accessibilityRole="button"
+      style={styles.appointmentCard}
       onPress={() => {
         setSelectedEmergency(item);
         loadPaymentInfo(item.id); // Cargar info de pago
@@ -287,7 +287,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
           <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
         </View>
       </View>
-      
+
       <View style={styles.appointmentDetails}>
         <View style={styles.detailRow}>
           <Ionicons name="time-outline" size={16} color="#666" />
@@ -306,10 +306,10 @@ const EmergencyDetailScreen = ({ navigation }) => {
           <Text style={styles.detailText}>{item.vetName}</Text>
         </View>
       </View>
-      
+
       <View style={styles.buttonsContainer}>
         {(['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'En atención'].includes(item.status)) && (
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.actionButton, styles.cancelButton]}
             onPress={() => {
               setSelectedEmergency(item);
@@ -320,7 +320,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
           </TouchableOpacity>
         )}
         {(['Atendida', 'Cancelada', 'Expirada'].includes(item.status)) && (
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={styles.reviewButton}
             onPress={() => {
               setSelectedEmergency(item);
@@ -350,13 +350,13 @@ const EmergencyDetailScreen = ({ navigation }) => {
         <View style={styles.modalView}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Detalles de la Emergencia</Text>
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}
               onPress={() => setModalVisible(false)}
             >
               <Ionicons name="close" size={24} color="#333" />
             </TouchableOpacity>
           </View>
-          
+
           {selectedEmergency && (
             <ScrollView style={styles.modalContent}>
               <View style={styles.statusContainer}>
@@ -364,7 +364,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   <Text style={styles.modalStatusText}>{getStatusLabel(selectedEmergency.status)}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.infoSection}>
                 <Text style={styles.infoSectionTitle}>Fecha y Hora</Text>
                 <View style={styles.infoRow}>
@@ -376,7 +376,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   <Text style={styles.infoText}>{selectedEmergency.time}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.infoSection}>
                 <Text style={styles.infoSectionTitle}>Servicio</Text>
                 <View style={styles.infoRow}>
@@ -384,7 +384,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   <Text style={styles.infoText}>{selectedEmergency.type}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.infoSection}>
                 <Text style={styles.infoSectionTitle}>Mascota</Text>
                 <View style={styles.infoRow}>
@@ -392,7 +392,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   <Text style={styles.infoText}>{selectedEmergency.petName}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.infoSection}>
                 <Text style={styles.infoSectionTitle}>Veterinario</Text>
                 <View style={styles.infoRow}>
@@ -400,7 +400,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   <Text style={styles.infoText}>{selectedEmergency.vetName}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.infoSection}>
                 <Text style={styles.infoSectionTitle}>Ubicación</Text>
                 <View style={styles.infoRow}>
@@ -408,7 +408,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   <Text style={styles.infoText}>{selectedEmergency.address}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.infoSection}>
                 <Text style={styles.infoSectionTitle}>Descripción</Text>
                 <View style={styles.infoRow}>
@@ -416,13 +416,13 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   <Text style={styles.infoText}>{selectedEmergency.description || 'Sin descripción'}</Text>
                 </View>
               </View>
-              
+
               {/* Sección de Pago con Mercado Pago */}
-              {(['En camino', 'En atención'].includes(selectedEmergency.status)) && 
+              {(['En camino', 'En atención'].includes(selectedEmergency.status)) &&
                selectedEmergency.originalData?.metodoPago === 'MercadoPago' && (
                 <View style={styles.paymentSection}>
                   <Text style={styles.infoSectionTitle}>Pago del Servicio</Text>
-                  
+
                   {loadingPago ? (
                     <ActivityIndicator size="small" color="#1E88E5" style={{ marginVertical: 10 }} />
                   ) : pagoInfo && ['Pagado', 'Capturado', 'Completado'].includes(pagoInfo.estado) ? (
@@ -446,7 +446,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
                           El pago aún no ha sido completado. Presiona el botón para continuar.
                         </Text>
                       </View>
-                      <TouchableOpacity 
+                      <TouchableOpacity accessibilityRole="button"
                         style={styles.payButton}
                         onPress={handlePagar}
                         disabled={loadingPago}
@@ -465,9 +465,9 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   )}
                 </View>
               )}
-              
+
               {/* Método de pago Efectivo */}
-              {(['En camino', 'En atención'].includes(selectedEmergency.status)) && 
+              {(['En camino', 'En atención'].includes(selectedEmergency.status)) &&
                selectedEmergency.originalData?.metodoPago === 'Efectivo' && (
                 <View style={styles.paymentSection}>
                   <Text style={styles.infoSectionTitle}>Método de Pago</Text>
@@ -482,12 +482,12 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   </View>
                 </View>
               )}
-              
+
               {/* Botón para confirmar servicio completado */}
               {selectedEmergency.status === 'En atención' && pagoInfo && pagoInfo.estado === 'Pagado' && (
                 <View style={styles.paymentSection}>
                   <Text style={styles.infoSectionTitle}>Confirmar Servicio</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity accessibilityRole="button"
                     style={styles.confirmButton}
                     onPress={handleConfirmarServicio}
                     disabled={loadingPago}
@@ -506,11 +506,11 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   </Text>
                 </View>
               )}
-              
-              {/* {(['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'Iniciada'].includes(selectedEmergency.status)) 
+
+              {/* {(['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'Iniciada'].includes(selectedEmergency.status))
               && (
                 <View style={styles.modalButtonsContainer}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.modalActionButton, styles.modalCancelButton]}
                     onPress={() => {
                       setModalVisible(false);
@@ -521,10 +521,10 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   </TouchableOpacity>
                 </View>
               )}
-              
+
               {(['Completada', 'Cancelada', 'Expirada'].includes(selectedEmergency.status)) && (
                 <View style={styles.modalButtonsContainer}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.modalActionButton}
                     onPress={() => {
                       setModalVisible(false);
@@ -546,11 +546,11 @@ const EmergencyDetailScreen = ({ navigation }) => {
     <View style={styles.container}>
       <StatusBar backgroundColor="#1E88E5" barStyle="light-content" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back-outline" size={28} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mis Emergencias</Text>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={styles.newAppointmentButton}
           onPress={() => navigation.navigate('EmergencyForm')}
         >
@@ -558,9 +558,9 @@ const EmergencyDetailScreen = ({ navigation }) => {
           <Ionicons name="add" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.tabsContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.tab, activeTab === 'active' && styles.activeTab]}
           onPress={() => setActiveTab('active')}
         >
@@ -568,7 +568,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
             Activas
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.tab, activeTab === 'history' && styles.activeTab]}
           onPress={() => setActiveTab('history')}
         >
@@ -577,7 +577,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
-      
+
       {isLoading ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Cargando emergencias...</Text>
@@ -586,7 +586,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
         <View style={styles.emptyContainer}>
           <Ionicons name="alert-circle" size={80} color="#F44336" style={styles.emptyIcon} />
           <Text style={styles.emptyText}>Error al cargar emergencias</Text>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={styles.emptyButton}
             onPress={() => loadEmergencias()}
           >
@@ -606,13 +606,13 @@ const EmergencyDetailScreen = ({ navigation }) => {
         <View style={styles.emptyContainer}>
           <Ionicons name="medkit" size={80} color="#1E88E5" style={styles.emptyIcon} />
           <Text style={styles.emptyText}>
-            {activeTab === 'active' 
-              ? 'No tienes emergencias activas' 
+            {activeTab === 'active'
+              ? 'No tienes emergencias activas'
               : 'No tienes historial de emergencias'
             }
           </Text>
           {activeTab === 'active' && (
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={styles.emptyButton}
               onPress={() => navigation.navigate('EmergencyForm')}
             >
@@ -621,7 +621,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
           )}
         </View>
       )}
-      
+
       {emergencyDetailsModal}
     </View>
   );
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -652,6 +652,9 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
@@ -670,6 +673,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,//Radio de la sombra
   },
   newAppointmentButtonText: {
+    flexShrink: 1,
     color: '#fff',//Color del texto
     fontWeight: 'bold',//Peso del texto
     marginRight: 5,//Margen derecho
@@ -713,16 +717,21 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   appointmentHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
   dateContainer: {
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
   },
   dateText: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
@@ -747,11 +756,14 @@ const styles = StyleSheet.create({
     marginVertical: 3,
   },
   detailText: {
+    flexShrink: 1,
     marginLeft: 8,
     fontSize: 14,
     color: '#666',
   },
   buttonsContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'flex-end',
   },
@@ -812,6 +824,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   paymentStatusText: {
+    flexShrink: 1,
     fontSize: 15,
     color: '#4CAF50',
     fontWeight: '600',
@@ -838,6 +851,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   payButtonText: {
+    flexShrink: 1,
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
@@ -902,6 +916,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   modalTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
@@ -938,6 +953,7 @@ const styles = StyleSheet.create({
     marginVertical: 5,
   },
   infoText: {
+    flexShrink: 1,
     marginLeft: 10,
     fontSize: 16,
     color: '#666',

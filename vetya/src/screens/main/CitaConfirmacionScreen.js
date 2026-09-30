@@ -1,10 +1,10 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  ScrollView,
   Alert,
   Animated,
   Platform,
@@ -17,21 +17,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import useCitaStore from '../../store/useCitaStore';
 import usePagoStore from '../../store/usePagoStore';
+import axios from '../../config/axios';
 import { createIdempotencyKey } from '../../utils/idempotency';
 
 const CitaConfirmacionScreen = ({ navigation, route }) => {
   const { appointmentData, pet, provider, service, date, time, location, reason, reschedulingAppointment } = route.params || {};
   const isRescheduling = !!reschedulingAppointment?._id;
   const currentPaymentMethod = reschedulingAppointment?.metodoPago === 'MercadoPago' ? 'MercadoPago' : 'Efectivo';
-  
+
   // Estados para manejar el pago
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(isRescheduling ? currentPaymentMethod : 'Efectivo');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [createdAppointment, setCreatedAppointment] = useState(null);
   const [cashStatus, setCashStatus] = useState(null);
+  const [mpAvailable, setMpAvailable] = useState(false);
   const [paymentIdempotencyKey] = useState(() => createIdempotencyKey());
   const paymentSubmissionRef = useRef(false);
-  
+
   // Stores
   const { crearPreferencia, crearPagoEfectivo, obtenerEstadoEfectivoPrestador } = usePagoStore();
   const { createAppointment, reprogramAppointment } = useCitaStore();
@@ -41,6 +43,16 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   const isFreeService = service?.esGratis === true || servicePrice === 0;
   const canUseCash = isRescheduling || (cashStatus?.canAcceptCash ?? initialCanAcceptCash) !== false;
 
+  useFocusEffect(useCallback(() => {
+    if (!providerId || isRescheduling || isFreeService) return;
+    let active = true;
+    setMpAvailable(false);
+    axios.get(`/pagos/mercadopago/prestador/${providerId}/disponible`)
+      .then(({ data }) => { if (active) setMpAvailable(data.disponible === true); })
+      .catch(() => { if (active) setMpAvailable(false); });
+    return () => { active = false; };
+  }, [providerId, isRescheduling, isFreeService]));
+
   useEffect(() => {
     const loadCashStatus = async () => {
       if (!providerId || isRescheduling) return;
@@ -48,9 +60,6 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       const result = await obtenerEstadoEfectivoPrestador(providerId);
       if (result.success) {
         setCashStatus(result.data);
-        if (result.data?.canAcceptCash === false) {
-          setSelectedPaymentMethod('MercadoPago');
-        }
       }
     };
 
@@ -58,11 +67,11 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   }, [providerId, isRescheduling]);
 
   useEffect(() => {
-    if (!canUseCash && selectedPaymentMethod === 'Efectivo') {
-      setSelectedPaymentMethod('MercadoPago');
-    }
-  }, [canUseCash, selectedPaymentMethod]);
-  
+    if (isRescheduling) return;
+    if (!canUseCash) setSelectedPaymentMethod(mpAvailable ? 'MercadoPago' : null);
+    else if (!mpAvailable && selectedPaymentMethod === 'MercadoPago') setSelectedPaymentMethod('Efectivo');
+  }, [canUseCash, mpAvailable, isRescheduling, selectedPaymentMethod]);
+
   // Si no hay datos de appointment, mostrar mensaje de error
   if (!appointmentData) {
     return (
@@ -74,7 +83,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={60} color="#F44336" />
           <Text style={styles.errorText}>No se pudo cargar la información de la cita</Text>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.actionButton, styles.primaryButton]}
             onPress={() => navigation.navigate('MainTabs', { screen: 'Inicio' })}
           >
@@ -216,34 +225,46 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       await handleEfectivoPayment();
       return;
     }
-    paymentSubmissionRef.current = true;
     if (!appointmentData) {
-      paymentSubmissionRef.current = false;
       Alert.alert('Error', 'No se puede procesar el pago sin información de la cita');
       return;
     }
 
+    paymentSubmissionRef.current = true;
     try {
       setProcessingPayment(true);
-      
+      let disponible;
+      try {
+        const response = await axios.get(`/pagos/mercadopago/prestador/${providerId}/disponible`);
+        disponible = response.data.disponible === true;
+      } catch (_error) {
+        Alert.alert('Error', 'No se pudo verificar si el prestador acepta Mercado Pago. Intentá nuevamente.');
+        return;
+      }
+      if (!disponible) {
+        setMpAvailable(false);
+        Alert.alert('Mercado Pago no disponible', 'Este prestador aún no vinculó su cuenta. Seleccioná efectivo.');
+        return;
+      }
+
       console.log('🔄 Creando cita para pago con Mercado Pago...');
-      
+
       // 1. Crear la cita en la base de datos (estado: Pendiente)
       const citaResult = await createAppointment({
         ...appointmentData,
         metodoPago: 'MercadoPago',
         estado: 'Pendiente',
       });
-      
+
       if (!citaResult.success) {
         Alert.alert('Error', citaResult.error || 'No se pudo crear la cita');
         return;
       }
-      
+
       const nuevaCita = citaResult.data;
       console.log('✅ Cita creada:', nuevaCita._id);
       setCreatedAppointment(nuevaCita);
-      
+
       // 2. Crear preferencia de pago
       // Aunque el pago se apruebe, la cita debe seguir pendiente hasta que el prestador la acepte
       const result = await crearPreferencia(
@@ -253,13 +274,13 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         `Cita veterinaria - ${nuevaCita.servicio?.nombre || service?.nombre || 'Consulta general'}`,
         paymentIdempotencyKey
       );
-      
+
       console.log('📦 Resultado de crearPreferencia:', result);
-      
+
       if (result.success && result.initPoint) {
         console.log('✅ Preferencia creada, redirigiendo a Mercado Pago');
         console.log('🔗 Init Point:', result.initPoint);
-        
+
         Alert.alert(
           'Proceder al Pago',
           'Seras redirigido a Mercado Pago para completar el pago. Luego, tu cita seguira pendiente hasta que el prestador la acepte o rechace.',
@@ -269,13 +290,13 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               onPress: async () => {
                 try {
                   console.log('🔗 Abriendo Mercado Pago:', result.initPoint);
-                  
+
                   // Abrir Mercado Pago en el navegador
                   const supported = await Linking.canOpenURL(result.initPoint);
-                  
+
                   if (supported) {
                     await Linking.openURL(result.initPoint);
-                    
+
                     // Navegar a la pantalla de citas mientras el usuario paga
                     Alert.alert(
                       'Redirigido a Mercado Pago',
@@ -321,52 +342,52 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Confirmación de Cita</Text>
       </View>
-      
+
       <ScrollView style={styles.content}>
         <View style={styles.confirmationBox}>
           <View style={styles.successIconContainer}>
             <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
           </View>
-          
+
           <Text style={styles.confirmationTitle}>¡Casi listo!</Text>
           <Text style={styles.confirmationMessage}>
             Revisa los detalles de tu cita y selecciona el metodo de pago para enviar la reserva al prestador.
           </Text>
-          
+
           <View style={styles.divider} />
-          
+
           <Text style={styles.sectionTitle}>Detalles de la Cita</Text>
-          
+
           <View style={styles.detailRow}>
             <Ionicons name="calendar" size={22} color="#1E88E5" style={styles.detailIcon} />
             <Text style={styles.detailLabel}>Fecha:</Text>
             <Text style={styles.detailValue}>
-              {date?.displayDate || (date?.date ? new Date(date.date).toLocaleDateString('es-ES', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+              {date?.displayDate || (date?.date ? new Date(date.date).toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
               }) : 'Fecha no especificada')}
             </Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Ionicons name="time" size={22} color="#1E88E5" style={styles.detailIcon} />
             <Text style={styles.detailLabel}>Hora:</Text>
             <Text style={styles.detailValue}>{time?.time || 'Hora no especificada'} - {time?.endTime || ''}</Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Ionicons name="medkit" size={22} color="#1E88E5" style={styles.detailIcon} />
             <Text style={styles.detailLabel}>Servicio:</Text>
             <Text style={styles.detailValue}>{service?.nombre || 'Servicio no especificado'}</Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Ionicons name="paw" size={22} color="#1E88E5" style={styles.detailIcon} />
             <Text style={styles.detailLabel}>Mascota:</Text>
@@ -375,19 +396,19 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               {pet?.raza && ` (${pet.raza})`}
             </Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Ionicons name="person" size={22} color="#1E88E5" style={styles.detailIcon} />
             <Text style={styles.detailLabel}>Prestador:</Text>
             <Text style={styles.detailValue}>{provider?.nombre || 'Prestador no especificado'}</Text>
           </View>
-          
+
           <View style={styles.detailRow}>
             <Ionicons name="location" size={22} color="#1E88E5" style={styles.detailIcon} />
             <Text style={styles.detailLabel}>Ubicación:</Text>
             <Text style={styles.detailValue}>{location?.label || 'No especificada'}</Text>
           </View>
-          
+
           {reason && (
             <View style={styles.reasonContainer}>
               <Text style={styles.reasonLabel}>Motivo de la consulta:</Text>
@@ -403,21 +424,21 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               </Text>
             </View>
           )}
-          
+
           <View style={styles.statusContainer}>
             <Text style={styles.statusLabel}>Estado:</Text>
             <View style={[styles.statusBadge, { backgroundColor: '#FFC107' }]}>
               <Text style={styles.statusText}>Pendiente de aprobacion</Text>
             </View>
           </View>
-          
+
           {/* Sección de método de pago */}
           {!isFreeService ? (
           <View style={styles.paymentSection}>
             <Text style={styles.paymentTitle}>Método de Pago</Text>
             <Text style={styles.paymentSubtitle}>Selecciona cómo deseas pagar el servicio</Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity accessibilityRole="button"
               style={[
                 styles.paymentOption,
                 selectedPaymentMethod === 'Efectivo' && styles.paymentOptionSelected,
@@ -427,10 +448,10 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               disabled={isRescheduling || !canUseCash}
             >
               <View style={styles.paymentOptionContent}>
-                <Ionicons 
-                  name="cash-outline" 
-                  size={28} 
-                  color={selectedPaymentMethod === 'Efectivo' ? '#1E88E5' : '#666'} 
+                <Ionicons
+                  name="cash-outline"
+                  size={28}
+                  color={selectedPaymentMethod === 'Efectivo' ? '#1E88E5' : '#666'}
                 />
                 <View style={styles.paymentOptionText}>
                   <Text style={[
@@ -446,8 +467,11 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                 <Ionicons name="checkmark-circle" size={24} color="#1E88E5" />
               )}
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+            {!canUseCash && !mpAvailable && (
+              <Text style={styles.paymentSubtitle}>Este prestador no tiene medios de pago disponibles por ahora.</Text>
+            )}
+
+            {(mpAvailable || (isRescheduling && currentPaymentMethod === 'MercadoPago')) && <TouchableOpacity accessibilityRole="button"
               style={[
                 styles.paymentOption,
                 selectedPaymentMethod === 'MercadoPago' && styles.paymentOptionSelected
@@ -456,10 +480,10 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               disabled={isRescheduling}
             >
               <View style={styles.paymentOptionContent}>
-                <Ionicons 
-                  name="card-outline" 
-                  size={28} 
-                  color={selectedPaymentMethod === 'MercadoPago' ? '#1E88E5' : '#666'} 
+                <Ionicons
+                  name="card-outline"
+                  size={28}
+                  color={selectedPaymentMethod === 'MercadoPago' ? '#1E88E5' : '#666'}
                 />
                 <View style={styles.paymentOptionText}>
                   <Text style={[
@@ -474,7 +498,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               {selectedPaymentMethod === 'MercadoPago' && (
                 <Ionicons name="checkmark-circle" size={24} color="#1E88E5" />
               )}
-            </TouchableOpacity>
+            </TouchableOpacity>}
           </View>
           ) : (
             <View style={styles.paymentSection}>
@@ -482,22 +506,22 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               <Text style={styles.paymentSubtitle}>No necesitás seleccionar método de pago para esta reserva.</Text>
             </View>
           )}
-          
+
           <View style={styles.actionsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={[styles.actionButton, styles.primaryButton]}
               onPress={handleGoHome}
             >
               <Text style={styles.primaryButtonText}>Volver al Inicio</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity accessibilityRole="button"
               style={[
-                styles.actionButton, 
+                styles.actionButton,
                 selectedPaymentMethod === 'MercadoPago' && !isFreeService ? styles.mercadoPagoButton : styles.secondaryButton
               ]}
               onPress={isRescheduling ? handleReschedule : (isFreeService ? handleEfectivoPayment : (selectedPaymentMethod === 'MercadoPago' ? handleMercadoPagoPayment : handleEfectivoPayment))}
-              disabled={processingPayment}
+              disabled={processingPayment || (!isRescheduling && !isFreeService && !selectedPaymentMethod)}
             >
               {processingPayment ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -523,7 +547,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 15,
     paddingHorizontal: 20,
     alignItems: 'center',
@@ -587,12 +611,16 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   detailLabel: {
+    flexBasis: 100,
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    width: 100,
+
   },
   detailValue: {
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 16,
     color: '#555',
     flex: 1,
@@ -630,6 +658,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   rescheduleNoticeText: {
+    flexShrink: 1,
     flex: 1,
     fontSize: 14,
     color: '#E65100',
@@ -643,10 +672,12 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   statusLabel: {
+    flexBasis: 100,
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    width: 100,
+
   },
   statusBadge: {
     backgroundColor: '#FFC107',
@@ -697,11 +728,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   paymentOptionContent: {
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
   paymentOptionText: {
+    minWidth: 0,
     marginLeft: 15,
     flex: 1,
   },

@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SIZES, SHADOWS } from "../../styles/globalStyles";
@@ -52,7 +51,7 @@ const getCommissionAmount = (pago) => {
 
 const getNetAmount = (pago) => {
   const amount = toNumber(pago?.monto);
-  const backendNetAmount = pago?.mercadoPago?.sellerNetAmount;
+  const backendNetAmount = pago?.mercadoPago?.netReceivedAmount;
 
   if (pago?.metodoPago === "Efectivo") {
     return 0;
@@ -62,7 +61,7 @@ const getNetAmount = (pago) => {
     return toNumber(backendNetAmount, amount);
   }
 
-  return Math.max(amount - getCommissionAmount(pago), 0);
+  return 0;
 };
 
 const EarningsScreen = ({ navigation }) => {
@@ -262,7 +261,7 @@ const EarningsScreen = ({ navigation }) => {
 
   // Renderizar cada transacción
   const renderTransactionItem = ({ item }) => (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={styles.transactionCard}
       onPress={() => handleTransactionDetails(item)}
     >
@@ -354,7 +353,7 @@ Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
     <View style={styles.filterContainer}>
       <Text style={styles.filterTitle}>Mostrar:</Text>
       <View style={styles.filterButtonsContainer}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[
             styles.filterButton,
             filterPeriod === "all" && styles.activeFilterButton,
@@ -371,7 +370,7 @@ Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[
             styles.filterButton,
             filterPeriod === "month" && styles.activeFilterButton,
@@ -388,7 +387,7 @@ Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[
             styles.filterButton,
             filterPeriod === "week" && styles.activeFilterButton,
@@ -409,13 +408,13 @@ Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
 
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.backButton}
             onPress={() => {
               if (navigation.canGoBack()) {
@@ -468,10 +467,10 @@ Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
           <View style={styles.detailCard}>
             <View style={styles.detailCardHeader}>
               <View style={[styles.iconBadge, { backgroundColor: COLORS.warning + '15' }]}>
-                <Ionicons 
-                  name="time" 
-                  size={28} 
-                  color={COLORS.warning} 
+                <Ionicons
+                  name="time"
+                  size={28}
+                  color={COLORS.warning}
                 />
               </View>
             </View>
@@ -538,7 +537,7 @@ Estado: ${transaction.estado === "completado" ? "Cobrado" : "Pendiente"}
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -549,7 +548,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 15,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 15,
@@ -562,12 +561,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   backButton: {
+    minHeight: 40,
+    paddingVertical: 12,
     width: 40,
-    height: 40,
+
     justifyContent: "center",
     alignItems: "center",
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: "bold",
     color: COLORS.white,
@@ -593,6 +595,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   totalCardLabel: {
+    flexShrink: 1,
     fontSize: 16,
     color: COLORS.white,
     marginLeft: 10,
@@ -650,6 +653,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   filterButtonsContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: "row",
   },
   filterButton: {
@@ -691,6 +696,8 @@ const styles = StyleSheet.create({
     ...SHADOWS.small,
   },
   transactionHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
@@ -732,6 +739,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   cashDebtHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: "row",
     alignItems: "flex-start",
   },
@@ -789,11 +798,15 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   detailLabel: {
+    flexBasis: 100,
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.grey,
-    width: 100,
+
   },
   detailValue: {
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.dark,
     flex: 1,
@@ -808,11 +821,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   referenceLabel: {
+    flexShrink: 1,
     fontSize: 12,
     color: COLORS.grey,
     marginRight: 5,
   },
   referenceValue: {
+    flexShrink: 1,
     fontSize: 12,
     color: COLORS.primary,
     fontWeight: "500",

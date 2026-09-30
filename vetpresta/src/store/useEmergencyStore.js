@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { emergenciaService } from '../services/api';
+import logger from '../utils/logger';
 
 const getEmergencyId = (emergency) => emergency?._id || emergency?.id;
 
@@ -10,20 +11,30 @@ const getEmergencyId = (emergency) => emergency?._id || emergency?.id;
 const useEmergencyStore = create((set, get) => ({
   // Estado inicial
   emergencies: [],
+  emergencias: [],
   activeEmergencies: [],
   currentEmergency: null,
+  emergenciaActual: null,
+  availableForEmergencies: false,
   isLoading: false,
   error: null,
-  
+
+  setEmergencias: (emergencias = []) => set({
+    emergencias,
+    emergencies: emergencias,
+    availableForEmergencies: false
+  }),
+
   // Obtener todas las solicitudes de emergencia asignadas al veterinario
   fetchEmergencies: async () => {
     set({ isLoading: true, error: null });
     try {
       const response = await emergenciaService.getVeterinarianEmergencies();
       if (response.success) {
-        set({ 
-          emergencies: response.data, 
-          isLoading: false 
+        set({
+          emergencies: response.data,
+          emergencias: response.data,
+          isLoading: false
         });
         return { success: true, data: response.data };
       } else {
@@ -43,9 +54,9 @@ const useEmergencyStore = create((set, get) => ({
     try {
       const response = await emergenciaService.getNearbyEmergencies();
       if (response.success) {
-        set({ 
-          activeEmergencies: response.data, 
-          isLoading: false 
+        set({
+          activeEmergencies: response.data,
+          isLoading: false
         });
         return { success: true, data: response.data };
       } else {
@@ -62,27 +73,27 @@ const useEmergencyStore = create((set, get) => ({
   // Cargar emergencias activas del usuario
   loadActiveEmergencies: async () => {
     set({ isLoading: true, error: null });
-    
+
     try {
-      console.log('Obteniendo emergencias activas...');
+      logger.debug('Obteniendo emergencias activas...');
       const result = await emergenciaService.getActiveEmergencies();
-      
+
       if (result.success) {
-        console.log(`Se encontraron ${result.data.length} emergencias activas`);
-        
+        logger.debug(`Se encontraron ${result.data.length} emergencias activas`);
+
         // Verificar si hay emergencias en estado "Solicitada" que puedan haber expirado
         const emergenciasActualizadas = [...result.data];
         let cambiosRealizados = false;
-        
+
         for (let i = 0; i < emergenciasActualizadas.length; i++) {
           const emergencia = emergenciasActualizadas[i];
           if (emergencia.estado === 'Solicitada') {
             // Verificar si la emergencia ha expirado (5 minutos desde la solicitud)
-            const expiraEn = emergencia.expiraEn ? new Date(emergencia.expiraEn) : 
+            const expiraEn = emergencia.expiraEn ? new Date(emergencia.expiraEn) :
                             new Date(new Date(emergencia.fechaSolicitud).getTime() + 5 * 60 * 1000);
-            
+
             if (new Date() > expiraEn) {
-              console.log(`Emergencia ${emergencia._id} expirada`);
+              logger.debug(`Emergencia ${emergencia._id} expirada`);
               // La emergencia ha expirado, actualizar estado en el backend
               const verifyResult = await emergenciaService.checkEmergencyExpiration(emergencia._id);
               if (verifyResult.success && verifyResult.data.emergencia.estado === 'Cancelada') {
@@ -93,27 +104,27 @@ const useEmergencyStore = create((set, get) => ({
             }
           }
         }
-        
+
         // Si se realizaron cambios, filtrar emergencias canceladas/expiradas
-        const emergenciasFiltradas = cambiosRealizados ? 
+        const emergenciasFiltradas = cambiosRealizados ?
           emergenciasActualizadas.filter(e => e.estado !== 'Cancelada') : emergenciasActualizadas;
-        
-        set({ 
+
+        set({
           activeEmergencies: emergenciasFiltradas,
           isLoading: false
         });
         return emergenciasFiltradas;
       } else {
-        console.log('Error al cargar emergencias activas:', result.error);
-        set({ 
+        logger.warn('Error al cargar emergencias activas:', result.error);
+        set({
           error: result.error,
           isLoading: false
         });
         return [];
       }
     } catch (error) {
-      console.log('Error al cargar emergencias activas:', error);
-      set({ 
+      logger.warn('Error al cargar emergencias activas:', error);
+      set({
         error: "Error al cargar emergencias activas",
         isLoading: false
       });
@@ -135,7 +146,7 @@ const useEmergencyStore = create((set, get) => ({
         }
         return result.data;
       } else {
-        console.log('Error al verificar expiración:', result.error);
+        logger.warn('Error al verificar expiracion:', result.error);
         return {
           tiempoRestante: 0,
           expirada: false,
@@ -143,7 +154,7 @@ const useEmergencyStore = create((set, get) => ({
         };
       }
     } catch (error) {
-      console.log('Error al verificar expiración:', error);
+      logger.warn('Error al verificar expiracion:', error);
       return {
         tiempoRestante: 0,
         expirada: false,
@@ -156,11 +167,13 @@ const useEmergencyStore = create((set, get) => ({
   fetchEmergencyById: async (emergencyId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await emergenciaService.getEmergencyDetails(emergencyId);
+      const serviceFn = emergenciaService.getById || emergenciaService.getEmergencyDetails;
+      const response = await serviceFn(emergencyId);
       if (response.success) {
-        set({ 
-          currentEmergency: response.data, 
-          isLoading: false 
+        set({
+          currentEmergency: response.data,
+          emergenciaActual: response.data,
+          isLoading: false
         });
         return { success: true, data: response.data };
       } else {
@@ -175,44 +188,48 @@ const useEmergencyStore = create((set, get) => ({
   },
 
   // Aceptar una solicitud de emergencia
-  acceptEmergency: async (emergencyId) => {
-    console.log('📦 [STORE] Iniciando aceptación de emergencia:', emergencyId);
+  updateEmergencyLocation: (emergencyId, latitude, longitude) =>
+    emergenciaService.updateEmergencyLocation(emergencyId, latitude, longitude),
+
+  acceptEmergency: async (emergencyId, acceptData = undefined) => {
+    logger.debug('[STORE] Iniciando aceptacion de emergencia:', emergencyId);
     set({ isLoading: true, error: null });
     try {
-      const response = await emergenciaService.acceptEmergency(emergencyId);
-      console.log('📦 [STORE] Respuesta recibida:', {
+      const response = await emergenciaService.acceptEmergency(emergencyId, acceptData);
+      logger.debug('[STORE] Respuesta recibida:', {
         success: response.success,
         tienePreferencia: !!response.data?.preferenciaMP,
         metodoPago: response.data?.emergenciaActualizada?.metodoPago
       });
-      
+
       if (response.success) {
         // Actualizar el estado de la emergencia a "Aceptada" en la lista local
         set(state => ({
           activeEmergencies: state.activeEmergencies.filter(e => e._id !== emergencyId),
-          emergencies: [...state.emergencies, response.data],
+          emergencies: [...state.emergencies.filter(e => getEmergencyId(e) !== emergencyId), response.data],
+          emergencias: [...state.emergencias.filter(e => getEmergencyId(e) !== emergencyId), response.data],
           isLoading: false
         }));
-        console.log('✅ [STORE] Emergencia aceptada y estado actualizado');
+        logger.debug('[STORE] Emergencia aceptada y estado actualizado');
         return { success: true, data: response.data };
       } else {
-        console.error('❌ [STORE] Error en respuesta:', response.error);
+        logger.warn('[STORE] Error en respuesta:', response.error);
         set({ isLoading: false, error: response.error });
         return { success: false, error: response.error };
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Error al aceptar la emergencia';
-      console.error('❌ [STORE] Excepción al aceptar emergencia:', errorMessage);
+      const errorMessage = error.response?.data?.message || error.message || 'Error al aceptar la emergencia';
+      logger.error('[STORE] Excepcion al aceptar emergencia:', errorMessage);
       set({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
     }
   },
 
   // Rechazar una solicitud de emergencia
-  rejectEmergency: async (emergencyId) => {
+  rejectEmergency: async (emergencyId, motivo = undefined) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await emergenciaService.rejectEmergency(emergencyId);
+      const response = await emergenciaService.rejectEmergency(emergencyId, motivo);
       if (response.success) {
         // Eliminar la emergencia rechazada de la lista local
         set(state => ({
@@ -231,6 +248,64 @@ const useEmergencyStore = create((set, get) => ({
     }
   },
 
+  fetchEmergenciesByPrestador: async (prestadorId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const serviceFn = emergenciaService.getByPrestador || emergenciaService.getVeterinarianEmergencies;
+      const response = await serviceFn(prestadorId);
+      if (response.success) {
+        set({
+          emergencies: response.data,
+          emergencias: response.data,
+          isLoading: false
+        });
+        return { success: true, data: response.data };
+      }
+
+      set({ isLoading: false, error: response.error });
+      return { success: false, error: response.error };
+    } catch (error) {
+      const errorMessage = error.message || 'Error al obtener emergencias';
+      set({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  updateEmergencyStatus: async (emergencyId, estado, payload = undefined) => {
+    set({ isLoading: true, error: null });
+    try {
+      const serviceFn = emergenciaService.updateStatus || emergenciaService.setEmergencyStatus;
+      const response = payload === undefined
+        ? await serviceFn(emergencyId, estado)
+        : await serviceFn(emergencyId, estado, payload);
+      if (response.success) {
+        set(state => ({
+          emergencies: state.emergencies.map(e => getEmergencyId(e) === emergencyId ? { ...e, estado } : e),
+          emergencias: state.emergencias.map(e => getEmergencyId(e) === emergencyId ? { ...e, estado } : e),
+          currentEmergency: getEmergencyId(state.currentEmergency) === emergencyId
+            ? { ...state.currentEmergency, estado }
+            : state.currentEmergency,
+          emergenciaActual: getEmergencyId(state.emergenciaActual) === emergencyId
+            ? { ...state.emergenciaActual, estado }
+            : state.emergenciaActual,
+          isLoading: false
+        }));
+        return { success: true, data: response.data };
+      }
+
+      set({ isLoading: false, error: response.error });
+      return { success: false, error: response.error };
+    } catch (error) {
+      const errorMessage = error.message || 'Error al actualizar emergencia';
+      set({ isLoading: false, error: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  toggleAvailability: () => {
+    set(state => ({ availableForEmergencies: !state.availableForEmergencies }));
+  },
+
   // Marcar emergencia como "En camino"
   setEmergencyOnWay: async (emergencyId) => {
     set({ isLoading: true, error: null });
@@ -239,12 +314,18 @@ const useEmergencyStore = create((set, get) => ({
       if (response.success) {
         // Actualizar el estado de la emergencia en la lista local
         set(state => ({
-          emergencies: state.emergencies.map(e => 
+          emergencies: state.emergencies.map(e =>
             e._id === emergencyId ? {...e, estado: 'En camino'} : e
           ),
-          currentEmergency: state.currentEmergency?._id === emergencyId 
-            ? {...state.currentEmergency, estado: 'En camino'} 
+          emergencias: state.emergencias.map(e =>
+            e._id === emergencyId ? {...e, estado: 'En camino'} : e
+          ),
+          currentEmergency: state.currentEmergency?._id === emergencyId
+            ? {...state.currentEmergency, estado: 'En camino'}
             : state.currentEmergency,
+          emergenciaActual: state.emergenciaActual?._id === emergencyId
+            ? {...state.emergenciaActual, estado: 'En camino'}
+            : state.emergenciaActual,
           isLoading: false
         }));
         return { success: true, data: response.data };
@@ -261,33 +342,39 @@ const useEmergencyStore = create((set, get) => ({
 
   // Marcar emergencia como "Atendida"
   completeEmergency: async (emergencyId) => {
-    console.log('🟡 [Store] completeEmergency iniciado con ID:', emergencyId);
+    logger.debug('[Store] completeEmergency iniciado con ID:', emergencyId);
     set({ isLoading: true, error: null });
     try {
-      console.log('🟡 [Store] Llamando a emergenciaService.setEmergencyStatus');
+      logger.debug('[Store] Llamando a emergenciaService.setEmergencyStatus');
       const response = await emergenciaService.setEmergencyStatus(emergencyId, 'Atendida');
-      console.log('🟡 [Store] Respuesta de setEmergencyStatus:', response);
-      
+      logger.debug('[Store] Respuesta de setEmergencyStatus:', response);
+
       if (response.success) {
-        console.log('🟡 [Store] ✅ Actualización exitosa, actualizando estado local');
+        logger.debug('[Store] Actualizacion exitosa, actualizando estado local');
         // Actualizar el estado de la emergencia en la lista local
         set(state => ({
-          emergencies: state.emergencies.map(e => 
+          emergencies: state.emergencies.map(e =>
             e._id === emergencyId ? {...e, estado: 'Atendida'} : e
           ),
-          currentEmergency: state.currentEmergency?._id === emergencyId 
-            ? {...state.currentEmergency, estado: 'Atendida'} 
+          emergencias: state.emergencias.map(e =>
+            e._id === emergencyId ? {...e, estado: 'Atendida'} : e
+          ),
+          currentEmergency: state.currentEmergency?._id === emergencyId
+            ? {...state.currentEmergency, estado: 'Atendida'}
             : state.currentEmergency,
+          emergenciaActual: state.emergenciaActual?._id === emergencyId
+            ? {...state.emergenciaActual, estado: 'Atendida'}
+            : state.emergenciaActual,
           isLoading: false
         }));
         return { success: true, data: response.data };
       } else {
-        console.log('🟡 [Store] ❌ Error en respuesta:', response.error);
+        logger.warn('[Store] Error en respuesta:', response.error);
         set({ isLoading: false, error: response.error });
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('🟡 [Store] 💥 Excepción en completeEmergency:', error);
+      logger.error('[Store] Excepcion en completeEmergency:', error);
       const errorMessage = error.response?.data?.message || 'Error al completar la emergencia';
       set({ isLoading: false, error: errorMessage });
       return { success: false, error: errorMessage };
@@ -296,7 +383,7 @@ const useEmergencyStore = create((set, get) => ({
 
   // Limpiar el estado
   clearCurrentEmergency: () => {
-    set({ currentEmergency: null });
+    set({ currentEmergency: null, emergenciaActual: null });
   },
 
   applySocketEmergencyUpdate: (emergency) => {
@@ -315,10 +402,14 @@ const useEmergencyStore = create((set, get) => ({
 
       return {
         emergencies: mergeList(state.emergencies),
+        emergencias: mergeList(state.emergencias),
         activeEmergencies: mergeList(state.activeEmergencies),
         currentEmergency: getEmergencyId(state.currentEmergency) === emergencyId
           ? { ...state.currentEmergency, ...emergency }
           : state.currentEmergency,
+        emergenciaActual: getEmergencyId(state.emergenciaActual) === emergencyId
+          ? { ...state.emergenciaActual, ...emergency }
+          : state.emergenciaActual,
       };
     });
   },

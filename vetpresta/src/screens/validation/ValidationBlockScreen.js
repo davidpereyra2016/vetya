@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -7,18 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  ScrollView,
-  Platform,
-  Dimensions
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  Platform} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import useValidacionStore from '../../store/useValidacionStore';
 import useAuthStore from '../../store/useAuthStore';
 
-const { width } = Dimensions.get('window');
 
 const ValidationBlockScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -78,7 +74,7 @@ const ValidationBlockScreen = ({ navigation }) => {
     if (estadoValidacion === 'en_revision') {
       startPolling();
     }
-    
+
     // Cleanup al desmontar el componente
     return () => {
       stopPolling();
@@ -170,7 +166,7 @@ const ValidationBlockScreen = ({ navigation }) => {
     return (
       <View style={styles.progressCard}>
         <Text style={styles.progressTitle}>Progreso de Validación</Text>
-        
+
         <View style={styles.progressItem}>
           <View style={styles.progressHeader}>
             <Ionicons name="document-outline" size={20} color="#666" />
@@ -229,30 +225,30 @@ const ValidationBlockScreen = ({ navigation }) => {
 
   if (isLoading && !estadoValidacion) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1E88E5" />
           <Text style={styles.loadingText}>Verificando estado de validación...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   const estadoInfo = getEstadoInfo();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Vetya Prestadores</Text>
-        <TouchableOpacity onPress={onRefresh}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Actualizar" hitSlop={8} onPress={onRefresh}>
           <Ionicons name="refresh" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -262,7 +258,7 @@ const ValidationBlockScreen = ({ navigation }) => {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={clearError}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={clearError}>
               <Ionicons name="close" size={20} color="#FF3B30" />
             </TouchableOpacity>
           </View>
@@ -281,7 +277,7 @@ const ValidationBlockScreen = ({ navigation }) => {
           {renderRejectionInfo()}
 
           <View style={styles.actionsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={[styles.actionButton, { backgroundColor: estadoInfo.color }]}
               onPress={handleNavigateToValidation}
             >
@@ -289,7 +285,7 @@ const ValidationBlockScreen = ({ navigation }) => {
               <Text style={styles.actionButtonText}>{estadoInfo.actionText}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={styles.secondaryButton}
               onPress={handleLogout}
             >
@@ -305,16 +301,16 @@ const ValidationBlockScreen = ({ navigation }) => {
             <Text style={styles.helpTitle}>¿Necesitas Ayuda?</Text>
           </View>
           <Text style={styles.helpText}>
-            Si tienes dudas sobre el proceso de validación o necesitas asistencia, 
+            Si tienes dudas sobre el proceso de validación o necesitas asistencia,
             puedes contactar a nuestro equipo de soporte.
           </Text>
-          <TouchableOpacity style={styles.helpButton}>
+          <TouchableOpacity accessibilityRole="button" style={styles.helpButton}>
             <Ionicons name="mail-outline" size={16} color="#1E88E5" />
             <Text style={styles.helpButtonText}>Contactar Soporte</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -330,9 +326,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 45,
+    paddingTop: 16,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 20,
     fontWeight: 'bold',
@@ -363,6 +363,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorText: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#FF3B30',
     flex: 1,
   },
@@ -414,6 +416,8 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   progressItem: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -424,11 +428,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressLabel: {
+    flexShrink: 1,
     fontSize: 16,
     color: '#333',
     marginLeft: 8,
   },
   progressText: {
+    flexShrink: 1,
     fontSize: 16,
     color: '#666',
     fontWeight: '600',
@@ -464,6 +470,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   observationsTitle: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#856404',
@@ -489,6 +496,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   rejectionTitle: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#721C24',
@@ -518,6 +526,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   actionButtonText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
@@ -534,6 +543,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   secondaryButtonText: {
+    flexShrink: 1,
     color: '#666',
     fontSize: 16,
     fontWeight: '600',
@@ -555,6 +565,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   helpTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
@@ -572,6 +583,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   helpButtonText: {
+    flexShrink: 1,
     color: '#1E88E5',
     fontSize: 16,
     fontWeight: '600',

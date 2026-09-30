@@ -1,11 +1,11 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Image,
   FlatList,
   Animated,
   RefreshControl,
@@ -41,7 +41,7 @@ const HomeScreen = ({ navigation }) => {
   const [availableVetsLoading, setAvailableVetsLoading] = useState(false);
   // Estado para controlar si hay una emergencia en progreso
   const [isEmergencyInProgress, setIsEmergencyInProgress] = useState(false);
-  
+
   // Estado para seguimiento de veterinario en emergencias activas
   const [activeEmergencyVet, setActiveEmergencyVet] = useState(null);
   const [estimatedArrivalTime, setEstimatedArrivalTime] = useState('--');
@@ -59,7 +59,7 @@ const HomeScreen = ({ navigation }) => {
       arrivalIdempotencyKeysRef.current[emergencyId] = createIdempotencyKey();
     }
   }, [activeEmergencyVet?.emergencyId]);
-  
+
   // Referencia al temporizador para actualización de ubicación
   const locationUpdateTimerRef = useRef(null);
   // Contador de errores consecutivos del endpoint /ubicacion-veterinario.
@@ -76,7 +76,7 @@ const HomeScreen = ({ navigation }) => {
   const section2Anim = useRef(new Animated.Value(0)).current;
   const section3Anim = useRef(new Animated.Value(0)).current;
   const statusBannerAnim = useRef(new Animated.Value(-50)).current;
-  
+
   // Obtener veterinarios disponibles del store (solo para emergencias)
   const {
     availableVets,
@@ -86,20 +86,20 @@ const HomeScreen = ({ navigation }) => {
     checkEmergencyExpiration,
     confirmVetArrival
   } = useEmergencyStore();
-  
+
   // Obtener citas del usuario del store
   const { upcomingAppointments, fetchUserAppointments, userAppointments } = useCitaStore();
-  
+
   // Obtener prestadores destacados de todos los tipos (nuevo store)
-  const { 
+  const {
     prestadores,
-    prestadoresDestacados, 
+    prestadoresDestacados,
     fetchPrestadoresDestacados,
     fetchAllPrestadores,
     isLoading: loadingPrestadores,
-    error: prestadoresError 
+    error: prestadoresError
   } = usePrestadoresStore();
-  
+
   // Obtener valoraciones de prestadores
   const {
     valoracionesPrestador,
@@ -108,7 +108,7 @@ const HomeScreen = ({ navigation }) => {
     fetchEstadisticasPrestador,
     isLoading: loadingValoraciones
   } = useValoracionesStore();
-  
+
   // Obtener conteo de pacientes atendidos
   const {
     totalPacientes,
@@ -131,10 +131,10 @@ const HomeScreen = ({ navigation }) => {
 
   // Nombre de la mascota: primera mascota registrada (si existe)
   const firstPetName = pets && pets.length > 0 ? (pets[0]?.nombre || null) : null;
-  
+
   // Estado para almacenar prestadores con calificación > 4.5
   const [prestadoresDestacadosConStats, setPrestadoresDestacadosConStats] = useState([]);
-  
+
   // Estados para almacenar estadísticas de prestadores y conteo de pacientes
   const [estadisticasPrestadores, setEstadisticasPrestadores] = useState({});
   const [countPacientes, setCountPacientes] = useState({});
@@ -145,28 +145,28 @@ const HomeScreen = ({ navigation }) => {
   // Datos de ejemplo para los servicios
   const services = [
     {
-      id: 'emergencias', 
-      title: 'Emergencias', 
-      icon: 'alert-circle-outline', 
-      color: '#F44336' 
+      id: 'emergencias',
+      title: 'Emergencias',
+      icon: 'alert-circle-outline',
+      color: '#F44336'
     },
     // {
     //   id: '1',
     //   title: 'Consulta General',
-    //   icon: 'medkit-outline', 
+    //   icon: 'medkit-outline',
     //   color: '#1E88E5'
     // },
     // {
     //   id: '2',
     //   title: 'Vacunación',
-    //   icon: 'shield-checkmark-outline', 
+    //   icon: 'shield-checkmark-outline',
     //   color: '#4CAF50'
     //   // #4CAF50
     // },
     {
       id: '3',
       title: 'Mis Emergencias',
-      icon: 'calendar-outline', 
+      icon: 'calendar-outline',
       color: '#FF9800'
     },
     {
@@ -196,14 +196,14 @@ const HomeScreen = ({ navigation }) => {
       // Importante: evitar actualizaciones periódicas innecesarias
       return;
     }
-    
+
     // Ordenar emergencias por fecha de solicitud (más reciente primero)
     const sortedEmergencies = [...emergencies].sort((a, b) => {
       const dateA = new Date(a.fechaSolicitud);
       const dateB = new Date(b.fechaSolicitud);
       return dateB - dateA; // Orden descendente (más reciente primero)
     });
-    
+
     // Tomar la primera emergencia activa (la más reciente)
     const activeEmergency = sortedEmergencies[0];
 
@@ -211,12 +211,12 @@ const HomeScreen = ({ navigation }) => {
     if (activeEmergency.veterinario || activeEmergency.veterinarioAsignado) {
       // El backend puede devolver el veterinario en 'veterinario' o 'veterinarioAsignado'
       const veterinario = activeEmergency.veterinario || activeEmergency.veterinarioAsignado;
-      
+
       const vetData = {
         id: veterinario._id || veterinario.id,
         name: veterinario.nombre,
         // Manejar diferentes estructuras de datos para especialidades
-        specialty: Array.isArray(veterinario.especialidad) 
+        specialty: Array.isArray(veterinario.especialidad)
           ? veterinario.especialidad.join(', ')
           : Array.isArray(veterinario.especialidades)
             ? veterinario.especialidades.join(', ')
@@ -267,7 +267,7 @@ const HomeScreen = ({ navigation }) => {
     if (!activeEmergency || !activeEmergency._id) {
       return;
     }
-    
+
     // Detener cualquier temporizador existente
     if (locationUpdateTimerRef.current) {
       clearInterval(locationUpdateTimerRef.current);
@@ -284,7 +284,7 @@ const HomeScreen = ({ navigation }) => {
     locationUpdateTimerRef.current = setInterval(() => {
       updateVetLocation(activeEmergency);
     }, 30000); // 30 segundos
-    
+
     // Devolver una función de limpieza para useEffect
     return () => {
       if (locationUpdateTimerRef.current) {
@@ -349,19 +349,19 @@ const HomeScreen = ({ navigation }) => {
 
   const cargarEstadisticasYPacientesEnParalelo = useCallback(async (prestadoresList) => {
     if (!prestadoresList || prestadoresList.length === 0) return;
-    
+
     try {
-      
+
       // Crear objetos para almacenar resultados
       const nuevasEstadisticas = {};
       const nuevosPacientes = {};
-      
+
       // Crear un array de promesas para estadísticas
       const estadisticasPromises = prestadoresList.map(async prestador => {
         try {
           const id = prestador._id;
           const result = await fetchEstadisticasPrestador(id);
-          
+
           // Guardar resultado en el objeto
           if (result && result.success) {
             nuevasEstadisticas[id] = result.data;
@@ -372,13 +372,13 @@ const HomeScreen = ({ navigation }) => {
           console.error(`Error al cargar estadísticas para prestador ${prestador._id}:`, err);
         }
       });
-      
+
       // Crear un array de promesas para pacientes
       const pacientesPromises = prestadoresList.map(async prestador => {
         try {
           const id = prestador._id;
           const result = await fetchTotalPacientes(id);
-          
+
           // Guardar resultado en el objeto
           if (result && result.success) {
             nuevosPacientes[id] = result.data.totalPacientes || 0;
@@ -389,14 +389,14 @@ const HomeScreen = ({ navigation }) => {
           console.error(`Error al cargar pacientes para prestador ${prestador._id}:`, err);
         }
       });
-      
+
       // Ejecutar todas las promesas en paralelo
       await Promise.all([...estadisticasPromises, ...pacientesPromises]);
-      
+
       // Actualizar los estados con los datos obtenidos
       setEstadisticasPrestadores(nuevasEstadisticas);
       setCountPacientes(nuevosPacientes);
-      
+
       // Filtrar prestadores destacados con rating > 4.5
       const destacados = prestadoresList
         .filter(prestador => {
@@ -411,7 +411,7 @@ const HomeScreen = ({ navigation }) => {
         }))
         .sort((a, b) => b.rating - a.rating)
         .slice(0, Math.max(3, Math.min(4, prestadoresList.length)));
-      
+
       setPrestadoresDestacadosConStats(destacados);
     } catch (error) {
       console.error('Error en cargarEstadisticasYPacientesEnParalelo:', error);
@@ -518,7 +518,7 @@ const HomeScreen = ({ navigation }) => {
       // Esperar a que finalicen todas las demás operaciones paralelas
       const prestadores = await prestadoresPromise;
       await availableVetsPromise;
-      
+
       // Procesar emergencias activas (si existen)
       if (emergenciesResult && emergenciesResult.length > 0) {
         processActiveEmergencies(emergenciesResult);
@@ -531,7 +531,7 @@ const HomeScreen = ({ navigation }) => {
         setActiveEmergencyVet(null);
         setIsEmergencyInProgress(false);
       }
-      
+
       // Si hay prestadores, cargar sus estadísticas y pacientes en paralelo
       if (prestadores?.length > 0) {
         void cargarEstadisticasYPacientesEnParalelo(prestadores);
@@ -541,7 +541,7 @@ const HomeScreen = ({ navigation }) => {
       setIsLoading(false);
     }
   }, [loadAvailableVets, loadActiveEmergencies, processActiveEmergencies, fetchAllPrestadores, cargarEstadisticasYPacientesEnParalelo]);
-  
+
   // Función para actualizar datos (pull-to-refresh)
   const onRefresh = useCallback(async () => {
     // Resetear el tiempo de última carga para permitir refresh manual
@@ -567,10 +567,10 @@ const HomeScreen = ({ navigation }) => {
       if (isLoadingRef.current || (now - lastLoadTime.current < MIN_LOAD_INTERVAL)) {
         return;
       }
-      
+
       isLoadingRef.current = true;
       lastLoadTime.current = now;
-      
+
       // Cargar datos de forma consolidada
       Promise.all([
         loadInitialData(),
@@ -580,7 +580,7 @@ const HomeScreen = ({ navigation }) => {
       ]).finally(() => {
         isLoadingRef.current = false;
       });
-      
+
       return () => {};
     }, [loadInitialData, fetchUserAppointments, fetchPets, fetchConsejosDestacados])
   );
@@ -611,7 +611,7 @@ const HomeScreen = ({ navigation }) => {
       navigation.navigate('ServiceDetails', { service });
     }
   };
-  
+
   // Datos para la sección de prestadores destacados con rating > 4.5
   // Usamos los datos ya procesados con estadísticas y pacientes
   const featuredVets = prestadoresDestacadosConStats
@@ -624,12 +624,12 @@ const HomeScreen = ({ navigation }) => {
         id: vet._id,
         name: vet.nombre,
         image: vet.imagen, // Asegurar que imagen se mapee correctamente a image
-        specialty: Array.isArray(vet.especialidad) 
+        specialty: Array.isArray(vet.especialidad)
           ? vet.especialidad.join(', ')
           : vet.especialidad || 'General',
         // Convertir especialidades a array para el componente
-        especialidades: Array.isArray(vet.especialidades) 
-          ? vet.especialidades 
+        especialidades: Array.isArray(vet.especialidades)
+          ? vet.especialidades
           : Array.isArray(vet.especialidad)
             ? vet.especialidad
             : vet.especialidad ? [vet.especialidad] : ['General'],
@@ -639,7 +639,7 @@ const HomeScreen = ({ navigation }) => {
         available: Boolean(vet.disponible)
       };
     });
-    
+
   // Monitor de cambios en prestadores destacados
   useEffect(() => {
     // Monitoreo silencioso de cambios en prestadores destacados
@@ -662,8 +662,8 @@ const HomeScreen = ({ navigation }) => {
     available: true,
     image: vet.imagen,
     // Asegurar que tenemos especialidades como array para evitar errores
-    especialidades: Array.isArray(vet.especialidades) 
-      ? vet.especialidades 
+    especialidades: Array.isArray(vet.especialidades)
+      ? vet.especialidades
       : Array.isArray(vet.especialidad)
         ? vet.especialidad
         : vet.especialidad ? [vet.especialidad] : ['General']
@@ -697,7 +697,7 @@ const HomeScreen = ({ navigation }) => {
     // Navegar a la pantalla de detalle del veterinario
     navigation.navigate('VetDetail', { vet });
   };
-  
+
   // Función para confirmar la llegada del veterinario
   const handleConfirmVetArrival = async (emergencyId) => {
     if (arrivalSubmissionRef.current[emergencyId]) return;
@@ -711,7 +711,7 @@ const HomeScreen = ({ navigation }) => {
     try {
       // Llamar al store para confirmar la llegada
       const result = await confirmVetArrival(emergencyId, arrivalIdempotencyKeysRef.current[emergencyId]);
-      
+
       if (result.success) {
         // Actualizar el estado local
         setEmergencyStatus('En atención');
@@ -720,11 +720,11 @@ const HomeScreen = ({ navigation }) => {
           ...prev,
           status: 'En atención'
         }));
-        
+
         // 💳 Redirigir a Mercado Pago si hay initPoint
         if (result.initPoint) {
           console.log('💳 Redirigiendo a Mercado Pago:', result.initPoint);
-          
+
           Alert.alert(
             "Llegada confirmada",
             "El veterinario ha llegado. Ahora serás redirigido a Mercado Pago para completar el pago del servicio.",
@@ -787,7 +787,7 @@ const HomeScreen = ({ navigation }) => {
       || (item.experience ? `${item.experience}` : `${item.patients || 0} pacientes`);
 
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={styles.providerCard}
         onPress={() => handleVetPress(item)}
         activeOpacity={0.9}
@@ -825,7 +825,7 @@ const HomeScreen = ({ navigation }) => {
 
   // Renderizar cada veterinario disponible (diseño horizontal: imagen + info + badge)
   const renderAvailableVetItem = ({ item }) => (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={styles.vetCardNew}
       onPress={() => handleVetPress(item)}
       activeOpacity={0.9}
@@ -873,7 +873,7 @@ const HomeScreen = ({ navigation }) => {
                 : '¿En qué podemos ayudarte hoy?'}
             </Text>
           </View>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.profileButton}
             activeOpacity={0.8}
             onPress={() => navigation.navigate('Perfil')}
@@ -894,7 +894,7 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Animated.View>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -912,7 +912,7 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Nuestros servicios</Text>
-            <TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button">
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
           </View>
@@ -939,7 +939,7 @@ const HomeScreen = ({ navigation }) => {
                 </Text>
               </Animated.View>
             </View>
-            
+
             {/* Mostrar el estado de la emergencia y el veterinario */}
             {/* Mensaje general si no hay veterinario asignado aún pero la emergencia está activa */}
             {activeEmergencyVet.vetAssigned === false && activeEmergencyVet.status !== 'Cancelada' && activeEmergencyVet.status !== 'Finalizada' && (
@@ -966,7 +966,7 @@ const HomeScreen = ({ navigation }) => {
                 </Text>
               </Animated.View>
             )}
-            
+
             {activeEmergencyVet.status === 'En camino' && (
               <Animated.View style={[styles.statusBanner, { backgroundColor: '#4CAF50', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="checkmark-circle" size={16} color="#fff" />
@@ -975,7 +975,7 @@ const HomeScreen = ({ navigation }) => {
                 </Text>
               </Animated.View>
             )}
-            
+
             {activeEmergencyVet.status === 'En atención' && (
               <Animated.View style={[styles.statusBanner, { backgroundColor: '#2196F3', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="medkit" size={16} color="#fff" />
@@ -984,7 +984,7 @@ const HomeScreen = ({ navigation }) => {
                 </Text>
               </Animated.View>
             )}
-            
+
             {activeEmergencyVet.status === 'Confirmada' && (
               <Animated.View style={[styles.statusBanner, { backgroundColor: '#4CAF50', transform: [{ translateX: statusBannerAnim }] }]}>
                 <Ionicons name="checkmark-circle" size={16} color="#fff" />
@@ -993,7 +993,7 @@ const HomeScreen = ({ navigation }) => {
                 </Text>
               </Animated.View>
             )}
-            
+
             <View style={styles.emergencyPaymentNotice}>
               <View style={styles.emergencyPaymentIcon}>
                 <Ionicons name="receipt-outline" size={20} color="#B26A00" />
@@ -1014,11 +1014,11 @@ const HomeScreen = ({ navigation }) => {
                   </Text>
                 </View>
               </View>
-              
+
               <View style={styles.emergencyInfo}>
                 <Text style={styles.emergencyVetName}>{activeEmergencyVet.name}</Text>
                 <Text style={styles.emergencySpecialty}>{activeEmergencyVet.specialty}</Text>
-                
+
                 {/* Solo mostrar la ubicación si el veterinario ha aceptado y está asignado*/}
                 {activeEmergencyVet.vetAssigned !== false && ['Asignada', 'Confirmada', 'En camino'].includes(activeEmergencyVet.status) ? (
                   <View style={styles.vetDistanceCard}>
@@ -1026,24 +1026,24 @@ const HomeScreen = ({ navigation }) => {
                       <Text style={styles.distanceTitle}>Ubicación actual</Text>
                       <Text style={styles.distanceValue}>{currentDistance}</Text>
                     </View>
-                    
+
                     <View style={styles.estimatedTimeContainer}>
                       <Ionicons name="time-outline" size={16} color="#616161" />
                       <Text style={styles.estimatedTimeText}>
                         Llegada estimada: {estimatedArrivalTime}
                       </Text>
                     </View>
-                    
+
                     <Text style={styles.privacyNotice}>
                       * La ubicación mostrada tiene un radio de privacidad de 1km
                     </Text>
-                    
+
                     <View style={styles.updateContainer}>
                       <Text style={styles.lastUpdatedText}>
                         {lastUpdated ? `Actualizado: ${lastUpdated.toLocaleTimeString()}` : 'Cargando...'}
                         {updatingLocation && ' · Actualizando...'}
                       </Text>
-                      <TouchableOpacity 
+                      <TouchableOpacity accessibilityRole="button"
                         style={styles.refreshButton}
                         onPress={() => activeEmergencyVet && updateVetLocation(activeEmergencyVet.emergencyId)}
                         disabled={updatingLocation}
@@ -1065,10 +1065,10 @@ const HomeScreen = ({ navigation }) => {
                 )}
               </View>
             </View>
-            
+
             {/* Botón para confirmar llegada del veterinario - solo visible cuando está en camino */}
             {activeEmergencyVet.status === 'En camino' && (
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={[styles.emergencyButton, styles.confirmButton, isLoading && styles.emergencyButtonDisabled]}
                 onPress={() => handleConfirmVetArrival(activeEmergencyVet.emergencyId)}
                 disabled={isLoading}
@@ -1081,8 +1081,8 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={styles.emergencyButtonText}>Confirmar que el veterinario llegó</Text>
               </TouchableOpacity>
             )}
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity accessibilityRole="button"
               style={styles.emergencyButton}
               onPress={() => navigation.navigate('MisEmergencias', { emergencyId: activeEmergencyVet.emergencyId })}
             >
@@ -1095,21 +1095,21 @@ const HomeScreen = ({ navigation }) => {
             {(() => {
               // Renderizando sección de cita próxima
               // Control de citas próximas
-              
+
               // Si no hay citas o el array no está inicializado
               if (!upcomingAppointments || upcomingAppointments.length === 0) {
                 // No hay citas disponibles
                 return null;
               }
-              
+
               // Filtrar solo citas confirmadas
               const citasConfirmadas = upcomingAppointments.filter(cita => {
                 // Evaluación de cita
                 return cita.estado === 'Confirmada';
               });
-              
+
               // Conteo de citas confirmadas
-              
+
               // Si hay citas confirmadas, mostrar la tarjeta
               if (citasConfirmadas.length > 0) {
                 return (
@@ -1125,13 +1125,13 @@ const HomeScreen = ({ navigation }) => {
                       // Obtener la próxima cita confirmada
                       const proximaCita = citasConfirmadas
                         .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))[0];
-                      
+
                       if (!proximaCita) return null;
-                      
+
                       // Formatear la fecha
                       const fechaCita = new Date(proximaCita.fecha);
                       const fechaFormateada = format(fechaCita, "EEEE, d 'de' MMMM", { locale: es });
-                      
+
                       return (
                         <View style={styles.appointmentContent}>
                           <View style={styles.appointmentInfo}>
@@ -1144,7 +1144,7 @@ const HomeScreen = ({ navigation }) => {
                               {proximaCita.prestador?.nombre || proximaCita.prestadorNombre || 'Profesional asignado'}
                             </Text>
                           </View>
-                          <TouchableOpacity 
+                          <TouchableOpacity accessibilityRole="button"
                             style={styles.appointmentButton}
                             onPress={() => navigation.navigate('Citas')}
                           >
@@ -1158,7 +1158,7 @@ const HomeScreen = ({ navigation }) => {
               } else {
                 return null;
               }
-            })()} 
+            })()}
           </>
         )}
 
@@ -1171,7 +1171,7 @@ const HomeScreen = ({ navigation }) => {
         }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Veterinarios disponibles</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AllVetsScreen', { filter: 'available' })}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('AllVetsScreen', { filter: 'available' })}>
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
           </View>
@@ -1201,7 +1201,7 @@ const HomeScreen = ({ navigation }) => {
             />
           )}
         </Animated.View>
-        
+
         {/* Prestadores destacados */}
         <Animated.View style={[styles.sectionContainer, {
           opacity: section2Anim,
@@ -1211,7 +1211,7 @@ const HomeScreen = ({ navigation }) => {
         }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Prestadores destacados</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('PrestaDetailsScreen', { filter: 'featured' })}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('PrestaDetailsScreen', { filter: 'featured' })}>
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
           </View>
@@ -1247,12 +1247,12 @@ const HomeScreen = ({ navigation }) => {
         }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Consejos de salud</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('HealthTips')}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('HealthTips')}>
               <Text style={styles.seeAllText}>Ver todos</Text>
             </TouchableOpacity>
           </View>
           {consejosDestacados.length === 0 ? (
-            <TouchableOpacity style={styles.tipCard} onPress={() => navigation.navigate('HealthTips')}>
+            <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.tipCard} onPress={() => navigation.navigate('HealthTips')}>
               <View style={styles.tipImageContainer}>
                 <Ionicons name="document-text-outline" size={32} color="#1E88E5" />
               </View>
@@ -1264,7 +1264,7 @@ const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           ) : (
             consejosDestacados.slice(0, 2).map((tip, index) => (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
                 key={tip.id}
                 style={[styles.tipCard, index > 0 && { marginTop: 15 }]}
                 onPress={() => navigation.navigate('HealthTipDetail', { tip })}
@@ -1304,24 +1304,8 @@ const styles = StyleSheet.create({
     right: 20,
     alignItems: 'center',
   },
-  emergencyButton: {
-    backgroundColor: '#FF3B30',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 15,
-    borderRadius: 50,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  emergencyButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
+
+
   emergencyTimerText: {
     marginTop: 5,
     color: '#FF3B30',
@@ -1343,6 +1327,7 @@ const styles = StyleSheet.create({
     width: '100%',//Ancho del contenedor
   },
   statusBannerText: {
+    flexShrink: 1,
     color: '#fff',
     marginLeft: 8,//Margen izquierdo
     fontWeight: '500',//Peso del texto
@@ -1358,6 +1343,9 @@ const styles = StyleSheet.create({
     marginTop: 8,//Margen superior
   },
   pendingText: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     marginLeft: 10,//Margen izquierdo
     color: '#FF8F00',//Color del texto
     fontSize: 14,//Tamaño del texto
@@ -1370,7 +1358,7 @@ const styles = StyleSheet.create({
   // ─── HEADER PERSONALIZADO (saludo + avatar) ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
@@ -1484,12 +1472,15 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   sectionHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
   },
   sectionTitle: {
+    flexShrink: 1,
     fontSize: 19,
     fontWeight: 'bold',
     color: '#1A237E',
@@ -1515,12 +1506,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   appointmentHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
   },
   appointmentTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
@@ -1581,7 +1575,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
   },
-  
+
   // Estilos para la tarjeta de emergencia activa
   emergencyContainer: {
     backgroundColor: '#fff',
@@ -1597,12 +1591,15 @@ const styles = StyleSheet.create({
     borderLeftColor: '#F44336',
   },
   emergencyHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
   emergencyTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#F44336',
@@ -1647,22 +1644,13 @@ const styles = StyleSheet.create({
     color: '#5F4B23',
     lineHeight: 18,
   },
-  vetImageContainer: {
-    marginRight: 12,
-  },
+
   vetImage: {
     width: 60,
     height: 60,
     borderRadius: 30,
   },
-  vetImagePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F44336',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
   emergencyInfo: {
     flex: 1,
   },
@@ -1685,11 +1673,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   emergencyButtonText: {
+    flexShrink: 1,
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
   },
-  
+
   // Estilos para la tarjeta de distancia del veterinario
   vetDistanceCard: {
     backgroundColor: '#fff',
@@ -1711,11 +1700,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   distanceTitle: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#616161',
     fontWeight: '500',
   },
   distanceValue: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#4CAF50',
@@ -1726,6 +1717,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   estimatedTimeText: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#616161',
     marginLeft: 5,
@@ -1746,6 +1738,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   lastUpdatedText: {
+    flexShrink: 1,
     fontSize: 11,
     color: '#9E9E9E',
   },
@@ -1758,6 +1751,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   refreshButtonText: {
+    flexShrink: 1,
     color: '#4CAF50',
     fontSize: 12,
     fontWeight: '500',
@@ -1813,6 +1807,8 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   vetDetailSection: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 10,
@@ -2008,6 +2004,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   vetStatusBadgeNew: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E8F5E9',
@@ -2024,14 +2021,17 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   vetStatusTextNew: {
+    flexShrink: 1,
     fontSize: 10,
     color: '#4CAF50',
     fontWeight: '700',
   },
   callButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     backgroundColor: '#4CAF50',
     width: 44,
-    height: 44,
+
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
@@ -2079,6 +2079,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   ratingBadgeOverlayText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 11,
     fontWeight: 'bold',
@@ -2097,6 +2098,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   providerAddress: {
+    flexShrink: 1,
     fontSize: 11,
     color: '#666',
     marginLeft: 4,

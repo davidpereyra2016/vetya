@@ -1,16 +1,15 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
   TextInput,
-  ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { userService } from '../../services/api';
@@ -93,7 +92,7 @@ const ChangePasswordScreen = ({ navigation }) => {
 
       if (result.success) {
         Alert.alert(
-          '¡Contraseña Actualizada!', 
+          '¡Contraseña Actualizada!',
           'Tu contraseña ha sido cambiada exitosamente.',
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
@@ -108,16 +107,16 @@ const ChangePasswordScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
               style={styles.headerBackButton}
               onPress={() => navigation.goBack()}
             >
@@ -157,14 +156,14 @@ const ChangePasswordScreen = ({ navigation }) => {
                 autoCapitalize="none"
                 editable={!isLoading}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowCurrentPassword(!showCurrentPassword)}
               >
-                <Ionicons 
-                  name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
@@ -189,14 +188,14 @@ const ChangePasswordScreen = ({ navigation }) => {
                 autoCapitalize="none"
                 editable={!isLoading}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowNewPassword(!showNewPassword)}
               >
-                <Ionicons 
-                  name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
@@ -206,7 +205,7 @@ const ChangePasswordScreen = ({ navigation }) => {
               <View style={styles.strengthContainer}>
                 <View style={styles.strengthBarBg}>
                   <View style={[
-                    styles.strengthBar, 
+                    styles.strengthBar,
                     { backgroundColor: passwordStrength.color, width: `${(passwordStrength.score / 5) * 100}%` }
                   ]} />
                 </View>
@@ -218,15 +217,15 @@ const ChangePasswordScreen = ({ navigation }) => {
 
             {/* Confirmar contraseña */}
             <View style={[
-              styles.inputContainer, 
+              styles.inputContainer,
               passwordsMatch && styles.inputContainerSuccess,
               passwordsMismatch && styles.inputContainerError
             ]}>
-              <Ionicons 
-                name="lock-closed-outline" 
-                size={20} 
-                color={passwordsMatch ? '#34C759' : passwordsMismatch ? '#FF3B30' : '#1E88E5'} 
-                style={styles.inputIcon} 
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color={passwordsMatch ? '#34C759' : passwordsMismatch ? '#FF3B30' : '#1E88E5'}
+                style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
@@ -238,17 +237,17 @@ const ChangePasswordScreen = ({ navigation }) => {
                 autoCapitalize="none"
                 editable={!isLoading}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button"
+                style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
                 {passwordsMatch ? (
                   <Ionicons name="checkmark-circle" size={20} color="#34C759" />
                 ) : (
-                  <Ionicons 
-                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
-                    size={20} 
-                    color={passwordsMismatch ? '#FF3B30' : '#888'} 
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={passwordsMismatch ? '#FF3B30' : '#888'}
                   />
                 )}
               </TouchableOpacity>
@@ -259,8 +258,8 @@ const ChangePasswordScreen = ({ navigation }) => {
             )}
 
             {/* Botón guardar */}
-            <TouchableOpacity 
-              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
+            <TouchableOpacity accessibilityRole="button"
+              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={isLoading}
             >
@@ -296,7 +295,7 @@ const ChangePasswordScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -314,7 +313,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -332,8 +331,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerBackButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     justifyContent: 'center',
@@ -343,6 +344,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 22,
     fontWeight: '800',
@@ -399,6 +401,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -406,7 +410,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 15,
     paddingHorizontal: 10,
-    height: 55,
+
     backgroundColor: '#FAFAFA',
   },
   inputContainerSuccess: {
@@ -421,8 +425,11 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   input: {
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 8,
     flex: 1,
-    height: '100%',
+
     color: '#333',
     fontSize: 16,
   },
@@ -435,11 +442,13 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   separatorLine: {
+    minWidth: 0,
     flex: 1,
     height: 1,
     backgroundColor: '#E0E0E0',
   },
   separatorText: {
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: '600',
     color: '#1E88E5',
@@ -454,6 +463,7 @@ const styles = StyleSheet.create({
     marginTop: -5,
   },
   strengthBarBg: {
+    minWidth: 0,
     flex: 1,
     height: 4,
     backgroundColor: '#E0E0E0',
@@ -466,6 +476,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   strengthText: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: 'bold',
     width: 60,
@@ -478,9 +489,11 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   saveButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 10,
-    height: 55,
+
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -497,6 +510,7 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   saveButtonText: {
+    flexShrink: 1,
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
@@ -513,6 +527,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   tipsTitle: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
@@ -524,6 +539,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tipText: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#555',
     marginLeft: 8,

@@ -1,3 +1,5 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -7,15 +9,12 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  Modal,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
   SectionList
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
@@ -51,12 +50,12 @@ const VALID_ICONS = [
  */
 const getSafeIconName = (iconName) => {
   if (!iconName) return 'medical-outline';
-  
+
   // Si el ícono está en la lista de válidos, usarlo
   if (VALID_ICONS.includes(iconName)) {
     return iconName;
   }
-  
+
   // Si el ícono termina en -outline, verificar versión sin outline
   if (iconName.endsWith('-outline')) {
     const baseName = iconName.replace('-outline', '');
@@ -70,7 +69,7 @@ const getSafeIconName = (iconName) => {
       return outlineVersion;
     }
   }
-  
+
   // Mapeo de íconos comunes no válidos a alternativas válidas
   const iconMapping = {
     'tooth': 'medical',
@@ -82,12 +81,12 @@ const getSafeIconName = (iconName) => {
     'ambulance': 'medkit',
     'hospital': 'medkit'
   };
-  
+
   const mappedIcon = iconMapping[iconName.toLowerCase()];
   if (mappedIcon) {
     return mappedIcon;
   }
-  
+
   // Si nada funciona, usar ícono por defecto
   return 'medical-outline';
 };
@@ -99,7 +98,7 @@ const formatPrice = (value) => `$${Number(value || 0).toLocaleString('es-AR')}`;
 const ServicesScreen = ({ navigation }) => {
   // Estado global con Zustand
   const provider = useAuthStore(state => state.provider);
-  
+
   // Estado de servicios usando Zustand
   const {
     services: myServices,
@@ -115,9 +114,9 @@ const ServicesScreen = ({ navigation }) => {
     addServiceToProvider,
     updateProviderService,
     removeProviderService,
-    
+
   } = useServiceStore();
-  
+
   // Estado del prestador (para configuración de emergencias)
   const {
     prestador: prestadorDetails,
@@ -128,7 +127,7 @@ const ServicesScreen = ({ navigation }) => {
     resumenServicios,
     getResumenDisponibilidadServicios,
   } = useDisponibilidadStore();
-  
+
   // Estados locales para la UI
   // Estado para filtrado de servicios por estado (activo/inactivo/todos)
   const [serviceStatusFilter, setServiceStatusFilter] = useState('todos');
@@ -145,14 +144,14 @@ const ServicesScreen = ({ navigation }) => {
   const [emergencyAvailable, setEmergencyAvailable] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [modalidadAtencion, setModalidadAtencion] = useState(['Clínica']);
-  
+
   // Mostrar alertas de error si ocurren
   useEffect(() => {
     if (error) {
       Alert.alert('Error', error);
     }
   }, [error]);
-  
+
   // Cargar servicios al iniciar y cada vez que el provider cambie
   useEffect(() => {
     if (provider) {
@@ -161,25 +160,25 @@ const ServicesScreen = ({ navigation }) => {
       loadPrestadorDetails();
     }
   }, [provider]);
-  
+
   // Cargar detalles del prestador para configuración de emergencias
   const loadPrestadorDetails = async () => {
     try {
       if (!provider) return;
-      
+
       // Usar el ID del prestador directamente en lugar del ID de usuario
       const prestadorId = provider._id || provider.id;
-      
+
       if (!prestadorId) {
         console.log('Error: No se encontró ID de prestador válido');
         return;
       }
-      
+
       console.log('Cargando detalles del prestador usando ID:', prestadorId);
-      
+
       // Cargar detalles del prestador directamente
       const result = await usePrestadorStore.getState().loadPrestadorById(prestadorId);
-      
+
       if (result) {
         // Inicializar los estados de emergencia
         setEmergencyPriceInput(result.emergenciaGratisAdmin ? '0' : (result.precioEmergencia ? result.precioEmergencia.toString() : '0'));
@@ -192,7 +191,7 @@ const ServicesScreen = ({ navigation }) => {
       console.log('Error al cargar detalles del prestador:', error);
     }
   };
-  
+
   // Función para cargar todos los servicios que el prestador ya ha seleccionado (activos e inactivos)
   const loadServices = async () => {
     try {
@@ -200,16 +199,16 @@ const ServicesScreen = ({ navigation }) => {
         console.log('No hay información del prestador disponible');
         return;
       }
-      
+
       if (!provider.id && !provider._id) {
         console.log('No se encontró ID del prestador:', provider);
         return;
       }
-      
+
       // Usar el ID correcto (puede venir como id o _id dependiendo de la fuente)
       const providerId = provider.id || provider._id;
       console.log('Cargando todos los servicios (activos e inactivos) para el prestador ID:', providerId);
-      
+
       // Usar el store para cargar los servicios del prestador
       setIsRefreshing(true);
       await Promise.all([
@@ -223,7 +222,7 @@ const ServicesScreen = ({ navigation }) => {
       setIsRefreshing(false);
     }
   };
-  
+
   // Función para cargar los servicios disponibles según el tipo de prestador
   const loadAvailableServices = async () => {
     try {
@@ -233,17 +232,17 @@ const ServicesScreen = ({ navigation }) => {
         await getAvailableServices('Veterinario');
         return;
       }
-      
+
       const tipoProvider = provider.tipo || 'Veterinario';
       console.log('Cargando catálogo de servicios para tipo de prestador:', tipoProvider);
-      
+
       // Usar el store para cargar los servicios disponibles para este tipo de prestador
       await getAvailableServices(tipoProvider);
     } catch (error) {
       console.log('Error al cargar servicios disponibles:', error);
     }
   };
-  
+
   // Función para ver detalles de un servicio
   const handleViewServiceDetail = (service) => {
     // Asegurarnos de que estamos almacenando la información completa del servicio
@@ -272,20 +271,20 @@ const ServicesScreen = ({ navigation }) => {
       return [...prev, modalidad];
     });
   };
-  
+
   // Función para agregar un servicio del catálogo a mis servicios
   const handleAddServiceFromCatalog = async () => {
     if (!selectedService) {
       console.log('Error: No hay servicio seleccionado');
       return;
     }
-    
+
     if (!provider || (!provider.id && !provider._id)) {
       console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
-    
+
     // Validación del precio
     const precio = Number(priceInput);
     const precioMinimo = getPrecioMinimo(selectedService);
@@ -293,7 +292,7 @@ const ServicesScreen = ({ navigation }) => {
       Alert.alert('Error', 'El precio debe ser un número válido');
       return;
     }
-    
+
     // Validación de la duración
     if (serviceIsFree && precio !== 0) {
       Alert.alert('Servicio gratuito', 'Este servicio fue marcado como gratuito por administración y debe quedar en $0.');
@@ -309,34 +308,34 @@ const ServicesScreen = ({ navigation }) => {
       Alert.alert('Error', 'La duración debe ser un número válido');
       return;
     }
-    
+
     try {
       setIsRefreshing(true);
-      
+
       // Obtener los IDs correctos
       const providerId = provider._id || provider.id;
       const serviceId = selectedService._id || selectedService.id;
-      
+
       console.log('Datos para agregar servicio:', {
         providerId,
         serviceId,
         precio,
         duracion
       });
-      
+
       // Verificar si el servicio ya está en mi lista (usar el ID correcto)
       const exists = Array.isArray(myServices) && myServices.some(service => {
         const myServiceId = service._id || service.id;
         return myServiceId === serviceId;
       });
-      
+
       if (exists) {
         Alert.alert('Información', 'Este servicio ya está en tu lista');
         setShowServiceDetailModal(false);
         setIsRefreshing(false);
         return;
       }
-      
+
       const serviceData = {
         servicioId: serviceId,
         precio: serviceIsFree ? 0 : precio,
@@ -345,12 +344,12 @@ const ServicesScreen = ({ navigation }) => {
         modalidadAtencion: modalidadAtencion,
         activo: true
       };
-      
+
       console.log('Enviando solicitud con:', { providerId, serviceData });
-      
+
       // Usar el store para agregar el servicio a través de la API real
       const result = await addServiceToProvider(providerId, serviceData);
-      
+
       if (result) {
         setShowServiceDetailModal(false);
         await getResumenDisponibilidadServicios(providerId);
@@ -369,20 +368,20 @@ const ServicesScreen = ({ navigation }) => {
       setIsRefreshing(false);
     }
   };
-  
+
   // Función para actualizar el precio y duración de un servicio
   const handleUpdateServicePrice = async () => {
     if (!selectedService) {
       console.log('Error: No hay servicio seleccionado');
       return;
     }
-    
+
     if (!provider || (!provider.id && !provider._id)) {
       console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
-    
+
     // Validación del precio
     const precio = Number(priceInput);
     const precioMinimo = getPrecioMinimo(selectedService);
@@ -390,7 +389,7 @@ const ServicesScreen = ({ navigation }) => {
       Alert.alert('Error', 'El precio debe ser un número válido');
       return;
     }
-    
+
     // Validación de la duración
     if (serviceIsFree && precio !== 0) {
       Alert.alert('Servicio gratuito', 'Este servicio fue marcado como gratuito por administración y debe quedar en $0.');
@@ -406,31 +405,31 @@ const ServicesScreen = ({ navigation }) => {
       Alert.alert('Error', 'La duración debe ser un número válido');
       return;
     }
-    
+
     try {
       setIsRefreshing(true);
-      
+
       // Obtener los IDs correctos
       const providerId = provider._id || provider.id;
       const serviceId = selectedService._id || selectedService.id;
-      
+
       console.log('Datos para actualizar servicio:', {
         providerId,
         serviceId,
         precio,
         duracion
       });
-      
+
       const serviceData = {
         precio: serviceIsFree ? 0 : precio,
         esGratis: serviceIsFree,
         duracion: duracion,
         modalidadAtencion: modalidadAtencion
       };
-      
+
       // Usar el store para actualizar el servicio a través de la API real
       const result = await updateProviderService(providerId, serviceId, serviceData);
-      
+
       if (result) {
         setShowServiceDetailModal(false);
         Alert.alert('Éxito', 'Servicio actualizado correctamente');
@@ -444,41 +443,41 @@ const ServicesScreen = ({ navigation }) => {
       setIsRefreshing(false);
     }
   };
-  
+
   // Función para activar/desactivar un servicio
   const handleToggleServiceStatus = async (service) => {
     if (!service) {
       console.log('Error: No se proporcionó servicio');
       return;
     }
-    
+
     if (!provider || (!provider.id && !provider._id)) {
       console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
-    
+
     try {
       setIsRefreshing(true);
-      
+
       // Obtener los IDs correctos
       const providerId = provider._id || provider.id;
       const serviceId = service._id || service.id;
-      
+
       console.log('Datos para cambiar estado de servicio:', {
         providerId,
         serviceId,
         activo: !service.activo
       });
-      
+
       // Servicio con el estado actualizado
       const serviceData = {
         activo: !service.activo
       };
-      
+
       // Usar el store para actualizar el servicio a través de la API real
       const result = await updateProviderService(providerId, serviceId, serviceData);
-      
+
       if (result) {
         // El store ya actualizó el estado
         const newStatus = !service.activo;
@@ -494,20 +493,20 @@ const ServicesScreen = ({ navigation }) => {
       setIsRefreshing(false);
     }
   };
-  
+
   // Función para actualizar configuración de emergencias
   const handleUpdateEmergencySettings = async () => {
     if (!prestadorDetails || !prestadorDetails._id) {
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
-    
+
     // Validar que el prestador sea Veterinario
     if (prestadorDetails.tipo !== 'Veterinario') {
       Alert.alert('Información', 'Solo los veterinarios pueden configurar el servicio de emergencias.');
       return;
     }
-    
+
     // Validar precio
     const precioEmergencia = Number(emergencyPriceInput);
     const emergenciaGratis = prestadorDetails.emergenciaGratisAdmin === true;
@@ -516,7 +515,7 @@ const ServicesScreen = ({ navigation }) => {
       Alert.alert('Error', 'El precio de emergencia debe ser un número válido');
       return;
     }
-    
+
     if (emergenciaGratis && precioEmergencia !== 0) {
       Alert.alert('Emergencia gratuita', 'Administración marcó tus emergencias como gratuitas. El precio debe quedar en $0.');
       return;
@@ -528,14 +527,14 @@ const ServicesScreen = ({ navigation }) => {
 
     try {
       setIsRefreshing(true);
-      
+
       console.log('Actualizando configuración de emergencias:', {
         precioEmergencia,
         disponibleEmergencias: emergencyAvailable
       });
-      
+
       const result = await updateEmergencySettings(precioEmergencia, emergencyAvailable);
-      
+
       if (result) {
         setShowEmergencyModal(false);
         Alert.alert('Éxito', 'Configuración de emergencias actualizada correctamente');
@@ -549,24 +548,24 @@ const ServicesScreen = ({ navigation }) => {
       setIsRefreshing(false);
     }
   };
-  
+
   // Función para eliminar un servicio
   const handleRemoveService = (service) => {
     if (!service) {
       console.log('Error: No se proporcionó servicio');
       return;
     }
-    
+
     if (!provider || (!provider.id && !provider._id)) {
       console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
-    
+
     // Obtener los IDs correctos antes de mostrar el diálogo
     const providerId = provider._id || provider.id;
     const serviceId = service._id || service.id;
-    
+
     Alert.alert(
       'Eliminar servicio',
       `¿Estás seguro que deseas eliminar el servicio "${service.nombre}"?`,
@@ -581,15 +580,15 @@ const ServicesScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               setIsRefreshing(true);
-              
+
               console.log('Eliminando servicio:', {
                 providerId,
                 serviceId
               });
-              
+
               // Usar el store para eliminar el servicio
               const result = await removeProviderService(providerId, serviceId);
-              
+
               if (result) {
                 Alert.alert('Eliminado', 'Servicio eliminado correctamente');
               } else {
@@ -606,37 +605,37 @@ const ServicesScreen = ({ navigation }) => {
       ],
     );
   };
-  
 
-  
+
+
   // Filtrar mis servicios según la búsqueda y estado (activo/inactivo/todos)
   const filteredMyServices = myServices.filter(service => {
     // Filtrar por búsqueda de texto
     const matchesSearch = service.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (service.descripcion && service.descripcion.toLowerCase().includes(searchQuery.toLowerCase()));
-    
+
     // Filtrar por estado (activo/inactivo/todos)
-    const matchesStatus = 
-      serviceStatusFilter === 'todos' || 
+    const matchesStatus =
+      serviceStatusFilter === 'todos' ||
       (serviceStatusFilter === 'activos' && service.activo === true) ||
       (serviceStatusFilter === 'inactivos' && service.activo === false);
-    
+
     return matchesSearch && matchesStatus;
   });
-  
+
   // Filtrar servicios del catálogo según la búsqueda y categoría
   const filteredCatalogServices = availableServices.filter(service => {
-    const matchesSearch = 
+    const matchesSearch =
       service.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (service.descripcion && service.descripcion.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesCategory = 
-      selectedCategory === 'Todos' || 
+
+    const matchesCategory =
+      selectedCategory === 'Todos' ||
       service.categoria === selectedCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
-  
+
   // Obtener categorías únicas para el tipo de prestador
   const getUniqueCategories = () => {
     // Usar los servicios disponibles del store en lugar de los datos mock
@@ -679,7 +678,7 @@ const ServicesScreen = ({ navigation }) => {
       providerId,
     });
   };
-  
+
   // Renderizar cada servicio de mi lista
   const renderMyServiceItem = ({ item }) => {
     const availabilitySummary = getAvailabilitySummary(item);
@@ -691,8 +690,8 @@ const ServicesScreen = ({ navigation }) => {
         <View style={styles.serviceInfo}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={{
-              width: 30, 
-              height: 30, 
+              width: 30,
+              height: 30,
               borderRadius: 15,
               backgroundColor: item.color + '20',
               justifyContent: 'center',
@@ -703,22 +702,22 @@ const ServicesScreen = ({ navigation }) => {
             </View>
             <Text style={styles.serviceName}>{item.nombre}</Text>
           </View>
-          
+
           {item.descripcion ? (
             <Text style={styles.serviceDescription}>{item.descripcion}</Text>
           ) : null}
-          
+
           <View style={styles.serviceDetailsRow}>
             <View style={styles.serviceDetail}>
               <Ionicons name="cash-outline" size={14} color={COLORS.dark} />
               <Text style={styles.serviceDetailText}>{isServicioGratis(item) ? 'Gratis' : formatPrice(item.precio)}</Text>
             </View>
-            
+
             <View style={styles.serviceDetail}>
               <Ionicons name="time-outline" size={14} color={COLORS.dark} />
               <Text style={styles.serviceDetailText}>{item.duracion} min</Text>
             </View>
-            
+
             {item.categoria && (
               <View style={{
                 backgroundColor: item.color + '15',
@@ -741,7 +740,7 @@ const ServicesScreen = ({ navigation }) => {
               {availabilitySummary.blockCount > 0 ? ` · ${availabilitySummary.blockCount} bloques` : ''}
             </Text>
           </View>
-          
+
           {/* Badges de modalidad de atención */}
           {Array.isArray(item.modalidadAtencion) && item.modalidadAtencion.length > 0 && (
             <View style={styles.modalidadBadgesRow}>
@@ -760,34 +759,34 @@ const ServicesScreen = ({ navigation }) => {
             </View>
           )}
         </View>
-        
+
         <View style={styles.serviceActions}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Editar" hitSlop={8}
             style={styles.serviceActionButton}
             onPress={() => handleViewServiceDetail(item)}
           >
             <Ionicons name="create-outline" size={18} color={COLORS.primary} />
           </TouchableOpacity>
-          
-          <TouchableOpacity
+
+          <TouchableOpacity accessibilityRole="button" hitSlop={8}
             style={[styles.serviceActionButton, { marginTop: 10 }]}
             onPress={() => handleToggleServiceStatus(item)}
           >
-            <Ionicons 
-              name={item.activo ? "eye-outline" : "eye-off-outline"} 
-              size={18} 
-              color={item.activo ? COLORS.success : COLORS.grey} 
+            <Ionicons
+              name={item.activo ? "eye-outline" : "eye-off-outline"}
+              size={18}
+              color={item.activo ? COLORS.success : COLORS.grey}
             />
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity accessibilityRole="button" hitSlop={8}
             style={[styles.serviceActionButton, { marginTop: 10 }]}
             onPress={() => handleConfigureAvailability(item)}
           >
             <Ionicons name="calendar-outline" size={18} color={COLORS.primary} />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Eliminar" hitSlop={8}
             style={[styles.serviceActionButton, { marginTop: 10 }]}
             onPress={() => handleRemoveService(item)}
           >
@@ -798,16 +797,16 @@ const ServicesScreen = ({ navigation }) => {
     </View>
   );
   };
-  
+
   // Renderizar cada servicio del catálogo
   const renderCatalogServiceItem = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity accessibilityRole="button"
       style={styles.catalogServiceCard}
       onPress={() => handleViewServiceDetail(item)}
     >
       <View style={{
-        width: 40, 
-        height: 40, 
+        width: 40,
+        height: 40,
         borderRadius: 20,
         backgroundColor: item.color + '20',
         justifyContent: 'center',
@@ -816,31 +815,31 @@ const ServicesScreen = ({ navigation }) => {
       }}>
         <Ionicons name={getSafeIconName(item.icono)} size={20} color={item.color || COLORS.primary} />
       </View>
-      
+
       <Text style={styles.catalogServiceName} numberOfLines={2}>{item.nombre}</Text>
-      
+
       <View style={styles.catalogServiceDetails}>
         <Text style={styles.catalogServicePrice}>
           {isServicioGratis(item) ? 'Gratis' : `Mín. ${formatPrice(getPrecioMinimo(item))}`}
         </Text>
-        
+
         <Text style={styles.catalogServiceDuration}>
           {item.duracion > 0 ? `${item.duracion} min` : ''}
         </Text>
       </View>
     </TouchableOpacity>
   );
-  
+
   // Renderizar categorías para filtrar servicios
   const renderCategoryItem = ({ item }) => (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={[
         styles.categoryButton,
         selectedCategory === item && styles.categoryButtonSelected
       ]}
       onPress={() => setSelectedCategory(item)}
     >
-      <Text 
+      <Text
         style={[
           styles.categoryButtonText,
           selectedCategory === item && styles.categoryButtonTextSelected
@@ -850,25 +849,25 @@ const ServicesScreen = ({ navigation }) => {
       </Text>
     </TouchableOpacity>
   );
-  
+
   // Renderizar contenido cuando no hay servicios propios
   const renderEmptyMyServicesList = () => (
     <View style={globalStyles.emptyStateContainer}>
       <Ionicons name="list" size={50} color="#ccc" />
       <Text style={globalStyles.emptyStateText}>
-        No tienes servicios {serviceStatusFilter !== 'todos' ? 
-          (serviceStatusFilter === 'activos' ? 'activos' : 'inactivos') 
+        No tienes servicios {serviceStatusFilter !== 'todos' ?
+          (serviceStatusFilter === 'activos' ? 'activos' : 'inactivos')
           : ''} agregados
       </Text>
       <View style={styles.actionButtonsContainer}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[globalStyles.primaryButton, { marginTop: 20, marginRight: 10 }]}
           onPress={() => setViewMode('catalog')}
         >
           <Text style={globalStyles.primaryButtonText}>Explorar catálogo</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity
+
+        <TouchableOpacity accessibilityRole="button"
           style={[globalStyles.secondaryButton, { marginTop: 20 }]}
           onPress={loadServices}
         >
@@ -878,7 +877,7 @@ const ServicesScreen = ({ navigation }) => {
       </View>
     </View>
   );
-  
+
   // Renderizar contenido cuando no hay resultados de búsqueda
   const renderEmptyCatalogSearch = () => (
     <View style={globalStyles.emptyStateContainer}>
@@ -888,14 +887,14 @@ const ServicesScreen = ({ navigation }) => {
       </Text>
     </View>
   );
-  
+
   // Renderizar botón de configuración de emergencias (solo para veterinarios)
   const renderEmergencySettingsButton = () => {
     // Solo mostrar para veterinarios
     if (prestadorDetails?.tipo !== 'Veterinario') return null;
-    
+
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={styles.emergencyButton}
         onPress={() => setShowEmergencyModal(true)}
       >
@@ -904,16 +903,16 @@ const ServicesScreen = ({ navigation }) => {
       </TouchableOpacity>
     );
   };
-  
+
   // Renderizar pantalla principal
   return (
-    <SafeAreaView style={globalStyles.container}>
+    <View style={globalStyles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={globalStyles.header}>
         <View style={globalStyles.headerContent}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={{ padding: 5 }}
             onPress={() => {
               if (navigation.canGoBack()) {
@@ -929,25 +928,25 @@ const ServicesScreen = ({ navigation }) => {
           <View style={{ width: 24 }} />
         </View>
       </View>
-      
+
       {/* Botón de configuración de emergencias (solo para veterinarios) */}
       {renderEmergencySettingsButton()}
-      
+
       {/* Selector de modo de vista */}
       <View style={styles.viewModeSelector}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={[
             styles.viewModeButton,
             viewMode === 'myServices' && styles.viewModeButtonActive
           ]}
           onPress={() => setViewMode('myServices')}
         >
-          <Ionicons 
-            name="list-outline" 
-            size={18} 
-            color={viewMode === 'myServices' ? COLORS.primary : COLORS.grey} 
+          <Ionicons
+            name="list-outline"
+            size={18}
+            color={viewMode === 'myServices' ? COLORS.primary : COLORS.grey}
           />
-          <Text 
+          <Text
             style={[
               styles.viewModeButtonText,
               viewMode === 'myServices' && styles.viewModeButtonTextActive
@@ -956,20 +955,20 @@ const ServicesScreen = ({ navigation }) => {
             Mis servicios
           </Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity accessibilityRole="button"
           style={[
             styles.viewModeButton,
             viewMode === 'catalog' && styles.viewModeButtonActive
           ]}
           onPress={() => setViewMode('catalog')}
         >
-          <Ionicons 
-            name="grid-outline" 
-            size={18} 
-            color={viewMode === 'catalog' ? COLORS.primary : COLORS.grey} 
+          <Ionicons
+            name="grid-outline"
+            size={18}
+            color={viewMode === 'catalog' ? COLORS.primary : COLORS.grey}
           />
-          <Text 
+          <Text
             style={[
               styles.viewModeButtonText,
               viewMode === 'catalog' && styles.viewModeButtonTextActive
@@ -979,7 +978,7 @@ const ServicesScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* Barra de búsqueda */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
@@ -991,7 +990,7 @@ const ServicesScreen = ({ navigation }) => {
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button" hitSlop={8}
               onPress={() => setSearchQuery('')}
               style={{ padding: 5 }}
             >
@@ -1000,7 +999,7 @@ const ServicesScreen = ({ navigation }) => {
           )}
         </View>
       </View>
-      
+
       {isLoading ? (
         <View style={globalStyles.centeredContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -1032,7 +1031,7 @@ const ServicesScreen = ({ navigation }) => {
               showsHorizontalScrollIndicator={false}
             />
           </View>
-          
+
           {/* Cuadrícula de servicios del catálogo */}
           <FlatList
             data={filteredCatalogServices}
@@ -1048,7 +1047,7 @@ const ServicesScreen = ({ navigation }) => {
           />
         </View>
       )}
-      
+
       {/* Modal para detalle del servicio */}
       <Modal
         visible={showServiceDetailModal}
@@ -1057,7 +1056,7 @@ const ServicesScreen = ({ navigation }) => {
         onRequestClose={() => setShowServiceDetailModal(false)}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{flex: 1}}
           >
@@ -1067,11 +1066,11 @@ const ServicesScreen = ({ navigation }) => {
                   <Text style={styles.modalTitle}>
                     {viewMode === 'myServices' ? 'Editar precio' : 'Agregar servicio'}
                   </Text>
-                  <TouchableOpacity onPress={() => setShowServiceDetailModal(false)}>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={() => setShowServiceDetailModal(false)}>
                     <Ionicons name="close" size={24} color={COLORS.dark} />
                   </TouchableOpacity>
                 </View>
-                
+
                 {selectedService && (
                   <ScrollView style={styles.modalBody}>
                     {/* Icono y nombre del servicio */}
@@ -1087,9 +1086,9 @@ const ServicesScreen = ({ navigation }) => {
                       }}>
                         <Ionicons name={getSafeIconName(selectedService.icono)} size={30} color={selectedService.color || COLORS.primary} />
                       </View>
-                      
+
                       <Text style={styles.serviceDetailName}>{selectedService.nombre}</Text>
-                      
+
                       {selectedService.categoria && (
                         <View style={{
                           backgroundColor: selectedService.color + '15',
@@ -1104,9 +1103,9 @@ const ServicesScreen = ({ navigation }) => {
                           </Text>
                         </View>
                       )}
-                      
+
                       <Text style={styles.serviceDetailDescription}>{selectedService.descripcion}</Text>
-                      
+
                       {/* Duración */}
                       {selectedService.duracion > 0 && (
                         <View style={styles.serviceDetailInfoRow}>
@@ -1116,7 +1115,7 @@ const ServicesScreen = ({ navigation }) => {
                           </Text>
                         </View>
                       )}
-                      
+
                       {/* Campo de precio */}
                       <Text style={[styles.inputLabel, {marginTop: 20}]}>
                         Precio (Pesos)*
@@ -1134,7 +1133,7 @@ const ServicesScreen = ({ navigation }) => {
                       </View>
                       <View style={styles.switchContainer}>
                         <Text style={styles.switchLabel}>Ofrecer gratis</Text>
-                        <TouchableOpacity
+                        <TouchableOpacity accessibilityRole="button"
                           style={[styles.toggleButton, serviceIsFree ? styles.toggleButtonActive : {}]}
                           onPress={() => {
                             const nextValue = !serviceIsFree;
@@ -1145,13 +1144,13 @@ const ServicesScreen = ({ navigation }) => {
                           <View style={[styles.toggleDot, serviceIsFree ? styles.toggleDotActive : {}]} />
                         </TouchableOpacity>
                       </View>
-                      
+
                       <Text style={styles.priceHint}>
                         {serviceIsFree
                           ? 'Este servicio fue marcado como gratuito por administración.'
                           : `Precio mínimo permitido: ${formatPrice(getPrecioMinimo(selectedService))}. Puedes cobrar ese monto o más.`}
                       </Text>
-                      
+
                       {/* Campo de duración */}
                       <Text style={[styles.inputLabel, {marginTop: 15}]}>
                         Duración (minutos)*
@@ -1166,7 +1165,7 @@ const ServicesScreen = ({ navigation }) => {
                           onChangeText={setDurationInput}
                         />
                       </View>
-                      
+
                       <Text style={styles.priceHint}>
                         Define la duración aproximada de este servicio
                       </Text>
@@ -1179,7 +1178,7 @@ const ServicesScreen = ({ navigation }) => {
                         Indica dónde ofreces este servicio
                       </Text>
                       <View style={styles.modalidadContainer}>
-                        <TouchableOpacity
+                        <TouchableOpacity accessibilityRole="button"
                           style={[
                             styles.modalidadOption,
                             modalidadAtencion.includes('Clínica') && styles.modalidadOptionActive
@@ -1190,23 +1189,23 @@ const ServicesScreen = ({ navigation }) => {
                             styles.modalidadOptionTitle,
                             modalidadAtencion.includes('Clínica') && styles.modalidadOptionTextActive
                           ]}>Clínica</Text>
-                          
+
                           <View style={styles.modalidadIconsRow}>
-                            <Ionicons 
+                            <Ionicons
                               name={modalidadAtencion.includes('Clínica') ? 'checkmark-circle' : 'ellipse-outline'}
-                              size={24} 
+                              size={24}
                               color={modalidadAtencion.includes('Clínica') ? COLORS.primary : COLORS.grey}
                               style={{marginRight: 8}}
                             />
-                            <Ionicons 
-                              name="business-outline" 
-                              size={28} 
+                            <Ionicons
+                              name="business-outline"
+                              size={28}
                               color={modalidadAtencion.includes('Clínica') ? COLORS.primary : COLORS.grey}
                             />
                           </View>
                         </TouchableOpacity>
 
-                        <TouchableOpacity
+                        <TouchableOpacity accessibilityRole="button"
                           style={[
                             styles.modalidadOption,
                             modalidadAtencion.includes('Domicilio') && styles.modalidadOptionActiveDomicilio
@@ -1217,18 +1216,18 @@ const ServicesScreen = ({ navigation }) => {
                             styles.modalidadOptionTitle,
                             modalidadAtencion.includes('Domicilio') && {color: '#4CAF50'}
                           ]}>Domicilio</Text>
-                          
+
                           <View style={styles.modalidadIconsRow}>
-                            <Ionicons 
+                            <Ionicons
                               name={modalidadAtencion.includes('Domicilio') ? 'checkmark-circle' : 'ellipse-outline'}
-                              size={24} 
+                              size={24}
                               color={modalidadAtencion.includes('Domicilio') ? '#4CAF50' : COLORS.grey}
                               style={{marginRight: 8}}
                             />
-                            <Ionicons 
-                              name="home-outline" 
-                              size={28} 
-                              color={modalidadAtencion.includes('Domicilio') ? '#4CAF50' : COLORS.grey} 
+                            <Ionicons
+                              name="home-outline"
+                              size={28}
+                              color={modalidadAtencion.includes('Domicilio') ? '#4CAF50' : COLORS.grey}
                             />
                           </View>
                         </TouchableOpacity>
@@ -1236,16 +1235,16 @@ const ServicesScreen = ({ navigation }) => {
                     </View>
                   </ScrollView>
                 )}
-                
+
                 <View style={styles.modalFooter}>
-                  <TouchableOpacity 
+                  <TouchableOpacity accessibilityRole="button"
                     style={[globalStyles.secondaryButton, { flex: 1, marginRight: 10 }]}
                     onPress={() => setShowServiceDetailModal(false)}
                   >
                     <Text style={globalStyles.secondaryButtonText}>Cancelar</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity accessibilityRole="button"
                     style={[globalStyles.primaryButton, { flex: 1 }]}
                     onPress={viewMode === 'myServices' ? handleUpdateServicePrice : handleAddServiceFromCatalog}
                     disabled={isRefreshing}
@@ -1264,7 +1263,7 @@ const ServicesScreen = ({ navigation }) => {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
-      
+
       {/* Modal para configuración de emergencias (solo veterinarios) */}
       <Modal
         visible={showEmergencyModal}
@@ -1273,7 +1272,7 @@ const ServicesScreen = ({ navigation }) => {
         onRequestClose={() => setShowEmergencyModal(false)}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{flex: 1}}
           >
@@ -1281,11 +1280,11 @@ const ServicesScreen = ({ navigation }) => {
               <View style={styles.modalContainer}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Configurar Servicio de Emergencia</Text>
-                  <TouchableOpacity onPress={() => setShowEmergencyModal(false)}>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={() => setShowEmergencyModal(false)}>
                     <Ionicons name="close" size={24} color={COLORS.dark} />
                   </TouchableOpacity>
                 </View>
-                
+
                 <ScrollView style={styles.modalBody}>
                   {/* Icono y descripción */}
                   <View style={styles.serviceDetailHeader}>
@@ -1300,25 +1299,25 @@ const ServicesScreen = ({ navigation }) => {
                     }}>
                       <Ionicons name="medkit" size={30} color="#F44336" />
                     </View>
-                    
+
                     <Text style={styles.serviceDetailName}>Servicio de Emergencia</Text>
-                    
+
                     <Text style={styles.serviceDetailDescription}>
                       Configura el precio de tus servicios de emergencia a domicilio.
                       Los clientes podrán ver este precio cuando busquen veterinarios disponibles para emergencias.
                     </Text>
-                    
+
                     {/* Opción para habilitar/deshabilitar disponibilidad */}
                     <View style={styles.switchContainer}>
                       <Text style={styles.switchLabel}>Disponible para emergencias</Text>
-                      <TouchableOpacity 
+                      <TouchableOpacity accessibilityRole="button"
                         style={[styles.toggleButton, emergencyAvailable ? styles.toggleButtonActive : {}]}
                         onPress={() => setEmergencyAvailable(!emergencyAvailable)}
                       >
                         <View style={[styles.toggleDot, emergencyAvailable ? styles.toggleDotActive : {}]} />
                       </TouchableOpacity>
                     </View>
-                    
+
                     {/* Campo de precio de emergencia */}
                     <Text style={[styles.inputLabel, {marginTop: 20}]}>
                       Precio de Emergencia (Pesos)*
@@ -1334,7 +1333,7 @@ const ServicesScreen = ({ navigation }) => {
                         editable={prestadorDetails?.emergenciaGratisAdmin !== true}
                       />
                     </View>
-                    
+
                     <Text style={styles.priceHint}>
                       {prestadorDetails?.emergenciaGratisAdmin
                         ? 'Administración marcó tus emergencias como gratuitas.'
@@ -1342,16 +1341,16 @@ const ServicesScreen = ({ navigation }) => {
                     </Text>
                   </View>
                 </ScrollView>
-                
+
                 <View style={styles.modalFooter}>
-                  <TouchableOpacity 
+                  <TouchableOpacity accessibilityRole="button"
                     style={[globalStyles.secondaryButton, { flex: 1, marginRight: 10 }]}
                     onPress={() => setShowEmergencyModal(false)}
                   >
                     <Text style={globalStyles.secondaryButtonText}>Cancelar</Text>
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity accessibilityRole="button"
                     style={[globalStyles.primaryButton, { flex: 1 }]}
                     onPress={handleUpdateEmergencySettings}
                     disabled={isRefreshing}
@@ -1368,7 +1367,7 @@ const ServicesScreen = ({ navigation }) => {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -1394,6 +1393,7 @@ const styles = {
     ...SHADOWS.small,
   },
   emergencyButtonText: {
+    flexShrink: 1,
     color: '#F44336',
     fontWeight: '600',
     fontSize: 14,
@@ -1409,13 +1409,18 @@ const styles = {
     borderBottomColor: '#f0f0f0',
   },
   switchLabel: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: '500',
     color: COLORS.dark,
   },
   toggleButton: {
+    minHeight: 28,
+    paddingVertical: 12,
     width: 50,
-    height: 28,
+
     borderRadius: 14,
     backgroundColor: '#E0E0E0',
     padding: 2,
@@ -1446,6 +1451,7 @@ const styles = {
     ...SHADOWS.small,
   },
   viewModeButton: {
+    minWidth: 0,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1457,11 +1463,13 @@ const styles = {
     borderBottomColor: COLORS.primary,
   },
   viewModeButtonText: {
+    flexShrink: 1,
     marginLeft: 5,
     fontSize: 14,
     color: COLORS.grey,
   },
   viewModeButtonTextActive: {
+    flexShrink: 1,
     color: COLORS.primary,
     fontWeight: '600',
   },
@@ -1521,12 +1529,15 @@ const styles = {
     flexWrap: 'wrap',
   },
   serviceDetail: {
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 15,
     marginBottom: 5,
   },
   serviceDetailText: {
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.dark,
     marginLeft: 4,
@@ -1542,6 +1553,7 @@ const styles = {
     marginBottom: 6,
   },
   availabilityBadgeText: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
@@ -1563,12 +1575,13 @@ const styles = {
     paddingVertical: 5,
   },
   categoryButton: {
+    minHeight: 48,
     backgroundColor: COLORS.background,
     paddingHorizontal: 15,
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderRadius: 20,
     marginRight: 10,
-    height: 36,
+
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1602,24 +1615,30 @@ const styles = {
     ...SHADOWS.small,
   },
   catalogServiceName: {
+    minHeight: 40,
+    paddingVertical: 12,
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.dark,
     textAlign: 'center',
     marginBottom: 10,
-    height: 40,
+
   },
   catalogServiceDetails: {
+    flexWrap: 'wrap',
+    gap: 8,
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   catalogServicePrice: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: 'bold',
     color: COLORS.primary,
   },
   catalogServiceDuration: {
+    flexShrink: 1,
     fontSize: 12,
     color: COLORS.grey,
   },
@@ -1645,14 +1664,20 @@ const styles = {
     borderBottomColor: '#F0F0F0',
   },
   modalTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.dark,
   },
   modalBody: {
+    flexShrink: 1,
     padding: 20,
   },
   modalFooter: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     padding: 20,
     paddingTop: 0,
@@ -1681,6 +1706,7 @@ const styles = {
     marginTop: 10,
   },
   serviceDetailInfoText: {
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.dark,
     marginLeft: 8,
@@ -1697,14 +1723,18 @@ const styles = {
     marginTop: 5,
     fontStyle: 'italic',
   },
-  
+
   // Modalidad de atención
   modalidadContainer: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 8,
   },
   modalidadOption: {
+    flexBasis: 120,
+    flexGrow: 1,
+    minWidth: 0,
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1737,11 +1767,12 @@ const styles = {
   modalidadOptionTextActive: {
     color: COLORS.primary,
   },
-  
+
   modalidadBadgesRow: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     marginTop: 6,
-    gap: 6,
+    gap: 8,
   },
   modalidadBadge: {
     flexDirection: 'row',
@@ -1752,6 +1783,7 @@ const styles = {
     gap: 4,
   },
   modalidadBadgeText: {
+    flexShrink: 1,
     fontSize: 11,
     fontWeight: '600',
   },

@@ -1,16 +1,16 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import usePetStore from '../../store/usePetStore';
 import { mascotaService } from '../../services/api';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  FlatList, 
-  TouchableOpacity, 
-  Modal,
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  TouchableOpacity,
   TextInput,
-  ScrollView, 
   Image,
   Platform,
   KeyboardAvoidingView,
@@ -65,7 +65,7 @@ const MemoizedAddPetModal = memo(({
         <View style={styles.modalDragIndicator} />
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Agregar Mascota</Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}
             onPress={() => setModalVisible(false)}
             style={styles.modalCloseBtn}
           >
@@ -76,7 +76,7 @@ const MemoizedAddPetModal = memo(({
         <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
           {/* Foto (primero, más visual) */}
           <View style={styles.photoContainer}>
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               style={styles.photoButton}
               onPress={handleSelectImage}
               activeOpacity={0.85}
@@ -111,7 +111,7 @@ const MemoizedAddPetModal = memo(({
               {petTypes.map((type) => {
                 const selected = petType === type.name;
                 return (
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="button"
                     key={type.id}
                     style={[styles.typeOption, selected && styles.selectedTypeOption]}
                     onPress={() => handleSelectPetType(type)}
@@ -135,7 +135,7 @@ const MemoizedAddPetModal = memo(({
           {petType && (
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Raza</Text>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
                 style={styles.breedInput}
                 onPress={() => setShowBreedSelector(!showBreedSelector)}
                 activeOpacity={0.85}
@@ -156,7 +156,7 @@ const MemoizedAddPetModal = memo(({
               <View style={[styles.breedSelectorContainer, !showBreedSelector && styles.hiddenBreedSelector]}>
                 <ScrollView style={styles.breedsScrollView} nestedScrollEnabled>
                   {availableBreeds.map((breed, index) => (
-                    <TouchableOpacity
+                    <TouchableOpacity accessibilityRole="button"
                       key={index}
                       style={[styles.breedOption, petBreed === breed && styles.selectedBreedOption]}
                       onPress={() => handleSelectBreed(breed)}
@@ -212,7 +212,7 @@ const MemoizedAddPetModal = memo(({
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Género</Text>
             <View style={styles.genderContainer}>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={[styles.genderOption, petGender === 'Macho' && styles.selectedGenderMale]}
                 onPress={() => handleSelectGender('Macho')}
                 activeOpacity={0.85}
@@ -225,7 +225,7 @@ const MemoizedAddPetModal = memo(({
                 <Text style={[styles.genderText, petGender === 'Macho' && styles.selectedGenderText]}>Macho</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={[styles.genderOption, petGender === 'Hembra' && styles.selectedGenderFemale]}
                 onPress={() => handleSelectGender('Hembra')}
                 activeOpacity={0.85}
@@ -269,7 +269,7 @@ const MemoizedAddPetModal = memo(({
           </View>
 
           {/* Botón Guardar */}
-          <TouchableOpacity style={styles.addButton} onPress={addPet} activeOpacity={0.9}>
+          <TouchableOpacity accessibilityRole="button" style={styles.addButton} onPress={addPet} activeOpacity={0.9}>
             <Ionicons name="checkmark-circle" size={20} color="#FFF" style={{ marginRight: 8 }} />
             <Text style={styles.addButtonText}>Guardar mascota</Text>
           </TouchableOpacity>
@@ -282,7 +282,7 @@ const MemoizedAddPetModal = memo(({
 const PetsScreen = ({ navigation }) => {
   // Estados desde el store de Zustand
   const { pets, isLoading, error, fetchPets } = usePetStore();
-  
+
   // Estados locales para el formulario y UI
   const [modalVisible, setModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -315,26 +315,26 @@ const PetsScreen = ({ navigation }) => {
   const breedsByType = {
     'Perro': [
       'Mestizo',
-      'Labrador Retriever', 'Pastor Alemán', 'Bulldog', 'Golden Retriever', 
-      'Beagle', 'Poodle', 'Boxer', 'Chihuahua', 'Husky Siberiano', 
-      'Dálmata', 'Doberman', 'Gran Danés', 'Pitbull', 'Pug', 
+      'Labrador Retriever', 'Pastor Alemán', 'Bulldog', 'Golden Retriever',
+      'Beagle', 'Poodle', 'Boxer', 'Chihuahua', 'Husky Siberiano',
+      'Dálmata', 'Doberman', 'Gran Danés', 'Pitbull', 'Pug',
       'Rottweiler', 'Shih Tzu', 'Yorkshire Terrier', 'Otro'
     ],
     'Gato': [
-      'Siamés', 'Persa', 'Maine Coon', 'Bengalí', 'Sphynx', 
-      'Ragdoll', 'Británico de Pelo Corto', 'Abisinio', 'Azul Ruso', 
+      'Siamés', 'Persa', 'Maine Coon', 'Bengalí', 'Sphynx',
+      'Ragdoll', 'Británico de Pelo Corto', 'Abisinio', 'Azul Ruso',
       'Himalayo', 'Munchkin', 'Savannah', 'Siberiano', 'Otro'
     ],
     'Ave': [
-      'Periquito', 'Canario', 'Cacatúa', 'Loro', 'Agapornis', 
+      'Periquito', 'Canario', 'Cacatúa', 'Loro', 'Agapornis',
       'Ninfa', 'Guacamayo', 'Jilguero', 'Diamante Mandarín', 'Otro'
     ],
     'Pez': [
-      'Guppy', 'Betta', 'Goldfish', 'Neón Tetra', 'Pez Ángel', 
+      'Guppy', 'Betta', 'Goldfish', 'Neón Tetra', 'Pez Ángel',
       'Pez Payaso', 'Pez Disco', 'Pez Koi', 'Otro'
     ],
     'Conejo': [
-      'Rex', 'Cabeza de León', 'Holandés', 'Mini Lop', 'Angora', 
+      'Rex', 'Cabeza de León', 'Holandés', 'Mini Lop', 'Angora',
       'Californiano', 'Gigante de Flandes', 'Otro'
     ],
     'Roedor': [
@@ -415,17 +415,17 @@ const PetsScreen = ({ navigation }) => {
       alert('Por favor ingresa el nombre de tu mascota');
       return;
     }
-    
+
     if (!petType) {
       alert('Por favor selecciona el tipo de mascota');
       return;
     }
-    
+
     if (!petAge.trim()) {
       alert('Por favor ingresa la edad de tu mascota');
       return;
     }
-    
+
     // Preparar datos de la mascota
     const mascotaData = {
       nombre: petName,
@@ -439,11 +439,11 @@ const PetsScreen = ({ navigation }) => {
       vacunado: isVaccinated,
       imagen: petImage?.base64 || ''
     };
-    
+
     // Usar el store para agregar la mascota
     const { createPet } = usePetStore.getState();
     const result = await createPet(mascotaData);
-    
+
     if (result.success) {
       setModalVisible(false);
       resetForm();  // Reiniciar formulario
@@ -451,7 +451,7 @@ const PetsScreen = ({ navigation }) => {
       alert(result.error || 'Error al agregar mascota');
     }
   }, [petName, petType, petAge, petBreed, petGender, isVaccinated, petWeight, specialNeeds, petColor, petImage]);
-  
+
   // Reiniciar formulario
   const resetForm = () => {
     setPetName('');
@@ -473,7 +473,7 @@ const PetsScreen = ({ navigation }) => {
     const showGenderBadge = isMale || isFemale;
 
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={styles.petCard}
         onPress={() => navigation.navigate('PetDetailScreen', { petId: item._id })}
         activeOpacity={0.9}
@@ -567,11 +567,11 @@ const PetsScreen = ({ navigation }) => {
       {/* HEADER PREMIUM (curvo, con back + add glass) */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={styles.headerBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Mis Mascotas</Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Agregar" hitSlop={8}
             style={styles.headerAddButton}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.8}
@@ -589,7 +589,7 @@ const PetsScreen = ({ navigation }) => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filtersScroll}
           >
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               style={[
                 styles.filterBtn,
                 selectedPetType === 'all' ? styles.filterBtnActive : styles.filterBtnInactive
@@ -605,7 +605,7 @@ const PetsScreen = ({ navigation }) => {
             {availableFilters.map((filtro) => {
               const active = selectedPetType === filtro.name;
               return (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   key={filtro.id}
                   style={[styles.filterBtn, active ? styles.filterBtnActive : styles.filterBtnInactive]}
                   onPress={() => handleFilterByType(filtro.name)}
@@ -637,7 +637,7 @@ const PetsScreen = ({ navigation }) => {
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={60} color="#F44336" style={styles.errorIcon} />
           <Text style={styles.errorText}>Error al cargar mascotas</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadPets}>
+          <TouchableOpacity accessibilityRole="button" style={styles.retryButton} onPress={loadPets}>
             <Text style={styles.retryText}>Intentar nuevamente</Text>
           </TouchableOpacity>
         </View>
@@ -651,7 +651,7 @@ const PetsScreen = ({ navigation }) => {
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListFooterComponent={
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               style={styles.dashedAddButton}
               activeOpacity={0.85}
               onPress={() => setModalVisible(true)}
@@ -670,7 +670,7 @@ const PetsScreen = ({ navigation }) => {
           </View>
           <Text style={styles.emptyText}>No tienes mascotas registradas</Text>
           <Text style={styles.emptySubText}>Agrega tu primera mascota para comenzar</Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.emptyButton}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.9}
@@ -680,8 +680,8 @@ const PetsScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       )}
-      
-      <MemoizedAddPetModal 
+
+      <MemoizedAddPetModal
         modalVisible={modalVisible}
         setModalVisible={setModalVisible}
         petName={petName}
@@ -724,7 +724,7 @@ const styles = StyleSheet.create({
   // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -742,6 +742,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 22,
     fontWeight: '800',
@@ -750,16 +751,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerBackButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerAddButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     justifyContent: 'center',
@@ -799,11 +804,13 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   filterTextActive: {
+    flexShrink: 1,
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 13,
   },
   filterTextInactive: {
+    flexShrink: 1,
     color: '#666',
     fontWeight: '600',
     fontSize: 13,
@@ -879,12 +886,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   petHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
   },
   petName: {
+    flexShrink: 1,
     flex: 1,
     fontSize: 17,
     fontWeight: 'bold',
@@ -927,6 +937,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5E9',
   },
   vaccinatedPillText: {
+    flexShrink: 1,
     color: '#4CAF50',
     fontSize: 11,
     fontWeight: 'bold',
@@ -936,6 +947,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3E0',
   },
   pendingPillText: {
+    flexShrink: 1,
     color: '#FF9800',
     fontSize: 11,
     fontWeight: 'bold',
@@ -945,6 +957,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   weightPillText: {
+    flexShrink: 1,
     color: '#666',
     fontSize: 11,
     fontWeight: 'bold',
@@ -1026,6 +1039,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   emptyButtonText: {
+    flexShrink: 1,
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 15,
@@ -1038,10 +1052,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalView: {
+    maxHeight: '90%',
     backgroundColor: '#FFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    height: '90%',
+
     paddingTop: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -5 },
@@ -1065,11 +1080,14 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
   },
   modalTitle: {
+    flexShrink: 1,
     fontSize: 22,
     fontWeight: 'bold',
     color: '#1A237E',
   },
   modalCloseBtn: {
+    minWidth: 48,
+    minHeight: 48,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -1078,6 +1096,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalScrollView: {
+    flexShrink: 1,
     paddingHorizontal: 25,
   },
 
@@ -1086,6 +1105,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
   },
   inputLabel: {
@@ -1105,7 +1126,9 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   textArea: {
-    height: 100,
+    minHeight: 100,
+    paddingVertical: 12,
+
     textAlignVertical: 'top',
     paddingTop: 12,
   },
@@ -1132,12 +1155,14 @@ const styles = StyleSheet.create({
     borderColor: '#1E88E5',
   },
   typeText: {
+    flexShrink: 1,
     marginLeft: 6,
     color: '#333',
     fontWeight: '600',
     fontSize: 13,
   },
   selectedTypeText: {
+    flexShrink: 1,
     color: '#fff',
   },
 
@@ -1197,10 +1222,14 @@ const styles = StyleSheet.create({
 
   // ─── GÉNERO ───
   genderContainer: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   genderOption: {
+    flexBasis: 100,
+    minHeight: 48,
+    minWidth: 0,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1220,12 +1249,14 @@ const styles = StyleSheet.create({
     borderColor: '#E91E63',
   },
   genderText: {
+    flexShrink: 1,
     marginLeft: 8,
     fontSize: 15,
     color: '#333',
     fontWeight: '600',
   },
   selectedGenderText: {
+    flexShrink: 1,
     color: '#fff',
   },
 
@@ -1243,10 +1274,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   switchLabelWrap: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
   },
   switchLabel: {
+    flexShrink: 1,
     fontSize: 15,
     color: '#333',
     fontWeight: '600',
@@ -1303,6 +1337,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   addButtonText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',

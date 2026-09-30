@@ -81,3 +81,14 @@ agent-reviewer
 *.apk
 *.aab
 buildApks/
+
+# Local QA and generated media
+qa/
+**/qa-responsive-*.js
+vetpresta/video-vetpresta/
+*.mp4
+*.mov
+*.webm
+*.mp3
+*.wav
+*.m4a

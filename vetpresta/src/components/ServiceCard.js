@@ -33,7 +33,7 @@ const ServiceCard = ({ item, onPress }) => {
   };
 
   // Use icon and color from the item prop directly
-  const iconName = item.icon; 
+  const iconName = item.icon;
   const iconColor = item.color; // Use item.color for the icon
   // Determine if it's an emergency card for specific styling (e.g., border)
   // This assumes your emergency service item in HomeScreen.js will have an id 'emergencias'
@@ -42,7 +42,7 @@ const ServiceCard = ({ item, onPress }) => {
 
   return (
     <Animated.View style={{ transform: [{ scale: animatedScale }] }}>
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={[styles.card, pressed && styles.cardPressed, isEmergency && styles.emergencyCard]}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}

@@ -1,10 +1,10 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
   Platform,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -92,7 +92,7 @@ const HealthTipsScreen = ({ navigation }) => {
   const renderTipCard = (tip) => {
     const stylesForCategory = getCategoryStyles(tip.category, categorias);
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         key={tip.id}
         activeOpacity={0.85}
         style={styles.tipListCard}
@@ -125,7 +125,7 @@ const HealthTipsScreen = ({ navigation }) => {
       <StatusBar style="light" />
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} onPress={() => navigation.goBack()} style={styles.iconButton}>
             <Ionicons name="arrow-back" size={28} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Consejos de Salud</Text>
@@ -141,7 +141,7 @@ const HealthTipsScreen = ({ navigation }) => {
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+            <TouchableOpacity accessibilityRole="button" hitSlop={8} onPress={() => setSearchQuery('')} style={styles.clearButton}>
               <Ionicons name="close-circle" size={18} color="#999" />
             </TouchableOpacity>
           )}
@@ -158,7 +158,7 @@ const HealthTipsScreen = ({ navigation }) => {
             {PET_TYPES.map((pet) => {
               const isActive = selectedPetType === pet.id;
               return (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   key={pet.id}
                   onPress={() => setSelectedPetType(pet.id)}
                   style={[styles.filterPill, isActive ? styles.activeFilterPill : styles.inactiveFilterPill]}
@@ -171,14 +171,14 @@ const HealthTipsScreen = ({ navigation }) => {
           </ScrollView>
           {categorias.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersScroll}>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 onPress={() => setSelectedCategory('all')}
                 style={[styles.categoryFilter, selectedCategory === 'all' && styles.categoryFilterActive]}
               >
                 <Text style={[styles.categoryFilterText, selectedCategory === 'all' && styles.categoryFilterTextActive]}>Todas</Text>
               </TouchableOpacity>
               {categorias.map((cat) => (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   key={cat.id}
                   onPress={() => setSelectedCategory(cat.slug || cat.name)}
                   style={[styles.categoryFilter, selectedCategory === (cat.slug || cat.name) && styles.categoryFilterActive]}
@@ -201,7 +201,7 @@ const HealthTipsScreen = ({ navigation }) => {
             <Ionicons name="alert-circle-outline" size={58} color="#F44336" />
             <Text style={styles.stateTitle}>No se pudieron cargar los consejos</Text>
             <Text style={styles.stateText}>{error}</Text>
-            <TouchableOpacity onPress={refresh} style={styles.retryButton}>
+            <TouchableOpacity accessibilityRole="button" onPress={refresh} style={styles.retryButton}>
               <Text style={styles.retryButtonText}>Reintentar</Text>
             </TouchableOpacity>
           </View>
@@ -216,7 +216,7 @@ const HealthTipsScreen = ({ navigation }) => {
             {featured && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Tip destacado</Text>
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   activeOpacity={0.9}
                   style={[styles.featuredCard, { backgroundColor: getCategoryStyles(featured.category, categorias).featuredBg }]}
                   onPress={() => navigation.navigate('HealthTipDetail', { tip: featured })}
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
@@ -259,8 +259,11 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  iconButton: { width: 32, padding: 4 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#FFF' },
+  iconButton: {
+    minWidth: 48,
+    minHeight: 48, width: 32, padding: 4 },
+  headerTitle: {
+    flexShrink: 1, fontSize: 20, fontWeight: 'bold', color: '#FFF' },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -287,9 +290,12 @@ const styles = StyleSheet.create({
   },
   activeFilterPill: { backgroundColor: '#1E88E5' },
   inactiveFilterPill: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEEEEE' },
-  filterText: { fontSize: 14, fontWeight: '700' },
-  activeFilterText: { color: '#FFF' },
-  inactiveFilterText: { color: '#666' },
+  filterText: {
+    flexShrink: 1, fontSize: 14, fontWeight: '700' },
+  activeFilterText: {
+    flexShrink: 1, color: '#FFF' },
+  inactiveFilterText: {
+    flexShrink: 1, color: '#666' },
   categoryFilter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -303,12 +309,21 @@ const styles = StyleSheet.create({
     borderColor: '#E8EDF5',
   },
   categoryFilterActive: { backgroundColor: '#1A237E', borderColor: '#1A237E' },
-  categoryFilterText: { color: '#455A64', fontSize: 12, fontWeight: '700' },
-  categoryFilterTextActive: { color: '#FFF' },
+  categoryFilterText: {
+    flexShrink: 1, color: '#455A64', fontSize: 12, fontWeight: '700' },
+  categoryFilterTextActive: {
+    flexShrink: 1, color: '#FFF' },
   section: { marginTop: 15, paddingHorizontal: 20 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 12 },
-  featuredCard: { width: '100%', height: 205, borderRadius: 20, overflow: 'hidden', justifyContent: 'flex-end', elevation: 5 },
-  featuredImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  featuredCard: {
+    minHeight: 205, width: '100%',  borderRadius: 20, overflow: 'hidden', justifyContent: 'flex-end', elevation: 5 },
+  featuredImage: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexShrink: 0,
+    top: 0, ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', },
   featuredOverlay: { padding: 16, backgroundColor: 'rgba(0,0,0,0.42)' },
   categoryBadge: { backgroundColor: '#2196F3', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginBottom: 8 },
   categoryBadgeText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
@@ -332,8 +347,11 @@ const styles = StyleSheet.create({
   tipCategoryText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   tipListTitle: { fontSize: 15, fontWeight: 'bold', color: '#333', lineHeight: 20, marginBottom: 4 },
   tipDescription: { fontSize: 12, color: '#78909C', lineHeight: 17, marginBottom: 8 },
-  tipListFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  tipListReadTime: { fontSize: 12, color: '#888' },
+  tipListFooter: {
+    flexWrap: 'wrap',
+    gap: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  tipListReadTime: {
+    flexShrink: 1, fontSize: 12, color: '#888' },
   stateContainer: { alignItems: 'center', justifyContent: 'center', padding: 28, marginTop: 45 },
   stateTitle: { fontSize: 17, color: '#333', fontWeight: 'bold', textAlign: 'center', marginTop: 10 },
   stateText: { fontSize: 14, color: '#78909C', textAlign: 'center', marginTop: 8 },

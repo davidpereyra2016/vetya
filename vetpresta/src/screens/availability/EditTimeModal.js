@@ -1,5 +1,7 @@
+import ScrollView from '../../components/common/AppScrollView';
+import Modal from '../../components/common/ResponsiveModal';
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../styles/globalStyles';
@@ -34,7 +36,7 @@ const EditTimeModal = ({ visible, onClose, timeValue, onTimeChange, title }) => 
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     onTimeChange(`${hours}:${minutes}`);
-    
+
     // En iOS no cerramos automáticamente
     if (Platform.OS === 'android') {
       onClose();
@@ -53,13 +55,13 @@ const EditTimeModal = ({ visible, onClose, timeValue, onTimeChange, title }) => 
           {/* Cabecera */}
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={onClose}>
               <Ionicons name="close" size={24} color={COLORS.dark} />
             </TouchableOpacity>
           </View>
-          
+
           {/* Cuerpo */}
-          <View style={styles.modalBody}>
+          <ScrollView contentContainerStyle={styles.modalBody}>
             <DateTimePicker
               value={getTimeAsDate()}
               mode="time"
@@ -69,19 +71,19 @@ const EditTimeModal = ({ visible, onClose, timeValue, onTimeChange, title }) => 
               is24Hour={true}
               style={styles.timePicker}
             />
-          </View>
-          
+          </ScrollView>
+
           {/* Botones (solo para iOS) */}
           {Platform.OS === 'ios' && (
             <View style={styles.modalFooter}>
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.cancelButton}
                 onPress={onClose}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.confirmButton}
                 onPress={() => {
                   onClose();
@@ -105,6 +107,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContainer: {
+    maxHeight: '90%',
     backgroundColor: COLORS.white,
     width: '90%',
     maxWidth: 400,
@@ -120,18 +123,25 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   modalTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.dark,
   },
   modalBody: {
-    padding: 20,
+    flexShrink: 1,
+    padding: 12,
     alignItems: 'center',
   },
   timePicker: {
-    width: 250,
+    maxWidth: 250,
+    width: '100%',
   },
   modalFooter: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,

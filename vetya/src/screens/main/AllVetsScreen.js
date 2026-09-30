@@ -1,9 +1,9 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Image,
   ActivityIndicator,
@@ -40,30 +40,30 @@ const AllVetsScreen = ({ navigation, route }) => {
   const [selectedFilter, setSelectedFilter] = useState('Todos');
 
   // Estados desde los stores
-  const { 
+  const {
     prestadores,
     fetchVeterinariosDisponibles,
     clearPrestadores,
     isLoading: loadingPrestadores,
-    error: prestadoresError 
+    error: prestadoresError
   } = usePrestadoresStore();
-  
-  const { 
+
+  const {
     fetchEstadisticasPrestador
   } = useValoracionesStore();
-  
-  const { 
+
+  const {
     fetchTotalPacientes
   } = useCountPacientesStore();
-  
+
   // Estado para almacenar veterinarios con estadísticas completas
   const [veterinariosConStats, setVeterinariosConStats] = useState([]);
   // Estado para almacenar veterinarios filtrados
   const [veterinariosFiltrados, setVeterinariosFiltrados] = useState([]);
-  
+
   // Estado para controlar si los datos son de veterinarios (no de otra pantalla)
   const [datosListos, setDatosListos] = useState(false);
-  
+
   // Limpiar estado y cargar veterinarios al montar el componente
   useEffect(() => {
     const inicializar = async () => {
@@ -72,22 +72,22 @@ const AllVetsScreen = ({ navigation, route }) => {
       setDatosListos(false);
       setVeterinariosConStats([]);
       setVeterinariosFiltrados([]);
-      
+
       // Cargar solo veterinarios
       await loadVeterinarios();
       setDatosListos(true);
     };
-    
+
     inicializar();
   }, []);
-  
+
   // Cargar las estadísticas de valoraciones y pacientes para cada veterinario
   // Solo cuando los datos estén listos (después de cargar veterinarios)
   useEffect(() => {
     const cargarEstadisticasVeterinarios = async () => {
       // Solo procesar si los datos están listos y hay prestadores
       if (!datosListos || !prestadores?.length) return;
-      
+
       const vetsConStats = await Promise.all(
         prestadores.map(async (veterinario) => {
           try {
@@ -116,14 +116,14 @@ const AllVetsScreen = ({ navigation, route }) => {
           }
         })
       );
-      
+
       // Actualizar el estado con todos los veterinarios ordenados por rating (de mayor a menor)
       const ordenados = vetsConStats.sort((a, b) => b.rating - a.rating);
       setVeterinariosConStats(ordenados);
       // Inicialmente mostrar todos
       setVeterinariosFiltrados(ordenados);
     };
-    
+
     cargarEstadisticasVeterinarios();
   }, [datosListos, prestadores, fetchEstadisticasPrestador, fetchTotalPacientes]);
 
@@ -180,7 +180,7 @@ const AllVetsScreen = ({ navigation, route }) => {
 
     return (
       <View style={styles.prestadorCard}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           activeOpacity={0.9}
           onPress={() => navigation.navigate('VetDetail', { vet: item })}
         >
@@ -257,7 +257,7 @@ const AllVetsScreen = ({ navigation, route }) => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.agendarButton}
           onPress={() => navigation.navigate('AgendarCita', { selectedVet: item })}
           activeOpacity={0.9}
@@ -305,7 +305,7 @@ const AllVetsScreen = ({ navigation, route }) => {
       {/* Header premium (consistente con PrestaDetailsScreen) */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={styles.headerBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Veterinarios Disponibles</Text>
@@ -321,7 +321,7 @@ const AllVetsScreen = ({ navigation, route }) => {
         contentContainerStyle={styles.filtrosContainer}
       >
         {filtrosDisponibles.map((filtro) => (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             key={filtro}
             style={[
               styles.filtroButton,
@@ -371,7 +371,7 @@ const AllVetsScreen = ({ navigation, route }) => {
                 ? 'No hay veterinarios disponibles ahora'
                 : 'No hay veterinarios con valoración mayor a 4.5'}
           </Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.reloadButton}
             onPress={loadVeterinarios}
           >
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -411,8 +411,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerBackButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     justifyContent: 'center',
@@ -422,6 +424,8 @@ const styles = StyleSheet.create({
     width: 44,
   },
   headerTitle: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 22,
     fontWeight: '800',
@@ -432,7 +436,8 @@ const styles = StyleSheet.create({
 
   // ─── FILTROS ───
   filtrosScrollView: {
-    maxHeight: 60,
+    flexGrow: 0,
+
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
@@ -560,12 +565,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   tipoContainer: {
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
     flexWrap: 'wrap',
   },
   tipoBadge: {
+    flexShrink: 1,
     fontSize: 11,
     color: '#FFF',
     backgroundColor: '#1E88E5',
@@ -582,6 +589,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   ratingContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -590,6 +599,7 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   ratingText: {
+    flexShrink: 1,
     marginLeft: 6,
     fontSize: 12,
     color: '#888',
@@ -604,6 +614,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   disponibleTagText: {
+    flexShrink: 1,
     fontSize: 10,
     color: '#4CAF50',
     marginLeft: 3,
@@ -612,6 +623,8 @@ const styles = StyleSheet.create({
 
   // ─── STATS GRID MINI ───
   cardStatsGrid: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 14,
@@ -632,6 +645,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardStatValue: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: '900',
     color: '#333',
@@ -645,9 +659,11 @@ const styles = StyleSheet.create({
 
   // ─── BOTÓN AGENDAR ───
   agendarButton: {
+    minHeight: 46,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 14,
-    height: 46,
+
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -658,6 +674,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   agendarButtonText: {
+    flexShrink: 1,
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
@@ -686,6 +703,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reloadButtonText: {
+    flexShrink: 1,
     color: '#fff',
     fontWeight: 'bold',
     marginLeft: 8,

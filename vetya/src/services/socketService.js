@@ -2,6 +2,7 @@ import { io } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config/axios';
 import useAuthStore from '../store/useAuthStore';
+import logger from '../utils/logger';
 
 let socket = null;
 
@@ -21,7 +22,7 @@ const getStoredToken = async () => {
 export const connectEmergencySocket = async () => {
   const token = await getStoredToken();
   if (!token) {
-    console.log('[Socket] No hay token disponible para conectar');
+    logger.debug('[Socket] No hay token disponible para conectar');
     return null;
   }
 
@@ -40,19 +41,19 @@ export const connectEmergencySocket = async () => {
     });
 
     socket.on('connect', () => {
-      console.log('[Socket] Conectado:', socket.id);
+      logger.debug('[Socket] Conectado:', socket.id);
     });
 
     socket.on('connect_error', (error) => {
-      console.log('[Socket] Error de conexion:', error?.message || error);
+      logger.warn('[Socket] Error de conexion:', error?.message || error);
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('[Socket] Desconectado:', reason);
+      logger.debug('[Socket] Desconectado:', reason);
     });
 
     socket.on('socket:ready', (payload) => {
-      console.log('[Socket] Ready:', payload);
+      logger.debug('[Socket] Ready:', payload);
     });
   } else {
     socket.auth = { token };

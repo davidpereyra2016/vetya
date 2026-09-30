@@ -1,9 +1,9 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { View, ActivityIndicator, Alert, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { pagoService } from '../../services/api';
 
 /**
  * Pantalla de Checkout de Mercado Pago
@@ -16,6 +16,7 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
   const webViewRef = useRef(null);
+  const returnHandled = useRef(false);
   const destinationRoute = useMemo(() => {
     if (referenceType === 'emergencia' || emergenciaId) {
       return { name: 'MisEmergencias' };
@@ -41,20 +42,20 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
 
   if (!initPoint) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <StatusBar style="dark" />
         <View style={styles.loadingContainer}>
           <Ionicons name="warning-outline" size={40} color="#F44336" />
           <Text style={styles.loadingText}>No se encontró el enlace de pago.</Text>
-          <TouchableOpacity style={[styles.backButton, { marginTop: 16 }]} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={[styles.backButton, { marginTop: 16 }]} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
-  const handleNavigationStateChange = (navState) => {
+  const handleNavigationStateChange = async (navState) => {
     const { url, canGoBack } = navState;
     setCanGoBack(canGoBack);
 
@@ -65,11 +66,16 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
     }
 
     // Detectar URLs de retorno de Mercado Pago
-    if (url.includes('/pago-exitoso')) {
+    if (url.includes('/pago-exitoso') || url.includes('/pago-pendiente')) {
+      if (returnHandled.current) return;
+      returnHandled.current = true;
       setLoading(false);
+      const preferenceId = initPoint.match(/[?&]pref_id=([^&]+)/)?.[1];
+      const check = preferenceId ? await pagoService.consultarPreferencia(decodeURIComponent(preferenceId)) : null;
+      const approved = check?.success && check.data.verificado && ['Pagado', 'Capturado', 'Completado'].includes(check.data.estado);
       Alert.alert(
-        '✅ Pago Reservado',
-        'El pago ha sido reservado exitosamente. Se cobrará cuando confirmes que el servicio esté completado.',
+        approved ? 'Pago verificado' : 'Pago pendiente de verificación',
+        approved ? 'Mercado Pago informó que el pago fue aprobado.' : 'El servidor aún no confirmó el pago. Consultá el estado del servicio más tarde.',
         [
           {
             text: 'Entendido',
@@ -102,18 +108,6 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
           }
         ]
       );
-    } else if (url.includes('/pago-pendiente')) {
-      setLoading(false);
-      Alert.alert(
-        '⏳ Pago Pendiente',
-        'Tu pago está siendo procesado. Recibirás una notificación cuando se complete.',
-        [
-          {
-            text: 'Entendido',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
     }
   };
 
@@ -133,12 +127,12 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="dark" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
           style={styles.backButton}
           onPress={handleGoBack}
         >
@@ -147,7 +141,7 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
         <Text style={styles.headerTitle}>Pagar con Mercado Pago</Text>
         <View style={{ width: 40 }} />
       </View>
-      
+
       {/* Loading Indicator */}
       {loading && (
         <View style={styles.loadingContainer}>
@@ -155,7 +149,7 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
           <Text style={styles.loadingText}>Cargando checkout...</Text>
         </View>
       )}
-      
+
       {/* WebView */}
       <WebView
         ref={webViewRef}
@@ -203,7 +197,7 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
         domStorageEnabled={true}
         sharedCookiesEnabled={true}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -223,12 +217,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0'
   },
   backButton: {
+    minHeight: 40,
+    paddingVertical: 12,
     width: 40,
-    height: 40,
+
     justifyContent: 'center',
     alignItems: 'center'
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: '600',
     color: '#333'

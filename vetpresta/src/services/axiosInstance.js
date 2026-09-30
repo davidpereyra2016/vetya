@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config/axios';
+import logger from '../utils/logger';
 
 // Crear una única instancia de axios para toda la aplicación
 // URL se importa de config/axios.js (único lugar donde se define)
@@ -22,23 +23,23 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   error => {
-    console.log('API Error:', error.response?.data || error.message);
+    logger.warn('API Error:', error.response?.data || error.message);
     const shouldSkipTokenHandling = error.config?.skipTokenExpiredHandler === true;
-    
+
     // Si es un error 401 y no estamos ya redirigiendo
     if (error.response?.status === 401 && !isRedirectingToLogin && !shouldSkipTokenHandling) {
-      console.log('Token expirado detectado en axiosInstance, limpiando sesión...');
+      logger.warn('Token expirado detectado en axiosInstance, limpiando sesion...');
       isRedirectingToLogin = true;
-      
+
       // Limpiar token de axiosInstance
       delete axiosInstance.defaults.headers.common['Authorization'];
-      
+
       // Resetear el flag después de un breve delay
       setTimeout(() => {
         isRedirectingToLogin = false;
       }, 1000);
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -47,10 +48,10 @@ axiosInstance.interceptors.response.use(
 export const setupAxiosToken = (token) => {
   if (token) {
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    console.log('Token configurado en axiosInstance:', token.substring(0, 10) + '...');
+    logger.debug('Token configurado en axiosInstance');
   } else {
     delete axiosInstance.defaults.headers.common['Authorization'];
-    console.log('Token eliminado de axiosInstance');
+    logger.debug('Token eliminado de axiosInstance');
   }
 };
 

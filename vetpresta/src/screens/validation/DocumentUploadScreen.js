@@ -1,18 +1,16 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Modal,
   Image,
   Platform,
-  Dimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,7 +18,6 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import useValidacionStore from '../../store/useValidacionStore';
 
-const { width } = Dimensions.get('window');
 
 const DocumentUploadScreen = ({ navigation }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -58,7 +55,7 @@ const DocumentUploadScreen = ({ navigation }) => {
   const requestPermissions = async () => {
     const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
     const { status: libraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
+
     if (cameraStatus !== 'granted' || libraryStatus !== 'granted') {
       Alert.alert(
         'Permisos Requeridos',
@@ -185,7 +182,7 @@ const DocumentUploadScreen = ({ navigation }) => {
   const getDocumentoEstado = (tipoDocumento) => {
     const documento = documentosSubidos?.find(doc => doc.tipo === tipoDocumento);
     if (!documento) return null;
-    
+
     return {
       estado: documento.estado || 'pendiente',
       url: documento.url,
@@ -223,13 +220,13 @@ const DocumentUploadScreen = ({ navigation }) => {
       <View key={index} style={styles.documentoCard}>
         <View style={styles.documentoHeader}>
           <Text style={styles.documentoTitulo}>{tipoDocumento}</Text>
-          
+
           {documentoEstado && (
             <View style={[styles.estadoBadge, { backgroundColor: getEstadoColor(documentoEstado.estado) }]}>
-              <Ionicons 
-                name={getEstadoIcon(documentoEstado.estado)} 
-                size={16} 
-                color="#FFF" 
+              <Ionicons
+                name={getEstadoIcon(documentoEstado.estado)}
+                size={16}
+                color="#FFF"
               />
               <Text style={styles.estadoText}>
                 {documentoEstado.estado.toUpperCase()}
@@ -243,7 +240,7 @@ const DocumentUploadScreen = ({ navigation }) => {
             <Text style={styles.fechaSubida}>
               Subido: {new Date(documentoEstado.fechaSubida).toLocaleDateString()}
             </Text>
-            
+
             {documentoEstado.observaciones && (
               <View style={styles.observacionesContainer}>
                 <Ionicons name="information-circle-outline" size={16} color="#FF9500" />
@@ -253,7 +250,7 @@ const DocumentUploadScreen = ({ navigation }) => {
 
             {documentoEstado.url && (
               <View style={styles.previewContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity accessibilityRole="button" hitSlop={8}
                   style={styles.previewButton}
                   onPress={() => showImagePreview(documentoEstado.url)}
                 >
@@ -276,7 +273,7 @@ const DocumentUploadScreen = ({ navigation }) => {
         )}
 
         <View style={styles.documentoAcciones}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.accionButton, styles.subirButton]}
             onPress={() => showImagePicker(tipoDocumento)}
             disabled={isUploading}
@@ -288,7 +285,7 @@ const DocumentUploadScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           {documentoEstado && (
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={[styles.accionButton, styles.eliminarButton]}
               onPress={() => handleDeleteDocument(tipoDocumento)}
               disabled={isUploading}
@@ -305,29 +302,29 @@ const DocumentUploadScreen = ({ navigation }) => {
   // Verificar si hay documentos rechazados que requieren corrección
   const documentosConErrores = getDocumentosConErrores();
   const tieneDocumentosRechazados = documentosConErrores.length > 0;
-  
-  const canUploadDocuments = estadoValidacion === 'pendiente_documentos' || 
+
+  const canUploadDocuments = estadoValidacion === 'pendiente_documentos' ||
                             estadoValidacion === 'requiere_correccion' ||
                             tieneDocumentosRechazados;
 
   if (isLoading && !documentosRequeridos) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1E88E5" />
           <Text style={styles.loadingText}>Cargando documentos...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
           style={styles.backButton}
           onPress={() => {
             if (navigation.canGoBack()) {
@@ -347,7 +344,7 @@ const DocumentUploadScreen = ({ navigation }) => {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={clearError}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={clearError}>
               <Ionicons name="close" size={20} color="#FF3B30" />
             </TouchableOpacity>
           </View>
@@ -357,7 +354,7 @@ const DocumentUploadScreen = ({ navigation }) => {
           <View style={styles.warningContainer}>
             <Ionicons name="warning-outline" size={24} color="#FF9500" />
             <Text style={styles.warningText}>
-              {tieneDocumentosRechazados 
+              {tieneDocumentosRechazados
                 ? `Tienes ${documentosConErrores.length} documento(s) rechazado(s) que puedes corregir y volver a subir.`
                 : `No puedes subir documentos en el estado actual: ${estadoValidacion}`
               }
@@ -394,7 +391,7 @@ const DocumentUploadScreen = ({ navigation }) => {
                 'habilitacion': 'Habilitación Municipal',
                 'responsableTecnico': 'Documentos del Responsable Técnico'
               };
-              
+
               return (
                 <Text key={index} style={[styles.infoText, { marginTop: 5, fontWeight: 'bold', color: '#FF3B30' }]}>
                   • {nombreDocumentos[doc.tipo] || doc.tipo}
@@ -409,7 +406,7 @@ const DocumentUploadScreen = ({ navigation }) => {
           </View>
         )}
 
-        {documentosRequeridos?.map((tipoDocumento, index) => 
+        {documentosRequeridos?.map((tipoDocumento, index) =>
           renderDocumentoCard(tipoDocumento, index)
         )}
       </ScrollView>
@@ -422,18 +419,18 @@ const DocumentUploadScreen = ({ navigation }) => {
         onRequestClose={() => setPreviewVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={styles.modalOverlay}
             onPress={() => setPreviewVisible(false)}
           >
             <View style={styles.modalContent}>
-              <TouchableOpacity 
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}
                 style={styles.closeButton}
                 onPress={() => setPreviewVisible(false)}
               >
                 <Ionicons name="close" size={30} color="#FFF" />
               </TouchableOpacity>
-              
+
               {previewImage && (
                 <Image source={{ uri: previewImage }} style={styles.previewImageLarge} />
               )}
@@ -441,7 +438,7 @@ const DocumentUploadScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -457,12 +454,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 45,
+    paddingTop: 16,
   },
   backButton: {
     padding: 5,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
@@ -491,6 +492,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorText: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#FF3B30',
     flex: 1,
   },
@@ -503,6 +506,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   warningText: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#856404',
     flex: 1,
     marginLeft: 10,
@@ -530,6 +535,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   infoText: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 16,
     color: '#333',
     lineHeight: 22,
@@ -546,18 +553,22 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   documentoHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
   },
   documentoTitulo: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     flex: 1,
   },
   estadoBadge: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -565,6 +576,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
   },
   estadoText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 12,
     fontWeight: 'bold',
@@ -587,6 +599,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   observacionesText: {
+    flexShrink: 1,
     color: '#856404',
     fontSize: 14,
     flex: 1,
@@ -626,10 +639,13 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   documentoAcciones: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   accionButton: {
+    minWidth: 0,
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -645,6 +661,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF3B30',
   },
   accionButtonText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 14,
     fontWeight: 'bold',
@@ -660,14 +677,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    width: width * 0.9,
-    height: width * 0.9,
+    aspectRatio: 1,
+    maxHeight: '80%',
+    width: '90%',
+
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeButton: {
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'absolute',
-    top: -50,
+    top: 0,
     right: 0,
     zIndex: 1,
   },

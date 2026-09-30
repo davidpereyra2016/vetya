@@ -150,6 +150,7 @@ export const emitEmergencyUpdated = (emergencia, eventType = 'updated') => {
   }
 
   if (['created', 'assigned', 'rejected', 'cancelled', 'expired', 'accepted', 'vet_confirmed', 'vet_declined', 'status_changed'].includes(eventType)) {
-    emitToVeterinarios('emergencia:lista-actualizada', payload);
+    // La sala general solo invalida listados; los detalles requieren autorización.
+    emitToVeterinarios('emergencia:lista-actualizada', { eventType, updatedAt: payload.updatedAt });
   }
 };

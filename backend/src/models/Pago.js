@@ -51,7 +51,7 @@ const pagoSchema = new mongoose.Schema({
       'Pendiente',           // Preferencia creada, esperando pago
       'Procesando',          // Pago en proceso
       'Pagado',              // Pago aprobado pero no capturado
-      'Capturado',           // Pago capturado (dinero liberado al prestador)
+      'Capturado',           // Estado histórico de confirmación de servicio; no acredita liberación financiera
       'Completado',          // Servicio completado y pago finalizado
       'Fallido',             // Pago rechazado
       'Reembolsado',         // Pago devuelto
@@ -72,8 +72,22 @@ const pagoSchema = new mongoose.Schema({
     trim: true
     // Llave enviada por el cliente para evitar cobros duplicados
   },
+  checkoutKey: String,
+  paymentEvidence: [mongoose.Schema.Types.Mixed],
   // Campos específicos de Mercado Pago
   mercadoPago: {
+    collectorId: String,
+    payerId: String,
+    externalReference: String,
+    currency: String,
+    amount: Number,
+    liveMode: Boolean,
+    verifiedAt: Date,
+    providerUpdatedAt: Date,
+    netReceivedAmount: Number,
+    feeDetails: [mongoose.Schema.Types.Mixed],
+    moneyReleaseDate: Date,
+    moneyReleaseStatus: String,
     preferenceId: {
       type: String
       // ID de la preferencia de pago creada en MP
@@ -208,6 +222,7 @@ pagoSchema.index({ prestador: 1, estado: 1, createdAt: -1 });
 pagoSchema.index({ 'mercadoPago.preferenceId': 1 }, { sparse: true });
 pagoSchema.index({ 'mercadoPago.paymentId': 1 }, { sparse: true });
 pagoSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
+pagoSchema.index({ checkoutKey: 1 }, { unique: true, sparse: true });
 
 const Pago = mongoose.model("Pago", pagoSchema);
 export default Pago;

@@ -45,17 +45,17 @@ const citaService = {
       if (estado) {
         url += `?estado=${estado}`;
       }
-      
+
       // Realizar la petición - el interceptor de axios se encarga de añadir el token
       const response = await axios.get(url);
-      
+
       return { success: true, data: response.data };
     } catch (error) {
       // Si es un 404, significa que no hay citas, no es un error real
       if (error.response?.status === 404) {
         return { success: true, data: [] };
       }
-      
+
       const errorMessage = getErrorMessage(error, 'Error al obtener citas del prestador');
 
       if (isTransientNetworkError(error)) {
@@ -68,13 +68,25 @@ const citaService = {
       }
 
       console.log('Error al obtener citas del prestador:', error.response?.data || errorMessage);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: errorMessage
       };
     }
   },
-  
+
+  getCitaById: async (citaId) => {
+    try {
+      const response = await axios.get(`/citas/${citaId}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: getErrorMessage(error, 'Error al obtener detalle de la cita')
+      };
+    }
+  },
+
   /**
    * Actualiza el estado de una cita (Confirmar, Completar, Cancelar)
    * @param {string} prestadorId ID del prestador
@@ -88,23 +100,23 @@ const citaService = {
       if (!['Confirmada', 'Completada', 'Cancelada'].includes(estado)) {
         return { success: false, error: 'Estado no válido' };
       }
-      
+
       // URL para el endpoint de actualización
       const url = `/citas/prestador/${prestadorId}/cita/${citaId}`;
-      
+
       // Realizar la petición - el interceptor de axios se encarga de añadir el token
       const response = await axios.patch(url, { estado });
-      
+
       return { success: true, data: response.data };
     } catch (error) {
       console.error('Error al actualizar estado de cita:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Error al actualizar estado de la cita' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al actualizar estado de la cita'
       };
     }
   },
-  
+
   /**
    * Obtiene un resumen de citas para el dashboard del prestador
    * @param {string} prestadorId ID del prestador
@@ -114,16 +126,16 @@ const citaService = {
     try {
       // URL para el endpoint de resumen
       const url = `/citas/prestador/${prestadorId}/resumen`;
-      
+
       // Realizar la petición - el interceptor de axios se encarga de añadir el token
       const response = await axios.get(url);
-      
+
       return { success: true, data: response.data };
     } catch (error) {
       console.error('Error al obtener resumen del dashboard:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Error al obtener resumen del dashboard' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al obtener resumen del dashboard'
       };
     }
   },
@@ -135,20 +147,20 @@ const citaService = {
     try {
       // Obtener la hora local del dispositivo
       const horaLocal = new Date().toISOString();
-      
+
       // Llamar al endpoint que verifica las citas vencidas
       const response = await axios.post('/citas/verificar-citas-vencidas', { horaLocal });
-      
-      return { 
-        success: true, 
+
+      return {
+        success: true,
         data: response.data,
         citasCanceladas: response.data.citasCanceladas || 0
       };
     } catch (error) {
       console.error('Error al verificar citas vencidas:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Error al verificar citas vencidas' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Error al verificar citas vencidas'
       };
     }
   }

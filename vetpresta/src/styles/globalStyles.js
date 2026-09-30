@@ -1,6 +1,4 @@
-import { StyleSheet, Dimensions } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
+import { StyleSheet } from 'react-native';
 
 // Paleta de colores principal
 export const COLORS = {
@@ -28,8 +26,6 @@ export const SIZES = {
   large: 24,
   xlarge: 32,
   xxlarge: 40,
-  width,
-  height
 };
 
 // Tipografía
@@ -90,12 +86,12 @@ const globalStyles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: COLORS.background,
   },
-  
+
   // Headers
   header: {
     backgroundColor: COLORS.primary,
     padding: SIZES.medium,
-    paddingTop: SIZES.large * 1.5,
+    paddingTop: 16,
     borderBottomLeftRadius: 15,
     borderBottomRightRadius: 15,
   },
@@ -105,15 +101,19 @@ const globalStyles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
+    flexShrink: 1,
+    minWidth: 0,
     fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.card,
   },
   headerSubtitle: {
+    flexShrink: 1,
+    minWidth: 0,
     fontSize: 16,
     color: 'rgba(255,255,255,0.8)',
   },
-  
+
   // Tarjetas y secciones
   card: {
     backgroundColor: COLORS.card,
@@ -132,18 +132,24 @@ const globalStyles = StyleSheet.create({
     ...SHADOWS.small,
   },
   sectionHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SIZES.medium,
   },
   sectionTitle: {
+    flexShrink: 1,
+    minWidth: 0,
     ...FONTS.h3,
     color: COLORS.dark,
   },
-  
+
   // Inputs y formularios
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -151,26 +157,31 @@ const globalStyles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: SIZES.medium,
     paddingHorizontal: 10,
-    height: 55,
+
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
+    minHeight: 48,
+    paddingVertical: 8,
+    minWidth: 0,
     flex: 1,
-    height: '100%',
+
     color: COLORS.dark,
     fontSize: 16,
   },
   eyeIcon: {
     padding: 10,
   },
-  
+
   // Botones
   primaryButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: COLORS.primary,
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: SIZES.medium,
@@ -180,11 +191,13 @@ const globalStyles = StyleSheet.create({
     ...FONTS.button,
   },
   secondaryButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: COLORS.primary,
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: SIZES.medium,
@@ -194,9 +207,11 @@ const globalStyles = StyleSheet.create({
     ...FONTS.button,
   },
   dangerButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: COLORS.accent,
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: SIZES.medium,
@@ -205,7 +220,7 @@ const globalStyles = StyleSheet.create({
     color: COLORS.card,
     ...FONTS.button,
   },
-  
+
   // Textos
   title: {
     ...FONTS.h1,
@@ -232,7 +247,7 @@ const globalStyles = StyleSheet.create({
     marginTop: SIZES.small,
     textAlign: 'center',
   },
-  
+
   // Avatares e imágenes
   avatarContainer: {
     borderRadius: 50,
@@ -249,7 +264,7 @@ const globalStyles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
   },
-  
+
   // Badges
   badge: {
     paddingHorizontal: 8,
@@ -263,7 +278,7 @@ const globalStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  
+
   // Estados vacíos
   emptyStateContainer: {
     alignItems: 'center',

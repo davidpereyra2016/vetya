@@ -62,7 +62,7 @@ function getAdminPaymentFinancials(pago) {
     ? toMoney(pago?.cashDebt?.platformFee || monto * CASH_COMMISSION_PERCENTAGE)
     : toMoney(pago?.mercadoPago?.marketplaceFee || (esMercadoPago ? monto * CASH_COMMISSION_PERCENTAGE : 0));
   const netoDigital = esCobrado && esMercadoPago
-    ? toMoney(pago?.mercadoPago?.sellerNetAmount || Math.max(monto - comision, 0))
+    ? toMoney(pago?.mercadoPago?.netReceivedAmount ?? 0)
     : 0;
 
   return {
@@ -144,11 +144,11 @@ const isAuthenticated = (req, res, next) => {
   // Para propósitos de desarrollo, esto está simplificado
   // En producción, deberías implementar una autenticación adecuada
   const adminToken = req.cookies?.adminToken;
-  
+
   if (!adminToken) {
     return res.redirect('/admin/login');
   }
-  
+
   // Almacenar token para uso en vistas
   res.locals.adminToken = adminToken;
   next();
@@ -161,46 +161,46 @@ router.get('/login', (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  
+
   try {
     console.log('=== ADMIN LOGIN ATTEMPT ===');
     console.log('Email:', email);
     console.log('Password provided:', password ? 'YES' : 'NO');
-    
+
     // Usar la API existente para autenticar
     const loginUrl = `http://localhost:${process.env.PORT || 3000}/api/auth/login`;
     console.log('Calling API at:', loginUrl);
-    
+
     const response = await axios.post(loginUrl, {
       email,
       password,
       appType: 'admin' // Especificar que es una autenticación de administrador
     });
-    
+
     console.log('API Response Status:', response.status);
     console.log('API Response Data:', JSON.stringify(response.data, null, 2));
-    
+
     // Verificar si el usuario es administrador
     if (!response.data.user) {
       console.log('ERROR: No user data in response');
       return res.render('login', { error: 'Error: No se recibieron datos del usuario' });
     }
-    
+
     if (response.data.user.role !== 'admin') {
       console.log('Usuario no es admin:', response.data.user.role);
       return res.render('login', { error: 'Acceso denegado. No tienes permisos de administrador.' });
     }
-    
+
     console.log('Usuario admin verificado, estableciendo cookie...');
-    
+
     // Establecer cookie de autenticación
-    res.cookie('adminToken', response.data.token, { 
+    res.cookie('adminToken', response.data.token, {
       httpOnly: false, // Permitir acceso desde JavaScript
       secure: false, // Para desarrollo local
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 1 día
     });
-    
+
     console.log('Cookie establecida, redirigiendo a dashboard...');
     res.redirect('/admin/dashboard');
   } catch (error) {
@@ -209,11 +209,11 @@ router.post('/login', async (req, res) => {
       console.log('Error Status:', error.response.status);
       console.log('Error Data:', error.response.data);
       console.log('Error Message:', error.message);
-      
+
       // Si el error es por email no verificado, redirigir a verificación
       if (error.response.status === 403 && error.response.data.requiresVerification) {
         console.log('Email no verificado, redirigiendo a pantalla de verificación');
-        return res.render('email-verification', { 
+        return res.render('email-verification', {
           email: error.response.data.email,
           error: null,
           mensaje: null,
@@ -233,7 +233,7 @@ router.get('/verify-email', (req, res) => {
   if (!email) {
     return res.redirect('/admin/login');
   }
-  res.render('email-verification', { 
+  res.render('email-verification', {
     email,
     error: null,
     mensaje: null,
@@ -244,21 +244,21 @@ router.get('/verify-email', (req, res) => {
 router.post('/verify-email', async (req, res) => {
   const { email, code1, code2, code3, code4, code5, code6 } = req.body;
   const code = code1 + code2 + code3 + code4 + code5 + code6;
-  
+
   try {
     console.log('=== ADMIN EMAIL VERIFICATION ===');
     console.log('Email:', email);
     console.log('Code:', code);
-    
+
     const response = await axios.post(`http://localhost:${process.env.PORT || 3000}/api/auth/verify-email`, {
       email,
       code
     });
-    
+
     console.log('Verification successful:', response.data);
-    
+
     // Si la verificación es exitosa, redirigir al login con mensaje
-    res.render('login', { 
+    res.render('login', {
       error: null,
       mensaje: '✅ Email verificado exitosamente. Ahora puedes iniciar sesión.'
     });
@@ -268,7 +268,7 @@ router.post('/verify-email', async (req, res) => {
       console.log('Error Status:', error.response.status);
       console.log('Error Data:', error.response.data);
     }
-    res.render('email-verification', { 
+    res.render('email-verification', {
       email,
       error: error.response?.data?.message || 'Código inválido o expirado',
       mensaje: null,
@@ -279,18 +279,18 @@ router.post('/verify-email', async (req, res) => {
 
 router.post('/resend-verification', async (req, res) => {
   const { email } = req.body;
-  
+
   try {
     console.log('=== ADMIN RESEND VERIFICATION ===');
     console.log('Email:', email);
-    
+
     await axios.post(`http://localhost:${process.env.PORT || 3000}/api/auth/resend-verification`, {
       email
     });
-    
+
     console.log('Verification code resent successfully');
-    
-    res.render('email-verification', { 
+
+    res.render('email-verification', {
       email,
       error: null,
       mensaje: '✅ Nuevo código enviado a tu correo electrónico.',
@@ -302,7 +302,7 @@ router.post('/resend-verification', async (req, res) => {
       console.log('Error Status:', error.response.status);
       console.log('Error Data:', error.response.data);
     }
-    res.render('email-verification', { 
+    res.render('email-verification', {
       email,
       error: error.response?.data?.message || 'Error al reenviar el código',
       mensaje: null,
@@ -352,7 +352,7 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
   try {
     console.log('=== CARGANDO DASHBOARD ===');
     console.log('Token:', res.locals.adminToken);
-    
+
     // Obtener datos para el dashboard
     const [usuariosRes, prestadoresRes, mascotasRes, citasRes, emergenciasRes] = await Promise.all([
       axios.get(`http://localhost:${process.env.PORT || 3000}/api/users`, {
@@ -386,9 +386,9 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
         return { data: [] };
       })
     ]);
-    
+
     // Manejar diferentes formatos de respuesta de API
-    const usuarios = Array.isArray(usuariosRes.data) ? usuariosRes.data : 
+    const usuarios = Array.isArray(usuariosRes.data) ? usuariosRes.data :
                      usuariosRes.data?.data ? usuariosRes.data.data : [];
     const prestadores = Array.isArray(prestadoresRes.data) ? prestadoresRes.data :
                         prestadoresRes.data?.data ? prestadoresRes.data.data : [];
@@ -398,7 +398,7 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
                   citasRes.data?.data ? citasRes.data.data : [];
     const emergencias = Array.isArray(emergenciasRes.data) ? emergenciasRes.data :
                         emergenciasRes.data?.data ? emergenciasRes.data.data : [];
-    
+
     console.log('Contadores:', {
       usuarios: usuarios.length,
       prestadores: prestadores.length,
@@ -406,7 +406,7 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
       citas: citas.length,
       emergencias: emergencias.length
     });
-    
+
     res.render('dashboard', {
       contadores: {
         usuarios: usuarios.length,
@@ -420,8 +420,8 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
     });
   } catch (error) {
     console.error('Error general en dashboard:', error.message);
-    res.render('dashboard', { 
-      error: 'Error al cargar datos del dashboard', 
+    res.render('dashboard', {
+      error: 'Error al cargar datos del dashboard',
       contadores: {
         usuarios: 0,
         prestadores: 0,
@@ -440,22 +440,22 @@ router.get('/usuarios', isAuthenticated, async (req, res) => {
     const response = await axios.get(`http://localhost:${process.env.PORT || 3000}/api/users`, {
       headers: { Authorization: `Bearer ${res.locals.adminToken}` }
     });
-    
+
     // Manejar diferentes formatos de respuesta
     const usuarios = Array.isArray(response.data) ? response.data :
                      response.data?.data ? response.data.data : [];
-    
+
     console.log('Total usuarios encontrados:', usuarios.length);
-    
-    res.render('usuarios/index', { 
+
+    res.render('usuarios/index', {
       usuarios: usuarios,
       error: null
     });
   } catch (error) {
     console.error('Error al cargar usuarios:', error.message);
-    res.render('usuarios/index', { 
-      error: 'Error al cargar usuarios', 
-      usuarios: [] 
+    res.render('usuarios/index', {
+      error: 'Error al cargar usuarios',
+      usuarios: []
     });
   }
 });
@@ -464,42 +464,42 @@ router.get('/usuarios/:id', isAuthenticated, async (req, res) => {
   try {
     console.log('=== CARGANDO DETALLE DE USUARIO ===');
     console.log('ID Usuario:', req.params.id);
-    
+
     // Obtener datos del usuario
     const usuario = await User.findById(req.params.id).select('-password');
-    
+
     if (!usuario) {
       return res.redirect('/admin/usuarios');
     }
-    
+
     // Obtener todas las relaciones del usuario en paralelo
     const [mascotas, citas, emergencias, notificaciones, pagos, valoraciones] = await Promise.all([
       // Mascotas del usuario
       Mascota.find({ propietario: req.params.id }).sort({ createdAt: -1 }),
-      
+
       // Citas del usuario
       Cita.find({ usuario: req.params.id })
         .populate('prestador', 'nombre tipo email telefono')
         .populate('servicio', 'nombre categoria')
         .populate('mascota', 'nombre tipo')
         .sort({ fecha: -1 }),
-      
+
       // Emergencias del usuario (usa 'veterinario' no 'prestador')
       Emergencia.find({ usuario: req.params.id })
         .populate('veterinario', 'nombre tipo email telefono')
         .populate('mascota', 'nombre tipo')
         .sort({ createdAt: -1 }),
-      
+
       // Notificaciones del usuario
       Notificacion.find({ usuario: req.params.id })
         .sort({ createdAt: -1 })
         .limit(20),
-      
+
       // Pagos del usuario (tiene referencia polimórfica, no campos directos)
       Pago.find({ usuario: req.params.id })
         .populate('prestador', 'nombre tipo')
         .sort({ createdAt: -1 }),
-      
+
       // Valoraciones realizadas por el usuario
       Valoracion.find({ usuario: req.params.id })
         .populate('prestador', 'nombre tipo')
@@ -507,7 +507,7 @@ router.get('/usuarios/:id', isAuthenticated, async (req, res) => {
         .populate('cita')
         .sort({ createdAt: -1 })
     ]);
-    
+
     // Calcular estadísticas
     const estadisticas = {
       totalMascotas: mascotas.length,
@@ -524,15 +524,15 @@ router.get('/usuarios/:id', isAuthenticated, async (req, res) => {
       pagosCompletados: pagos.filter(p => ESTADOS_PAGO_COBRADO.has(p.estado)).length,
       pagosPendientes: pagos.filter(p => ESTADOS_PAGO_PENDIENTE.has(p.estado)).length,
       totalValoraciones: valoraciones.length,
-      promedioCalificaciones: valoraciones.length > 0 
+      promedioCalificaciones: valoraciones.length > 0
         ? (valoraciones.reduce((sum, v) => sum + v.calificacion, 0) / valoraciones.length).toFixed(1)
         : 0
     };
-    
+
     console.log('Estadísticas:', estadisticas);
     console.log('Renderizando vista usuarios/detalle');
-    
-    res.render('usuarios/detalle', { 
+
+    res.render('usuarios/detalle', {
       usuario,
       mascotas,
       citas,
@@ -566,10 +566,10 @@ router.get('/prestadores', isAuthenticated, async (req, res) => {
         headers: { Authorization: `Bearer ${res.locals.adminToken}` }
       })
     ]);
-    
+
     const prestadores = prestadoresResponse.data;
     const validaciones = validacionesResponse.data.prestadores || [];
-    
+
     // Crear un mapa de validaciones por prestadorId
     const validacionesMap = {};
     validaciones.forEach(validacion => {
@@ -577,7 +577,7 @@ router.get('/prestadores', isAuthenticated, async (req, res) => {
         validacionesMap[validacion.prestador._id] = validacion;
       }
     });
-    
+
     // Enriquecer prestadores con información de validación
     const prestadoresConValidacion = prestadores.map(prestador => {
       const validacion = validacionesMap[prestador._id];
@@ -587,7 +587,7 @@ router.get('/prestadores', isAuthenticated, async (req, res) => {
         estadoValidacion: validacion ? validacion.estado : 'sin_validacion'
       };
     });
-    
+
     // Debug temporal para verificar datos
     console.log('=== DEBUG PRESTADORES CON VALIDACION ===');
     prestadoresConValidacion.forEach((prestador, index) => {
@@ -606,9 +606,9 @@ router.get('/prestadores', isAuthenticated, async (req, res) => {
       }
     });
     console.log('=== FIN DEBUG ===');
-    
+
     // Renderizamos la vista prestadores/index
-    res.render('prestadores/index', { 
+    res.render('prestadores/index', {
       prestadores: prestadoresConValidacion,
       error: null
     });
@@ -622,14 +622,14 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
   try {
     console.log('=== CARGANDO DETALLE DE PRESTADOR ===');
     console.log('ID Prestador:', req.params.id);
-    
+
     // Obtener datos del prestador
     const prestador = await Prestador.findById(req.params.id).populate('usuario', 'username email');
-    
+
     if (!prestador) {
       return res.redirect('/admin/prestadores');
     }
-    
+
     // Obtener todas las relaciones del prestador en paralelo
     const [citas, emergencias, pagos, valoraciones, servicios, disponibilidades, notificaciones, validacion] = await Promise.all([
       // Citas del prestador
@@ -639,22 +639,22 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
         .populate('mascota', 'nombre tipo')
         .sort({ fecha: -1 })
         .limit(100),
-      
+
       // Emergencias atendidas (solo si es veterinario)
-      prestador.tipo === 'Veterinario' 
+      prestador.tipo === 'Veterinario'
         ? Emergencia.find({ veterinario: req.params.id })
             .populate('usuario', 'username email')
             .populate('mascota', 'nombre tipo')
             .sort({ createdAt: -1 })
             .limit(100)
         : Promise.resolve([]),
-      
+
       // Pagos recibidos
       Pago.find({ prestador: req.params.id })
         .populate('usuario', 'username email')
         .sort({ createdAt: -1 })
         .limit(100),
-      
+
       // Valoraciones recibidas
       Valoracion.find({ prestador: req.params.id })
         .populate('usuario', 'username email')
@@ -662,20 +662,20 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
         .populate('cita')
         .sort({ createdAt: -1 })
         .limit(50),
-      
+
       // Servicios ofrecidos
       Servicio.find({ prestadorId: req.params.id }).sort({ nombre: 1 }),
-      
+
       // Disponibilidad configurada
       Disponibilidad.find({ prestador: req.params.id })
         .populate('servicio', 'nombre')
         .limit(50),
-      
+
       // Notificaciones del prestador
       Notificacion.find({ prestador: req.params.id })
         .sort({ createdAt: -1 })
         .limit(20),
-      
+
       // Validación del prestador
       PrestadorValidacion.findOne({ prestador: req.params.id })
     ]);
@@ -709,7 +709,7 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
       comisiones: 0,
       pendiente: 0,
     });
-    
+
     // Calcular estadísticas
     const serviciosConPacientes = await Promise.all(servicios.map(async (servicio) => {
       const servicioObj = servicio.toObject ? servicio.toObject() : servicio;
@@ -747,16 +747,16 @@ router.get('/prestadores/:id', isAuthenticated, async (req, res) => {
       pagosCompletados: pagosConFinanzas.filter(p => p.finanzas.esCobrado).length,
       pagosPendientes: pagosConFinanzas.filter(p => p.finanzas.esPendiente).length,
       totalValoraciones: valoraciones.length,
-      promedioCalificaciones: valoraciones.length > 0 
+      promedioCalificaciones: valoraciones.length > 0
         ? (valoraciones.reduce((sum, v) => sum + v.calificacion, 0) / valoraciones.length).toFixed(1)
         : 0,
       totalServicios: serviciosConPacientes.length,
       serviciosActivos: serviciosConPacientes.filter(s => s.activo !== false).length
     };
-    
+
     console.log('Estadísticas:', estadisticas);
-    
-    res.render('prestadores/detalle', { 
+
+    res.render('prestadores/detalle', {
       prestador: prestadorActualizado || prestador,
       citas,
       emergencias,
@@ -881,7 +881,7 @@ router.post('/prestadores/:id/deuda-efectivo/instrucciones', isAuthenticated, as
 router.get('/mascotas', isAuthenticated, async (req, res) => {
   try {
     console.log('=== CARGANDO MASCOTAS CON DATOS ENRIQUECIDOS ===');
-    
+
     // Cargar mascotas, citas y emergencias en paralelo
     const [mascotasData, citasData, emergenciasData] = await Promise.all([
       Mascota.find()
@@ -891,38 +891,38 @@ router.get('/mascotas', isAuthenticated, async (req, res) => {
       Cita.find().lean(),
       Emergencia.find().lean()
     ]);
-    
+
     console.log('Mascotas encontradas:', mascotasData.length);
     console.log('Citas totales:', citasData.length);
     console.log('Emergencias totales:', emergenciasData.length);
-    
+
     // Enriquecer cada mascota con sus estadísticas de citas y emergencias
     const mascotasEnriquecidas = mascotasData.map(mascota => {
       // Contar citas de esta mascota
-      const citasMascota = citasData.filter(c => 
+      const citasMascota = citasData.filter(c =>
         c.mascota && c.mascota.toString() === mascota._id.toString()
       );
-      
+
       // Contar emergencias de esta mascota
-      const emergenciasMascota = emergenciasData.filter(e => 
+      const emergenciasMascota = emergenciasData.filter(e =>
         e.mascota && e.mascota.toString() === mascota._id.toString()
       );
-      
+
       return {
         ...mascota,
         totalCitas: citasMascota.length,
         citasPendientes: citasMascota.filter(c => c.estado === 'Pendiente').length,
         citasCompletadas: citasMascota.filter(c => c.estado === 'Completada').length,
         totalEmergencias: emergenciasMascota.length,
-        emergenciasActivas: emergenciasMascota.filter(e => 
+        emergenciasActivas: emergenciasMascota.filter(e =>
           ['Solicitada', 'Asignada', 'En camino', 'En atención'].includes(e.estado)
         ).length
       };
     });
-    
+
     console.log('Mascotas enriquecidas:', mascotasEnriquecidas.length);
-    
-    res.render('mascotas/index', { 
+
+    res.render('mascotas/index', {
       mascotas: mascotasEnriquecidas,
       mensaje: null,
       error: null
@@ -930,8 +930,8 @@ router.get('/mascotas', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('Error al cargar mascotas:', error.message);
     console.error('Stack:', error.stack);
-    res.render('mascotas/index', { 
-      error: 'Error al cargar mascotas: ' + error.message, 
+    res.render('mascotas/index', {
+      error: 'Error al cargar mascotas: ' + error.message,
       mascotas: [],
       mensaje: null
     });
@@ -943,7 +943,7 @@ router.get('/mascotas/:id', isAuthenticated, async (req, res) => {
   try {
     console.log('=== CARGANDO DETALLE DE MASCOTA ===');
     console.log('Mascota ID:', req.params.id);
-    
+
     // Cargar mascota con propietario, citas y emergencias en paralelo
     const [mascota, citas, emergencias] = await Promise.all([
       Mascota.findById(req.params.id)
@@ -959,7 +959,7 @@ router.get('/mascotas/:id', isAuthenticated, async (req, res) => {
         .sort({ createdAt: -1 })
         .lean()
     ]);
-    
+
     if (!mascota) {
       return res.render('mascotas/index', {
         error: 'Mascota no encontrada',
@@ -967,11 +967,11 @@ router.get('/mascotas/:id', isAuthenticated, async (req, res) => {
         mensaje: null
       });
     }
-    
+
     console.log('Mascota encontrada:', mascota.nombre);
     console.log('Total citas:', citas.length);
     console.log('Total emergencias:', emergencias.length);
-    
+
     // Calcular estadísticas
     const estadisticas = {
       totalCitas: citas.length,
@@ -980,13 +980,13 @@ router.get('/mascotas/:id', isAuthenticated, async (req, res) => {
       citasCompletadas: citas.filter(c => c.estado === 'Completada').length,
       citasCanceladas: citas.filter(c => c.estado === 'Cancelada').length,
       totalEmergencias: emergencias.length,
-      emergenciasActivas: emergencias.filter(e => 
+      emergenciasActivas: emergencias.filter(e =>
         ['Solicitada', 'Asignada', 'En camino', 'En atención'].includes(e.estado)
       ).length,
       emergenciasAtendidas: emergencias.filter(e => e.estado === 'Atendida').length,
       emergenciasCanceladas: emergencias.filter(e => e.estado === 'Cancelada').length
     };
-    
+
     res.render('mascotas/detalle', {
       mascota,
       citas,
@@ -1013,22 +1013,22 @@ router.get('/citas', isAuthenticated, async (req, res) => {
     const response = await axios.get(`http://localhost:${process.env.PORT || 3000}/api/citas`, {
       headers: { Authorization: `Bearer ${res.locals.adminToken}` }
     });
-    
+
     // Manejar diferentes formatos de respuesta
     const citas = Array.isArray(response.data) ? response.data :
                   response.data?.data ? response.data.data : [];
-    
+
     console.log('Total citas encontradas:', citas.length);
-    
-    res.render('citas/index', { 
+
+    res.render('citas/index', {
       citas: citas,
       error: null
     });
   } catch (error) {
     console.error('Error al cargar citas:', error.message);
-    res.render('citas/index', { 
-      error: 'Error al cargar citas', 
-      citas: [] 
+    res.render('citas/index', {
+      error: 'Error al cargar citas',
+      citas: []
     });
   }
 });
@@ -1040,26 +1040,26 @@ router.get('/servicios', isAuthenticated, async (req, res) => {
     const response = await axios.get(`http://localhost:${process.env.PORT || 3000}/api/servicios`, {
       headers: { Authorization: `Bearer ${res.locals.adminToken}` }
     });
-    
+
     // Manejar diferentes formatos de respuesta
     const servicios = Array.isArray(response.data) ? response.data :
                       response.data?.data ? response.data.data : [];
-    
+
     console.log('Total servicios encontrados:', servicios.length);
     const prestadoresEmergencia = await Prestador.find({ tipo: 'Veterinario' })
       .select('nombre email precioEmergencia emergenciaGratisAdmin disponibleEmergencias')
       .sort({ nombre: 1 })
       .lean();
-    
-    res.render('servicios/index', { 
+
+    res.render('servicios/index', {
       servicios: servicios,
       prestadoresEmergencia,
       error: null
     });
   } catch (error) {
     console.error('Error al cargar servicios:', error.message);
-    res.render('servicios/index', { 
-      error: 'Error al cargar servicios', 
+    res.render('servicios/index', {
+      error: 'Error al cargar servicios',
       servicios: [],
       prestadoresEmergencia: []
     });
@@ -1090,7 +1090,7 @@ router.post('/servicios/prestadores/:id/emergencia-gratis', isAuthenticated, asy
 router.get('/emergencias', isAuthenticated, async (req, res) => {
   try {
     console.log('=== CARGANDO EMERGENCIAS ADMIN ===');
-    
+
     // Obtener TODAS las emergencias directamente del modelo (no filtrar por usuario)
     const emergencias = await Emergencia.find()
       .populate('usuario', 'username email profilePicture telefono')
@@ -1098,9 +1098,9 @@ router.get('/emergencias', isAuthenticated, async (req, res) => {
       .populate('veterinario', 'nombre especialidad imagen rating telefono email')
       .sort({ fechaSolicitud: -1 })
       .lean();
-    
+
     console.log('Total emergencias encontradas:', emergencias.length);
-    
+
     // Debug para verificar datos
     if (emergencias.length > 0) {
       console.log('Primera emergencia:', {
@@ -1113,8 +1113,8 @@ router.get('/emergencias', isAuthenticated, async (req, res) => {
         otroAnimal: emergencias[0].otroAnimal?.esOtroAnimal
       });
     }
-    
-    res.render('emergencias/index', { 
+
+    res.render('emergencias/index', {
       emergencias: emergencias,
       mensaje: null,
       error: null
@@ -1122,8 +1122,8 @@ router.get('/emergencias', isAuthenticated, async (req, res) => {
   } catch (error) {
     console.error('Error al cargar emergencias:', error.message);
     console.error('Stack:', error.stack);
-    res.render('emergencias/index', { 
-      error: 'Error al cargar emergencias: ' + error.message, 
+    res.render('emergencias/index', {
+      error: 'Error al cargar emergencias: ' + error.message,
       emergencias: [],
       mensaje: null
     });
@@ -1135,14 +1135,14 @@ router.get('/emergencias/:id', isAuthenticated, async (req, res) => {
   try {
     console.log('=== CARGANDO DETALLE DE EMERGENCIA ===');
     console.log('Emergencia ID:', req.params.id);
-    
+
     // Obtener la emergencia con todos los datos poblados
     const emergencia = await Emergencia.findById(req.params.id)
       .populate('usuario', 'username email profilePicture telefono')
       .populate('mascota', 'nombre tipo raza imagen edad genero color peso')
       .populate('veterinario', 'nombre especialidad imagen rating telefono email experiencia')
       .lean();
-    
+
     if (!emergencia) {
       return res.render('emergencias/index', {
         error: 'Emergencia no encontrada',
@@ -1150,14 +1150,14 @@ router.get('/emergencias/:id', isAuthenticated, async (req, res) => {
         mensaje: null
       });
     }
-    
+
     console.log('Emergencia encontrada:', {
       id: emergencia._id,
       estado: emergencia.estado,
       tipoEmergencia: emergencia.tipoEmergencia,
       usuario: emergencia.usuario?.username
     });
-    
+
     res.render('emergencias/detalle', {
       emergencia,
       adminToken: res.locals.adminToken,
@@ -1180,19 +1180,19 @@ router.get('/validaciones', isAuthenticated, async (req, res) => {
     const response = await axios.get(`http://localhost:${process.env.PORT || 3000}/api/validacion/admin/todas?limit=100`, {
       headers: { Authorization: `Bearer ${res.locals.adminToken}` }
     });
-    
+
     // La API devuelve { prestadores: [...], pagination: {...} }
     const validaciones = response.data.prestadores || [];
-    
-    res.render('validaciones/index', { 
+
+    res.render('validaciones/index', {
       validaciones: validaciones,
       mensaje: req.query.mensaje || null,
       error: req.query.error || null
     });
   } catch (error) {
     console.error('Error al cargar validaciones:', error);
-    res.render('validaciones/index', { 
-      error: 'Error al cargar validaciones pendientes', 
+    res.render('validaciones/index', {
+      error: 'Error al cargar validaciones pendientes',
       validaciones: [],
       mensaje: null
     });
@@ -1206,8 +1206,8 @@ router.get('/validaciones/:id', isAuthenticated, async (req, res) => {
     const response = await axios.get(`http://localhost:${process.env.PORT || 3000}/api/validacion/admin/detalle/${req.params.id}`, {
       headers: { Authorization: `Bearer ${res.locals.adminToken}` }
     });
-    
-    res.render('validaciones/detalle', { 
+
+    res.render('validaciones/detalle', {
       validacion: response.data.validacion,
       progreso: response.data.progreso,
       documentosRequeridos: response.data.documentosRequeridos,
@@ -1224,7 +1224,7 @@ router.get('/validaciones/:id', isAuthenticated, async (req, res) => {
 router.post('/validaciones/:id/revisar-documento', isAuthenticated, async (req, res) => {
   try {
     const { tipoDocumento, estado, observaciones } = req.body;
-    
+
     await axios.put(`http://localhost:${process.env.PORT || 3000}/api/validacion/admin/revisar-documento/${req.params.id}`, {
       tipoDocumento,
       estado,
@@ -1232,7 +1232,7 @@ router.post('/validaciones/:id/revisar-documento', isAuthenticated, async (req, 
     }, {
       headers: { Authorization: `Bearer ${res.locals.adminToken}` }
     });
-    
+
     res.redirect(`/admin/validaciones/${req.params.id}?mensaje=Documento revisado correctamente`);
   } catch (error) {
     console.error('Error al revisar documento:', error);
@@ -1244,18 +1244,18 @@ router.post('/validaciones/:id/revisar-documento', isAuthenticated, async (req, 
 router.post('/validaciones/:id/decision', isAuthenticated, async (req, res) => {
   try {
     const { decision, observaciones } = req.body;
-    
+
     await axios.put(`http://localhost:${process.env.PORT || 3000}/api/validacion/admin/decision-final/${req.params.id}`, {
       decision,
       observaciones
     }, {
       headers: { Authorization: `Bearer ${res.locals.adminToken}` }
     });
-    
-    const mensaje = decision === 'aprobado' ? 'Prestador aprobado correctamente' : 
-                   decision === 'rechazado' ? 'Prestador rechazado' : 
+
+    const mensaje = decision === 'aprobado' ? 'Prestador aprobado correctamente' :
+                   decision === 'rechazado' ? 'Prestador rechazado' :
                    'Correcciones solicitadas';
-    
+
     res.redirect(`/admin/validaciones?mensaje=${encodeURIComponent(mensaje)}`);
   } catch (error) {
     console.error('Error al tomar decisión:', error);

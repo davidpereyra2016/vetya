@@ -1,9 +1,9 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
@@ -11,7 +11,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -72,10 +71,10 @@ const AdditionalDataScreen = ({ navigation }) => {
   const loadInitialData = async () => {
     console.log('🔄 Cargando datos iniciales...');
     await fetchEstadoValidacion();
-    
+
     console.log('Datos adicionales obtenidos:', datosAdicionales);
     console.log('Datos del provider:', provider);
-    
+
     // Pre-llenar formulario con datos de validación existentes
     if (datosAdicionales) {
       setFormData(prev => ({
@@ -95,7 +94,7 @@ const AdditionalDataScreen = ({ navigation }) => {
         codigoPostal: provider.direccion?.codigoPostal || prev.codigoPostal
       }));
     }
-    
+
     console.log('Datos del formulario después de cargar:', formData);
   };
 
@@ -178,11 +177,11 @@ const AdditionalDataScreen = ({ navigation }) => {
     }
 
     setIsSubmitting(true);
-    
+
     console.log('=== ENVIANDO DATOS ADICIONALES ===');
     console.log('Tipo de prestador:', prestadorTipo);
     console.log('Datos del formulario:', formData);
-    
+
     // Filtrar datos: eliminar campos vacíos, nulos y objetos vacíos
     const filteredData = Object.fromEntries(
       Object.entries(formData).filter(([key, value]) => {
@@ -193,12 +192,12 @@ const AdditionalDataScreen = ({ navigation }) => {
         return true;
       })
     );
-    
+
     console.log('Datos filtrados (sin campos vacíos):', filteredData);
 
     try {
       const result = await updateDatosAdicionales(filteredData);
-      
+
       console.log('Resultado de la API:', result);
 
       if (result.success) {
@@ -233,7 +232,7 @@ const AdditionalDataScreen = ({ navigation }) => {
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Limpiar error del campo al escribir
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
@@ -280,7 +279,7 @@ const AdditionalDataScreen = ({ navigation }) => {
   const renderCommonFields = () => (
     <>
       <Text style={styles.sectionTitle}>Información de Contacto</Text>
-      
+
       {renderInput('telefono', 'Teléfono *', '+54 11 1234-5678', {
         keyboardType: 'phone-pad'
       })}
@@ -300,7 +299,7 @@ const AdditionalDataScreen = ({ navigation }) => {
   const renderVeterinarioFields = () => (
     <>
       <Text style={styles.sectionTitle}>Información Profesional</Text>
-      
+
       {renderInput('numeroMatricula', 'Número de Matrícula *', 'MP 12345')}
 
       {renderInput('universidad', 'Universidad', 'Universidad donde se graduó')}
@@ -322,7 +321,7 @@ const AdditionalDataScreen = ({ navigation }) => {
   const renderCentroFields = () => (
     <>
       <Text style={styles.sectionTitle}>Información del Establecimiento</Text>
-      
+
       {renderInput('cuit_cuil', 'CUIT/CUIL *', '20-12345678-9')}
 
       {renderInput('razonSocial', 'Razón Social *', 'Nombre legal del establecimiento')}
@@ -334,13 +333,13 @@ const AdditionalDataScreen = ({ navigation }) => {
       })}
 
       {renderInput('telefonoAlternativo', 'Teléfono Alternativo', 'Teléfono secundario de contacto')}
-      
+
       <Text style={styles.sectionTitle}>Responsable Técnico</Text>
-      
+
       {renderInput('responsableTecnicoNombre', 'Nombre del Responsable Técnico', 'Nombre completo del veterinario responsable')}
-      
+
       {renderInput('responsableTecnicoMatricula', 'Matrícula del Responsable', 'MP 12345')}
-      
+
       {renderInput('responsableTecnicoDocumento', 'Documento del Responsable', 'DNI o documento de identidad')}
 
       {renderInput('horarioAtencion', 'Horario de Atención *', 'Ej: Lun-Vie 8:00-18:00, Sáb 8:00-12:00')}
@@ -350,7 +349,7 @@ const AdditionalDataScreen = ({ navigation }) => {
   const renderOtroFields = () => (
     <>
       <Text style={styles.sectionTitle}>Información Adicional</Text>
-      
+
       <View style={styles.infoBox}>
         <Ionicons name="information-circle-outline" size={24} color="#1E88E5" />
         <Text style={styles.infoBoxText}>
@@ -375,22 +374,22 @@ const AdditionalDataScreen = ({ navigation }) => {
 
   if (isLoading && !prestadorTipo) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1E88E5" />
           <Text style={styles.loadingText}>Cargando información...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
           style={styles.backButton}
           onPress={() => {
             if (navigation.canGoBack()) {
@@ -406,7 +405,7 @@ const AdditionalDataScreen = ({ navigation }) => {
         <View style={{ width: 24 }} />
       </View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
@@ -414,7 +413,7 @@ const AdditionalDataScreen = ({ navigation }) => {
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity onPress={clearError}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={clearError}>
                 <Ionicons name="close" size={20} color="#FF3B30" />
               </TouchableOpacity>
             </View>
@@ -431,13 +430,13 @@ const AdditionalDataScreen = ({ navigation }) => {
 
           <View style={styles.formContainer}>
             {renderCommonFields()}
-            
+
             {prestadorTipo === 'Veterinario' && renderVeterinarioFields()}
             {(prestadorTipo === 'Centro Veterinario' || prestadorTipo === 'Veterinaria') && renderCentroFields()}
             {prestadorTipo === 'Otro' && renderOtroFields()}
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
             onPress={handleSubmit}
             disabled={isSubmitting}
@@ -453,7 +452,7 @@ const AdditionalDataScreen = ({ navigation }) => {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -469,12 +468,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 45,
+    paddingTop: 16,
   },
   backButton: {
     padding: 5,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
@@ -502,6 +505,8 @@ const styles = StyleSheet.create({
     margin: 20,
   },
   errorText: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#FF3B30',
     flex: 1,
   },
@@ -529,6 +534,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   infoText: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 16,
     color: '#333',
     lineHeight: 22,
@@ -572,7 +579,8 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   textInputMultiline: {
-    height: 100,
+    paddingVertical: 12,
+
     minHeight: 100,
     textAlignVertical: 'top',
     paddingTop: 15,
@@ -590,6 +598,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   infoBoxText: {
+    flexShrink: 1,
     flex: 1,
     fontSize: 14,
     color: '#1565C0',

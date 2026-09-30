@@ -1,16 +1,15 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView,
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
@@ -22,7 +21,7 @@ const RegisterScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Usar la tienda de Zustand en lugar del contexto
   const register = useAuthStore(state => state.register);
   const isLoading = useAuthStore(state => state.isLoading);
@@ -33,19 +32,19 @@ const RegisterScreen = ({ navigation }) => {
     clearError(); // Limpiar errores anteriores
     const normalizedName = name.trim().replace(/\s+/g, ' ');
     const normalizedEmail = email.trim().toLowerCase();
-    
+
     if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
       Alert.alert('Error', 'Por favor complete todos los campos');
       return;
     }
-    
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Las contraseñas no coinciden');
       return;
     }
-    
+
     const result = await register(normalizedName, normalizedEmail, password, confirmPassword);
-    
+
     if (result.success && result.requiresVerification) {
       navigation.navigate('EmailVerification', {
         email: result.email || normalizedEmail,
@@ -70,14 +69,14 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollView}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -88,7 +87,7 @@ const RegisterScreen = ({ navigation }) => {
             <Text style={styles.headerText}>Crear Cuenta</Text>
             <Text style={styles.subHeaderText}>Registra tus datos para comenzar</Text>
           </View>
-          
+
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <Ionicons name="person-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
@@ -100,7 +99,7 @@ const RegisterScreen = ({ navigation }) => {
                 onChangeText={setName}
               />
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -113,7 +112,7 @@ const RegisterScreen = ({ navigation }) => {
                 onChangeText={setEmail}
               />
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -124,18 +123,18 @@ const RegisterScreen = ({ navigation }) => {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Ionicons 
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -146,20 +145,20 @@ const RegisterScreen = ({ navigation }) => {
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <Ionicons 
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity 
-              style={styles.registerButton} 
+
+            <TouchableOpacity accessibilityRole="button"
+              style={styles.registerButton}
               onPress={handleRegister}
               disabled={isLoading}
             >
@@ -167,21 +166,21 @@ const RegisterScreen = ({ navigation }) => {
                 {isLoading ? 'Registrando...' : 'Registrarse'}
               </Text>
             </TouchableOpacity>
-            
+
             {error ? (
               <Text style={styles.errorText}>{error}</Text>
             ) : null}
-            
+
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>¿Ya tienes una cuenta? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.loginButtonText}>Inicia sesión</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -232,6 +231,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -239,14 +240,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     paddingHorizontal: 10,
-    height: 55,
+
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 8,
     flex: 1,
-    height: '100%',
+
     color: '#333',
     fontSize: 16,
   },
@@ -254,9 +258,11 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   registerButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
@@ -268,10 +274,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   loginContainer: {
+    flexWrap: 'wrap',
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
   },
   loginText: {
+    flexShrink: 1,
     color: '#666',
     fontSize: 14,
   },

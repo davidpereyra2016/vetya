@@ -1,10 +1,10 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  ScrollView,
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
   Image,
   Switch,
   Alert,
@@ -22,12 +22,12 @@ import { getUserAvatarUri } from '../../utils/avatar';
 const ProfileScreen = (props) => {
   // Usar el hook useNavigation para asegurar que siempre tengamos acceso a navigation
   const navigation = useNavigation();
-  
+
   // Usar Zustand en lugar de AuthContext
   const user = useAuthStore(state => state.user);
   const logout = useAuthStore(state => state.logout);
   const updateUser = useAuthStore(state => state.updateUser);
-  
+
   // Cargar datos del perfil cuando se monta el componente
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -40,7 +40,7 @@ const ProfileScreen = (props) => {
         console.log('Error al cargar perfil:', error);
       }
     };
-    
+
     loadUserProfile();
   }, []);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -56,8 +56,8 @@ const ProfileScreen = (props) => {
           text: "Cancelar",
           style: "cancel"
         },
-        { 
-          text: "Cerrar sesión", 
+        {
+          text: "Cerrar sesión",
           onPress: () => logout(),
           style: "destructive"
         }
@@ -74,7 +74,7 @@ const ProfileScreen = (props) => {
         {/* Top bar: Título + ícono ajustes */}
         <View style={styles.headerTopBar}>
           <Text style={styles.headerTitle}>Mi Perfil</Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" hitSlop={8}
             style={styles.settingsButton}
             activeOpacity={0.8}
             onPress={() => navigation.navigate('EditProfile')}
@@ -99,7 +99,7 @@ const ProfileScreen = (props) => {
                 </Text>
               </View>
             )}
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button" hitSlop={8}
               style={styles.editPhotoBtn}
               activeOpacity={0.9}
               onPress={() => navigation.navigate('EditProfile')}
@@ -126,7 +126,7 @@ const ProfileScreen = (props) => {
         {/* SECCIÓN 1: Mi cuenta */}
         <Text style={styles.sectionTitle}>Mi cuenta</Text>
         <View style={styles.cardGroup}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.optionRow}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('EditProfile')}
@@ -138,7 +138,7 @@ const ProfileScreen = (props) => {
             <Ionicons name="chevron-forward" size={20} color="#BDBDBD" />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.optionRow}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('ChangePassword')}
@@ -150,7 +150,7 @@ const ProfileScreen = (props) => {
             <Ionicons name="chevron-forward" size={20} color="#BDBDBD" />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.optionRow}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('PaymentHistory')}
@@ -162,7 +162,7 @@ const ProfileScreen = (props) => {
             <Ionicons name="chevron-forward" size={20} color="#BDBDBD" />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.optionRow, styles.lastOptionRow]}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('Addresses')}
@@ -210,7 +210,7 @@ const ProfileScreen = (props) => {
         {/* SECCIÓN 3: Más */}
         <Text style={styles.sectionTitle}>Más</Text>
         <View style={styles.cardGroup}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.optionRow}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('HelpSupport')}
@@ -222,7 +222,7 @@ const ProfileScreen = (props) => {
             <Ionicons name="chevron-forward" size={20} color="#BDBDBD" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionRow} activeOpacity={0.7}>
+          <TouchableOpacity accessibilityRole="button" style={styles.optionRow} activeOpacity={0.7}>
             <View style={[styles.iconBox, { backgroundColor: '#FFF8E1' }]}>
               <Ionicons name="star" size={20} color="#FFB300" />
             </View>
@@ -230,7 +230,7 @@ const ProfileScreen = (props) => {
             <Ionicons name="chevron-forward" size={20} color="#BDBDBD" />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.optionRow}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('TermsConditions')}
@@ -242,7 +242,7 @@ const ProfileScreen = (props) => {
             <Ionicons name="chevron-forward" size={20} color="#BDBDBD" />
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.optionRow, styles.lastOptionRow]}
             activeOpacity={0.7}
             onPress={() => navigation.navigate('PrivacyPolicy')}
@@ -256,7 +256,7 @@ const ProfileScreen = (props) => {
         </View>
 
         {/* BOTÓN CERRAR SESIÓN */}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.logoutButton}
           activeOpacity={0.8}
           onPress={handleLogout}
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   // ─── HEADER FIJO (patrón HomeScreen: fuera del ScrollView, con zIndex + elevation) ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
@@ -302,14 +302,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 22,
     fontWeight: '800',
     color: '#FFF',
     letterSpacing: 0.5,
   },
   settingsButton: {
+    minWidth: 48,
+    minHeight: 48,
+    paddingVertical: 12,
     width: 42,
-    height: 42,
+
     borderRadius: 21,
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
@@ -344,6 +348,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   editPhotoBtn: {
+    minWidth: 48,
+    minHeight: 48,
     position: 'absolute',
     bottom: -4,
     right: -4,
@@ -368,10 +374,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   emailContainer: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
   },
   userEmail: {
+    flexShrink: 1,
     fontSize: 13,
     color: '#E3F2FD',
     fontWeight: '500',
@@ -427,6 +435,7 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   optionText: {
+    flexShrink: 1,
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
@@ -451,6 +460,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   logoutText: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: 'bold',
     color: '#D32F2F',

@@ -1,11 +1,11 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useEffect, useRef } from 'react';
-import { 
+import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   Animated,
-  ScrollView,
   Platform
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -13,11 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 const ConsultaConfirmacionScreen = ({ navigation, route }) => {
   const { pet, date, time, vet, reason } = route.params || {};
-  
+
   // Animaciones
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  
+
   useEffect(() => {
     // Animaciones de entrada
     Animated.parallel([
@@ -34,22 +34,22 @@ const ConsultaConfirmacionScreen = ({ navigation, route }) => {
       })
     ]).start();
   }, []);
-  
+
   // Mostrar la fecha formateada que ya viene procesada
   const formattedDate = () => {
     if (!date) return '';
-    
+
     // Usar la fecha ya formateada que enviamos desde la pantalla anterior
     return date.formattedDate;
   };
-  
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}
           style={styles.closeButton}
           onPress={() => navigation.popToTop()}
         >
@@ -57,29 +57,29 @@ const ConsultaConfirmacionScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Confirmación</Text>
       </View>
-      
+
       <ScrollView contentContainerStyle={styles.content}>
-        <Animated.View 
+        <Animated.View
           style={[
-            styles.card, 
-            { 
+            styles.card,
+            {
               opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }] 
+              transform: [{ scale: scaleAnim }]
             }
           ]}
         >
           <View style={styles.successIconContainer}>
             <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
           </View>
-          
+
           <Text style={styles.successTitle}>
             ¡Consulta Agendada!
           </Text>
-          
+
           <Text style={styles.successMessage}>
             Tu consulta ha sido agendada exitosamente. Te enviaremos un recordatorio 24 horas antes.
           </Text>
-          
+
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
               <Ionicons name="paw" size={22} color="#1E88E5" style={styles.detailIcon} />
@@ -88,9 +88,9 @@ const ConsultaConfirmacionScreen = ({ navigation, route }) => {
                 <Text style={styles.detailValue}>{pet?.name} ({pet?.type})</Text>
               </View>
             </View>
-            
+
             <View style={styles.separator} />
-            
+
             <View style={styles.detailItem}>
               <Ionicons name="calendar" size={22} color="#1E88E5" style={styles.detailIcon} />
               <View>
@@ -98,9 +98,9 @@ const ConsultaConfirmacionScreen = ({ navigation, route }) => {
                 <Text style={styles.detailValue}>{formattedDate()}</Text>
               </View>
             </View>
-            
+
             <View style={styles.separator} />
-            
+
             <View style={styles.detailItem}>
               <Ionicons name="time" size={22} color="#1E88E5" style={styles.detailIcon} />
               <View>
@@ -108,9 +108,9 @@ const ConsultaConfirmacionScreen = ({ navigation, route }) => {
                 <Text style={styles.detailValue}>{time?.time} hrs.</Text>
               </View>
             </View>
-            
+
             <View style={styles.separator} />
-            
+
             <View style={styles.detailItem}>
               <Ionicons name="person" size={22} color="#1E88E5" style={styles.detailIcon} />
               <View>
@@ -119,9 +119,9 @@ const ConsultaConfirmacionScreen = ({ navigation, route }) => {
                 <Text style={styles.detailSubvalue}>{vet?.specialty} • {vet?.rating} ★</Text>
               </View>
             </View>
-            
+
             <View style={styles.separator} />
-            
+
             <View style={styles.detailItem}>
               <Ionicons name="medical" size={22} color="#1E88E5" style={styles.detailIcon} />
               <View style={{flex: 1}}>
@@ -130,28 +130,28 @@ const ConsultaConfirmacionScreen = ({ navigation, route }) => {
               </View>
             </View>
           </View>
-          
+
           <View style={styles.infoBox}>
             <Ionicons name="information-circle" size={24} color="#1E88E5" style={styles.infoIcon} />
             <Text style={styles.infoText}>
               Si necesitas cambiar o cancelar tu cita, puedes hacerlo hasta 4 horas antes en la sección "Mis Citas".
             </Text>
           </View>
-          
+
           <View style={styles.appointmentId}>
             <Text style={styles.appointmentIdLabel}>ID de Consulta:</Text>
             <Text style={styles.appointmentIdValue}>VET-{Math.floor(100000 + Math.random() * 900000)}</Text>
           </View>
         </Animated.View>
-        
-        <TouchableOpacity
+
+        <TouchableOpacity accessibilityRole="button"
           style={styles.homeButton}
           onPress={() => navigation.popToTop()}
         >
           <Text style={styles.homeButtonText}>Volver al Inicio</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity
+
+        <TouchableOpacity accessibilityRole="button"
           style={styles.appointmentsButton}
           onPress={() => navigation.navigate('MainTabs', { screen: 'Citas' })}
         >
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E88E5',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 15,
     paddingHorizontal: 15,
     borderBottomLeftRadius: 30,//Radio de la esquina inferior izquierda
@@ -182,6 +182,9 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
@@ -241,6 +244,8 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   detailValue: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
@@ -269,6 +274,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   infoText: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#0D47A1',
     fontSize: 14,
     flex: 1,
@@ -282,11 +289,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   appointmentIdLabel: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#666',
     marginRight: 10,
   },
   appointmentIdValue: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
@@ -310,6 +319,7 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   appointmentsButtonText: {
+    flexShrink: 1,
     color: '#1E88E5',
     fontSize: 16,
     fontWeight: '500',

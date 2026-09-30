@@ -1,12 +1,11 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StyleSheet
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -41,6 +40,10 @@ const globalStyles = {
     justifyContent: 'space-between'
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.white
@@ -51,13 +54,13 @@ const TermsConditionsScreen = ({ navigation }) => {
   const lastUpdated = "24 de Marzo de 2026";
 
   return (
-    <SafeAreaView style={globalStyles.container}>
+    <View style={globalStyles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={globalStyles.header}>
         <View style={globalStyles.headerContent}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={{ padding: 5 }}
             onPress={() => navigation.goBack()}
           >
@@ -115,10 +118,10 @@ const TermsConditionsScreen = ({ navigation }) => {
             Si tiene alguna pregunta sobre estos Términos, por favor contáctenos a través de: vetyaoficial@gmail.com.
           </Text>
         </View>
-        
+
         <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

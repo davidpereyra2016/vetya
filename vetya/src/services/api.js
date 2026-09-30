@@ -1,4 +1,4 @@
-import axios from '../config/axios';
+import axios, { setAuthToken } from '../config/axios';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
@@ -32,8 +32,8 @@ export const authService = {
   login: async (email, password) => {
     try {
       // Añadir appType para diferenciar entre aplicaciones
-      const response = await axios.post('/auth/login', { 
-        email, 
+      const response = await axios.post('/auth/login', {
+        email,
         password,
         appType: 'client' // Importante: indicar que es la app de clientes
       });
@@ -199,42 +199,42 @@ export const veterinarioService = {
       };
     }
   },
-  
+
   // Obtener veterinarios disponibles para emergencias
   getAvailableForEmergencies: async () => {
     try {
       console.log('🔍 [API] Solicitando veterinarios disponibles...');
-      
+
       // Intentar con manejo de timeout más explícito
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos
-      
+
       const response = await axios.get('/prestadores/emergencias', {
         signal: controller.signal,
         timeout: 15000
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       console.log('✅ [API] Veterinarios recibidos:', response.data?.length || 0);
-      
+
       // Log de las coordenadas de cada veterinario para debug
       if (response.data && Array.isArray(response.data)) {
         response.data.forEach((vet, index) => {
           console.log(`   Vet ${index + 1}: ${vet.nombre}, ubicacionActual:`, vet.ubicacionActual?.coordenadas || 'NO TIENE');
         });
       }
-      
+
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
       console.error('❌ [API] Error al obtener veterinarios:', error.response?.data || error.message);
-      
+
       // Intentar diagnóstico de conexión
       await diagnosticarConexion();
-      
+
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener veterinarios disponibles',
@@ -246,18 +246,18 @@ export const veterinarioService = {
       };
     }
   },
-  
+
   // Obtener veterinarios disponibles para emergencias con ubicación en tiempo real
   getAvailableVetsWithLocation: async (clientLat, clientLng) => {
     try {
       console.log('🔍 [API] Solicitando veterinarios con ubicación. Cliente:', { lat: clientLat, lng: clientLng });
-      
+
       const response = await axios.get('/prestadores/emergencias/ubicacion', {
         params: { lat: clientLat, lng: clientLng }
       });
-      
+
       console.log('✅ [API] Veterinarios con ubicación recibidos:', response.data?.length || 0);
-      
+
       // Log detallado de coordenadas
       if (response.data && Array.isArray(response.data)) {
         response.data.forEach((vet, index) => {
@@ -267,7 +267,7 @@ export const veterinarioService = {
           console.log(`      -> distancia calculada:`, vet.distancia?.texto || 'N/A');
         });
       }
-      
+
       return {
         success: true,
         data: response.data
@@ -347,7 +347,7 @@ export const emergenciaService = {
       };
     }
   },
-  
+
   // Obtener actualización de ubicación del veterinario (datos reales del backend)
   getVetLocationUpdate: async (emergencyId) => {
     try {
@@ -372,7 +372,7 @@ export const emergenciaService = {
       };
     }
   },
-  
+
   // Obtener el estado actual de una emergencia
   getEmergencyStatus: async (emergencyId) => {
     try {
@@ -389,7 +389,7 @@ export const emergenciaService = {
       };
     }
   },
-  
+
   // Confirmar y aceptar el servicio de emergencia (pago)
   confirmEmergencyService: async (emergencyId, paymentMethod, veterinarianId) => {
     try {
@@ -413,28 +413,28 @@ export const emergenciaService = {
   // Obtener emergencias activas del usuario
   getActiveEmergencies: async () => {
     try {
-      
+
       // Configurar timeout y control de aborto
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos
-      
+
       const response = await axios.get('/emergencias/activas', {
         signal: controller.signal,
         timeout: 15000
       });
-      
+
       clearTimeout(timeoutId);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      
+
       // Intentar diagnóstico de conexión si es error de red
       if (error.message === 'Network Error') {
         await diagnosticarConexion();
       }
-      
+
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener emergencias activas',
@@ -452,12 +452,12 @@ export const emergenciaService = {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
-      
+
       const response = await axios.get('/emergencias', {
         signal: controller.signal,
         timeout: 15000
       });
-      
+
       clearTimeout(timeoutId);
       return {
         success: true,
@@ -467,7 +467,7 @@ export const emergenciaService = {
       if (error.message === 'Network Error') {
         await diagnosticarConexion();
       }
-      
+
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener emergencias',
@@ -495,7 +495,7 @@ export const emergenciaService = {
       };
     }
   },
-  
+
   // Verificar si una emergencia ha expirado o está por expirar
   checkEmergencyExpiration: async (emergenciaId) => {
     try {
@@ -536,21 +536,21 @@ export const emergenciaService = {
       };
     }
   },
-  
+
   // Asignar un veterinario a una emergencia existente
   assignVetToEmergency: async (emergencyId, vetId) => {
     try {
       const response = await axios.patch(`/emergencias/${emergencyId}/asignar-veterinario`, {
         veterinarioId: vetId
       });
-      
+
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
       console.error('Error al asignar veterinario:', error);
-      
+
       // Si ocurre un error, podemos intentar obtener los detalles actuales de la emergencia
       try {
         const emergencyResponse = await axios.get(`/emergencias/${emergencyId}`);
@@ -730,7 +730,7 @@ export const mascotaService = {
 
       // Convertir la URI a base64 para enviar al servidor
       const base64Image = await convertImageToBase64(result.assets[0].uri);
-      
+
       return {
         success: true,
         data: {
@@ -753,7 +753,7 @@ const convertImageToBase64 = async (uri) => {
     // Primero comprobamos el tamaño del archivo
     const fileInfo = await FileSystem.getInfoAsync(uri);
     // console.log(`Tamaño original de la imagen: ${fileInfo.size} bytes`);
-    
+
     // Siempre comprimimos la imagen para reducir tamaño y evitar PayloadTooLargeError
     // console.log('Aplicando compresión a la imagen');
     const compressedUri = await manipulateAsync(
@@ -761,11 +761,11 @@ const convertImageToBase64 = async (uri) => {
       [{ resize: { width: 400 } }],
       { compress: 0.3, format: SaveFormat.JPEG }
     );
-    
+
     // Verificar tamaño de la imagen comprimida
     const compressedInfo = await FileSystem.getInfoAsync(compressedUri.uri);
     // console.log(`Tamaño comprimido de la imagen: ${compressedInfo.size} bytes`);
-    
+
     const response = await fetch(compressedUri.uri);
     const blob = await response.blob();
     return new Promise((resolve, reject) => {
@@ -801,7 +801,7 @@ export const userService = {
       };
     }
   },
-  
+
   // Actualizar la ubicación del cliente
   updateLocation: async (userId, lat, lng) => {
     try {
@@ -821,7 +821,7 @@ export const userService = {
       };
     }
   },
-  
+
   // Obtener la ubicación guardada del cliente
   getLocation: async (userId) => {
     try {
@@ -980,29 +980,9 @@ export const userService = {
   }
 };
 
-// Configurar interceptor para incluir automáticamente el token de autenticación
+// Configurar token activo para las peticiones autenticadas.
 export const setupAxiosInterceptors = (token) => {
-  // Eliminar interceptores previos para evitar duplicados
-  axios.interceptors.request.eject(axios._requestInterceptorId);
-  
-  // Configurar el token en los headers
-  if (token) {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  } else {
-    delete axios.defaults.headers.common['Authorization'];
-  }
-  
-  // Configurar un nuevo interceptor de solicitud
-  axios._requestInterceptorId = axios.interceptors.request.use(
-    config => {
-      // Añadir parámetro para evitar caché en ciertos navegadores/entornos
-      if (config.method === 'get') {
-        config.params = { ...config.params, _: Date.now() };
-      }
-      return config;
-    },
-    error => Promise.reject(error)
-  );
+  setAuthToken(token);
 };
 
 // Función para diagnosticar problemas de red y conexión
@@ -1014,7 +994,7 @@ export const diagnosticarConexion = async () => {
       fetch(baseUrl),
       timeout(5000)
     ]);
-    
+
     return {
       success: true,
       mensaje: 'Conexión básica exitosa',
@@ -1039,6 +1019,14 @@ export const diagnosticarConexion = async () => {
 // 🔷 Servicio de Pagos con Mercado Pago
 // ============================================
 export const pagoService = {
+  consultarPreferencia: async (preferenceId) => {
+    try {
+      const response = await axios.get(`/pagos/mercadopago/preference-status/${encodeURIComponent(preferenceId)}`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'No se pudo verificar el pago' };
+    }
+  },
   /**
    * Crear preferencia de pago de Mercado Pago
    * Se ejecuta cuando el prestador acepta la emergencia

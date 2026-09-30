@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -7,10 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  ScrollView
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  Alert} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services/api';
@@ -37,7 +35,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
     try {
       const result = await authService.forgotPassword(email.trim().toLowerCase());
-      
+
       if (result.success) {
         setEmailSent(true);
       } else {
@@ -56,16 +54,16 @@ const ForgotPasswordScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollView}>
           {/* Header con botón de regreso */}
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
@@ -102,8 +100,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
                   />
                 </View>
 
-                <TouchableOpacity 
-                  style={[styles.sendButton, isLoading && styles.sendButtonDisabled]} 
+                <TouchableOpacity accessibilityRole="button"
+                  style={[styles.sendButton, isLoading && styles.sendButtonDisabled]}
                   onPress={handleSendResetEmail}
                   disabled={isLoading}
                 >
@@ -120,8 +118,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
                   Revisa tu bandeja de entrada.
                 </Text>
 
-                <TouchableOpacity 
-                  style={[styles.sendButton]} 
+                <TouchableOpacity accessibilityRole="button"
+                  style={[styles.sendButton]}
                   onPress={() => navigation.navigate('ResetPassword', { email: email.trim().toLowerCase() })}
                 >
                   <Text style={styles.sendButtonText}>
@@ -129,8 +127,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
-                  style={styles.resendButton} 
+                <TouchableOpacity accessibilityRole="button"
+                  style={styles.resendButton}
                   onPress={handleResendEmail}
                   disabled={isLoading}
                 >
@@ -139,8 +137,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
-                  style={styles.backToLoginButton} 
+                <TouchableOpacity accessibilityRole="button"
+                  style={styles.backToLoginButton}
                   onPress={() => navigation.goBack()}
                 >
                   <Text style={styles.backToLoginButtonText}>
@@ -160,7 +158,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -186,6 +184,7 @@ const styles = StyleSheet.create({
     marginLeft: -10,
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
@@ -221,6 +220,8 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -228,21 +229,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 20,
     paddingHorizontal: 10,
-    height: 55,
+
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 8,
     flex: 1,
-    height: '100%',
+
     color: '#333',
     fontSize: 16,
   },
   sendButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 15,
@@ -256,9 +262,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   resendButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#FF9500',
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 15,
@@ -269,10 +277,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   backToLoginButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#1E88E5',
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -290,6 +300,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   securityText: {
+    flexShrink: 1,
     color: '#666',
     fontSize: 14,
     marginLeft: 8,

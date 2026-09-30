@@ -13,29 +13,29 @@ import { es } from 'date-fns/locale';
  */
 const NotificacionItem = ({ item, onRead, onDelete }) => {
   const navigation = useNavigation();
-  
+
   // Formatear la fecha de la notificación
   const formatearFecha = (fecha) => {
     if (!fecha) return '';
     const fechaObj = new Date(fecha);
     return format(fechaObj, "d 'de' MMMM 'a las' HH:mm", { locale: es });
   };
-  
+
   // Manejar la acción de la notificación
   const handleAction = () => {
     // Marcar como leída si no lo está
     if (!item.leida && onRead) {
       onRead(item._id);
     }
-    
+
     // Realizar acción según el tipo de notificación
     if (item.accion === 'confirmar_emergencia' && item.datos?.emergenciaId) {
-      navigation.navigate('ConfirmarEmergencia', { 
+      navigation.navigate('ConfirmarEmergencia', {
         emergenciaId: item.datos.emergenciaId,
         notificacionId: item._id
       });
     } else if (item.tipo === 'emergencia_asignada' && item.datos?.emergenciaId) {
-      navigation.navigate('EmergencyDetails', { 
+      navigation.navigate('EmergencyDetails', {
         emergencyId: item.datos.emergenciaId,
         fromNotification: true
       });
@@ -45,17 +45,17 @@ const NotificacionItem = ({ item, onRead, onDelete }) => {
       navigation.navigate('Notificaciones');
     }
   };
-  
+
   return (
-    <TouchableOpacity 
-      style={[styles.container, !item.leida && styles.noLeida]} 
+    <TouchableOpacity accessibilityRole="button"
+      style={[styles.container, !item.leida && styles.noLeida]}
       onPress={handleAction}
     >
       {/* Indicador de no leída */}
       {!item.leida && (
         <View style={styles.indicadorNoLeida} />
       )}
-      
+
       {/* Icono según tipo */}
       <View style={styles.iconoContainer}>
         {item.tipo === 'emergencia_asignada' ? (
@@ -70,17 +70,19 @@ const NotificacionItem = ({ item, onRead, onDelete }) => {
           <Ionicons name="notifications" size={24} color="#7f8c8d" />
         )}
       </View>
-      
+
       {/* Contenido principal */}
       <View style={styles.contenido}>
         <Text style={styles.titulo}>{item.titulo}</Text>
         <Text style={styles.mensaje}>{item.mensaje}</Text>
         <Text style={styles.fecha}>{formatearFecha(item.fechaEnvio)}</Text>
       </View>
-      
+
       {/* Opciones */}
-      <TouchableOpacity 
+      <TouchableOpacity hitSlop={8}
         style={styles.botonEliminar}
+        accessibilityRole="button"
+        accessibilityLabel="Eliminar notificación"
         onPress={() => onDelete && onDelete(item._id)}
       >
         <Ionicons name="trash-outline" size={20} color="#7f8c8d" />
@@ -125,8 +127,10 @@ const styles = StyleSheet.create({
   },
   contenido: {
     flex: 1,
+    minWidth: 0,
   },
   titulo: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 5,
@@ -143,6 +147,8 @@ const styles = StyleSheet.create({
     color: '#a0aec0',
   },
   botonEliminar: {
+    minWidth: 48,
+    minHeight: 48,
     paddingHorizontal: 10,
     justifyContent: 'center',
   },

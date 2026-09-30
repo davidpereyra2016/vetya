@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
@@ -5,14 +6,12 @@ import {
   View,
   TouchableOpacity,
   TextInput,
-  ScrollView,
   ActivityIndicator,
   Image,
   Alert,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
@@ -202,14 +201,14 @@ const EditProfileScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <View style={styles.header}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -231,7 +230,7 @@ const EditProfileScreen = ({ navigation }) => {
                   </Text>
                 </View>
               )}
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
                 style={styles.cameraButton}
                 onPress={handleSelectImage}
                 disabled={isLoading}
@@ -239,7 +238,7 @@ const EditProfileScreen = ({ navigation }) => {
                 <Ionicons name="camera" size={18} color="#fff" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={handleSelectImage} disabled={isLoading}>
+            <TouchableOpacity accessibilityRole="button" onPress={handleSelectImage} disabled={isLoading}>
               <Text style={styles.changePhotoText}>Cambiar foto de perfil</Text>
             </TouchableOpacity>
           </View>
@@ -344,7 +343,7 @@ const EditProfileScreen = ({ navigation }) => {
               />
             </View>
 
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
               onPress={handleSave}
               disabled={isLoading}
@@ -372,7 +371,7 @@ const EditProfileScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -408,6 +407,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
@@ -450,12 +450,14 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   cameraButton: {
+    minHeight: 36,
+    paddingVertical: 12,
     position: 'absolute',
     bottom: 2,
     right: 2,
     backgroundColor: '#1E88E5',
     width: 36,
-    height: 36,
+
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
@@ -506,6 +508,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -513,22 +517,27 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 15,
     paddingHorizontal: 10,
-    height: 55,
+
     backgroundColor: '#FAFAFA',
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 8,
     flex: 1,
-    height: '100%',
+
     color: '#333',
     fontSize: 16,
   },
   saveButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 10,
-    height: 55,
+
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -561,6 +570,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   infoTitle: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',

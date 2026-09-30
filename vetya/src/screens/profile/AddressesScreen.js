@@ -1,10 +1,10 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  ScrollView,
   RefreshControl,
   ActivityIndicator,
   Platform,
@@ -116,7 +116,7 @@ const AddressesScreen = ({ navigation }) => {
           <Ionicons name="navigate" size={20} color="#1E88E5" />
           <Text style={styles.sectionTitle}>Ubicación Actual</Text>
         </View>
-        
+
         {currentLocation ? (
           <View style={styles.locationCard}>
             <View style={styles.locationInfo}>
@@ -134,7 +134,7 @@ const AddressesScreen = ({ navigation }) => {
                 </Text>
               )}
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={styles.updateButton}
               onPress={handleUpdateLocation}
               disabled={updatingLocation}
@@ -153,7 +153,7 @@ const AddressesScreen = ({ navigation }) => {
           <View style={styles.noLocationCard}>
             <Ionicons name="location-outline" size={40} color="#ccc" />
             <Text style={styles.noLocationText}>No hay ubicación guardada</Text>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button"
               style={styles.setLocationButton}
               onPress={handleUpdateLocation}
               disabled={updatingLocation}
@@ -222,11 +222,11 @@ const AddressesScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.headerBackButton}
             onPress={() => navigation.goBack()}
           >
@@ -258,7 +258,7 @@ const AddressesScreen = ({ navigation }) => {
             <Ionicons name="time" size={20} color="#1E88E5" />
             <Text style={styles.sectionTitle}>Historial de Direcciones</Text>
           </View>
-          
+
           <Text style={styles.sectionSubtitle}>
             Direcciones utilizadas en emergencias anteriores
           </Text>
@@ -280,7 +280,7 @@ const AddressesScreen = ({ navigation }) => {
         <View style={styles.infoCard}>
           <Ionicons name="information-circle" size={24} color="#1E88E5" />
           <Text style={styles.infoText}>
-            Las direcciones se guardan automáticamente cuando solicitas una emergencia. 
+            Las direcciones se guardan automáticamente cuando solicitas una emergencia.
             Tu ubicación actual ayuda a los veterinarios a llegar más rápido.
           </Text>
         </View>
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -328,14 +328,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerBackButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 22,
     fontWeight: '800',
@@ -367,6 +371,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
@@ -394,11 +399,13 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   coordLabel: {
+    flexShrink: 1,
     fontSize: 13,
     color: '#666',
     width: 70,
   },
   coordValue: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
     color: '#333',
@@ -493,6 +500,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   typeText: {
+    flexShrink: 1,
     fontSize: 11,
     color: '#F44336',
     marginLeft: 4,
@@ -537,6 +545,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   infoText: {
+    flexShrink: 1,
     flex: 1,
     fontSize: 13,
     color: '#1565C0',

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  RefreshControl, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  RefreshControl,
+  TouchableOpacity,
   ActivityIndicator,
   Alert
 } from 'react-native';
@@ -18,19 +18,19 @@ import NotificacionItem from '../components/NotificacionItem';
  * Pantalla que muestra y gestiona las notificaciones del prestador
  */
 const NotificacionesScreen = ({ navigation }) => {
-  const { 
-    notificaciones, 
-    isLoading, 
+  const {
+    notificaciones,
+    isLoading,
     error,
-    loadNotificaciones, 
-    markAsRead, 
+    loadNotificaciones,
+    markAsRead,
     markAllAsRead,
     deleteNotification
   } = useNotificacionStore();
-  
+
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('todas'); // 'todas', 'noLeidas'
-  
+
   // Cargar notificaciones cuando la pantalla recibe foco
   useFocusEffect(
     React.useCallback(() => {
@@ -38,24 +38,24 @@ const NotificacionesScreen = ({ navigation }) => {
       return () => {};
     }, [])
   );
-  
+
   // Función para cargar datos
   const loadData = async () => {
     await loadNotificaciones();
   };
-  
+
   // Manejar refresh al tirar hacia abajo
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
   };
-  
+
   // Marcar notificación como leída
   const handleMarkAsRead = async (id) => {
     await markAsRead(id);
   };
-  
+
   // Marcar todas las notificaciones como leídas
   const handleMarkAllAsRead = async () => {
     Alert.alert(
@@ -67,7 +67,7 @@ const NotificacionesScreen = ({ navigation }) => {
       ]
     );
   };
-  
+
   // Eliminar notificación
   const handleDelete = (id) => {
     Alert.alert(
@@ -79,41 +79,41 @@ const NotificacionesScreen = ({ navigation }) => {
       ]
     );
   };
-  
+
   // Filtrar notificaciones según estado
-  const filteredNotificaciones = filter === 'noLeidas' 
+  const filteredNotificaciones = filter === 'noLeidas'
     ? notificaciones.filter(n => !n.leida)
     : notificaciones;
-  
+
   // Renderizar cada notificación
   const renderItem = ({ item }) => (
-    <NotificacionItem 
-      item={item} 
+    <NotificacionItem
+      item={item}
       onRead={handleMarkAsRead}
       onDelete={handleDelete}
     />
   );
-  
+
   // Renderizar mensaje cuando no hay notificaciones
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="notifications-off-outline" size={70} color="#ccc" />
       <Text style={styles.emptyText}>No tienes notificaciones</Text>
-      <TouchableOpacity 
-        style={styles.refreshButton} 
+      <TouchableOpacity accessibilityRole="button"
+        style={styles.refreshButton}
         onPress={loadData}
       >
         <Text style={styles.refreshButtonText}>Actualizar</Text>
       </TouchableOpacity>
     </View>
   );
-  
+
   return (
     <View style={styles.container}>
       {/* Cabecera con filtros */}
       <View style={styles.header}>
         <View style={styles.filterButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.filterButton, filter === 'todas' && styles.activeFilter]}
             onPress={() => setFilter('todas')}
           >
@@ -121,7 +121,7 @@ const NotificacionesScreen = ({ navigation }) => {
               Todas
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.filterButton, filter === 'noLeidas' && styles.activeFilter]}
             onPress={() => setFilter('noLeidas')}
           >
@@ -130,9 +130,9 @@ const NotificacionesScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
-        
+
         {notificaciones.length > 0 && (
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={styles.markAllButton}
             onPress={handleMarkAllAsRead}
           >
@@ -140,7 +140,7 @@ const NotificacionesScreen = ({ navigation }) => {
           </TouchableOpacity>
         )}
       </View>
-      
+
       {/* Lista de notificaciones */}
       {isLoading && !refreshing ? (
         <View style={styles.loadingContainer}>
@@ -163,13 +163,13 @@ const NotificacionesScreen = ({ navigation }) => {
           }
         />
       )}
-      
+
       {/* Mensaje de error */}
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity 
-            style={styles.retryButton} 
+          <TouchableOpacity accessibilityRole="button"
+            style={styles.retryButton}
             onPress={loadData}
           >
             <Text style={styles.retryButtonText}>Reintentar</Text>

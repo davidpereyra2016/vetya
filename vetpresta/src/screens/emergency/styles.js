@@ -1,7 +1,6 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet} from 'react-native';
 import { COLORS, SHADOWS, SIZES } from '../../styles/globalStyles';
 
-const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -40,6 +39,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.white,
@@ -212,6 +213,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   clientInfo: {
+    minWidth: 0,
     flex: 1,
     marginLeft: 15,
   },
@@ -259,6 +261,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   petInfo: {
+    minWidth: 0,
     flex: 1,
   },
   petName: {
@@ -286,6 +289,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   petDetailsRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     marginTop: 8,
   },
@@ -318,7 +323,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   detailLabel: {
-    width: 130,
+    flexBasis: 110,
+    flexShrink: 1,
+
     fontSize: 14,
     color: COLORS.grey,
     fontWeight: '500',

@@ -1,11 +1,10 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   Image,
   Linking,
   Platform,
-  ScrollView,
   Share,
   StyleSheet,
   Text,
@@ -16,7 +15,6 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useConsejosSaludStore from '../../store/useConsejosSaludStore';
 
-const { height, width } = Dimensions.get('window');
 
 const getCategoryPalette = (tip) => {
   const color = tip?.color || '#1E88E5';
@@ -190,7 +188,7 @@ const HealthTipDetailScreen = ({ route, navigation }) => {
       <View style={styles.loadingContainer}>
         <Ionicons name="alert-circle-outline" size={58} color="#F44336" />
         <Text style={styles.loadingText}>{error || 'No se pudo cargar el consejo'}</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
       </View>
@@ -201,20 +199,20 @@ const HealthTipDetailScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.floatingHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassButton}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} onPress={() => navigation.goBack()} style={styles.glassButton}>
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={[styles.glassButton, { marginRight: 10 }]} onPress={handleLike}>
+          <TouchableOpacity accessibilityRole="button" hitSlop={8} style={[styles.glassButton, { marginRight: 10 }]} onPress={handleLike}>
             <Ionicons name="heart-outline" size={22} color="#FFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.glassButton} onPress={handleShare}>
+          <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.glassButton} onPress={handleShare}>
             <Ionicons name="share-social-outline" size={22} color="#FFF" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         <View style={[styles.heroSection, { backgroundColor: palette.bg }]}>
           {tip.image ? (
             <Image source={{ uri: tip.image }} style={styles.heroImage} />
@@ -258,7 +256,7 @@ const HealthTipDetailScreen = ({ route, navigation }) => {
           <MarkdownContent content={tip.content || tip.description} accentColor={palette.accent} />
 
           {tip.source ? (
-            <TouchableOpacity style={styles.sourceBox} onPress={() => Linking.openURL(tip.source)}>
+            <TouchableOpacity accessibilityRole="button" style={styles.sourceBox} onPress={() => Linking.openURL(tip.source)}>
               <Ionicons name="link-outline" size={18} color={palette.accent} />
               <Text style={[styles.sourceText, { color: palette.accent }]} numberOfLines={2}>Fuente profesional</Text>
             </TouchableOpacity>
@@ -267,7 +265,7 @@ const HealthTipDetailScreen = ({ route, navigation }) => {
       </ScrollView>
 
       <View style={styles.fabWrapper}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.fabButton, { backgroundColor: palette.bg, shadowColor: palette.bg }]}
           activeOpacity={0.9}
           onPress={() => navigation.navigate('AgendarCita')}
@@ -288,7 +286,7 @@ const styles = StyleSheet.create({
   backButtonText: { color: '#FFF', fontWeight: 'bold' },
   floatingHeader: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 40,
+    top: 16,
     left: 20,
     right: 20,
     flexDirection: 'row',
@@ -297,14 +295,17 @@ const styles = StyleSheet.create({
   },
   headerRight: { flexDirection: 'row' },
   glassButton: {
+    minHeight: 42,
+    paddingVertical: 12,
     width: 42,
-    height: 42,
+
     borderRadius: 21,
     backgroundColor: 'rgba(0,0,0,0.28)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  heroSection: { width, height: height * 0.35, justifyContent: 'center', alignItems: 'center' },
+  heroSection: {
+    aspectRatio: 1.6, width: '100%',  justifyContent: 'center', alignItems: 'center' },
   heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.24)' },
   heroPetTypeBadge: {
@@ -325,17 +326,22 @@ const styles = StyleSheet.create({
     marginTop: -35,
     paddingHorizontal: 25,
     paddingTop: 30,
-    minHeight: height * 0.7,
     elevation: 10,
   },
-  metaTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  metaTags: { flexDirection: 'row', flexShrink: 1 },
+  metaTopRow: {
+    flexWrap: 'wrap',
+    gap: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  metaTags: {
+    flexWrap: 'wrap',
+    gap: 8, flexDirection: 'row', flexShrink: 1 },
   categoryPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, marginRight: 8 },
   categoryPillText: { fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
   petTypePill: { backgroundColor: '#F5F5F5', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, flexShrink: 1 },
-  petTypePillText: { color: '#666', fontSize: 11, fontWeight: 'bold' },
+  petTypePillText: {
+    flexShrink: 1, color: '#666', fontSize: 11, fontWeight: 'bold' },
   timeInfo: { flexDirection: 'row', alignItems: 'center' },
-  timeInfoText: { color: '#999', fontSize: 12, fontWeight: '600' },
+  timeInfoText: {
+    flexShrink: 1, color: '#999', fontSize: 12, fontWeight: '600' },
   articleTitle: { fontSize: 26, fontWeight: '900', color: '#1A237E', lineHeight: 34, marginBottom: 20 },
   authorSection: { flexDirection: 'row', alignItems: 'center', paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', marginBottom: 25 },
   authorAvatar: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
@@ -357,10 +363,17 @@ const styles = StyleSheet.create({
   quoteBlock: { backgroundColor: '#F5F7FA', borderLeftWidth: 4, padding: 16, borderTopRightRadius: 12, borderBottomRightRadius: 12, marginVertical: 15 },
   quoteText: { fontSize: 15, fontStyle: 'italic', fontWeight: '500', lineHeight: 22 },
   sourceBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F9FC', padding: 14, borderRadius: 14, marginBottom: 28 },
-  sourceText: { fontSize: 14, fontWeight: 'bold', marginLeft: 8 },
-  fabWrapper: { position: 'absolute', bottom: 25, left: 20, right: 20 },
-  fabButton: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 56, borderRadius: 16, elevation: 8 },
-  fabText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
+  sourceText: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1, fontSize: 14, fontWeight: 'bold', marginLeft: 8 },
+  fabWrapper: {
+    flexShrink: 0,     },
+  fabButton: {
+    minHeight: 56,
+    paddingVertical: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center',  borderRadius: 16, elevation: 8 },
+  fabText: {
+    flexShrink: 1, color: '#FFF', fontSize: 16, fontWeight: 'bold' },
 });
 
 export default HealthTipDetailScreen;

@@ -5,18 +5,15 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   ActivityIndicator,
   Linking,
   Alert,
 } from 'react-native';
 import usePublicidadStore from '../store/usePublicidadStore';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 // Dimensiones del carrusel
 const CARD_MARGIN = 16;
-const CARD_WIDTH = SCREEN_WIDTH - CARD_MARGIN * 2;
 const CARD_HEIGHT = 130;
 
 /**
@@ -26,10 +23,18 @@ const CARD_HEIGHT = 130;
  * Si el banner tiene `enlace`, al tocarlo abre la URL en el navegador.
  */
 const BannerPublicitario = () => {
+  const { width } = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState(width);
+  const cardWidth = Math.max(1, containerWidth - CARD_MARGIN * 2);
+  const stride = cardWidth + CARD_MARGIN;
   const { banners, isLoading, fetchBanners } = usePublicidadStore();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef(null);
   const activeIndexRef = useRef(0);
+
+  useEffect(() => {
+    flatListRef.current?.scrollToOffset({ offset: activeIndexRef.current * stride, animated: false });
+  }, [stride]);
 
   useEffect(() => {
     fetchBanners();
@@ -91,7 +96,7 @@ const BannerPublicitario = () => {
       <Container
         activeOpacity={0.9}
         onPress={hasLink ? () => handlePress(item) : undefined}
-        style={styles.card}
+        style={[styles.card, { width: cardWidth }]}
       >
         <Image
           source={{ uri: item.urlImagen }}
@@ -116,16 +121,16 @@ const BannerPublicitario = () => {
   }
 
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} onLayout={({ nativeEvent }) => setContainerWidth(nativeEvent.layout.width)}>
       <FlatList
         ref={flatListRef}
         data={banners}
         renderItem={renderItem}
         keyExtractor={(item) => String(item._id)}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
-        snapToInterval={CARD_WIDTH + CARD_MARGIN}
+        snapToInterval={stride}
+        getItemLayout={(_, index) => ({ length: stride, offset: stride * index, index })}
         snapToAlignment="start"
         decelerationRate="fast"
         contentContainerStyle={styles.listContent}
@@ -164,7 +169,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: CARD_MARGIN,
   },
   card: {
-    width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: 16,
     overflow: 'hidden',

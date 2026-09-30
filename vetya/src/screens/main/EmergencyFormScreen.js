@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -5,7 +6,6 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -26,24 +26,24 @@ const PetSelector = ({ pet, isSelected, onSelect }) => {
   };
   const iconName = petIcons[pet.tipo?.toLowerCase()] || petIcons.default;
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       style={[styles.petItem, isSelected && styles.selectedPetItem]}
       onPress={() => onSelect(pet)}
       activeOpacity={0.8}
     >
       <View style={styles.petImageContainer}>
         {pet.imagen ? (
-          <Image 
-            source={{ uri: pet.imagen }} 
+          <Image
+            source={{ uri: pet.imagen }}
             style={styles.petImage}
             resizeMode="cover"
           />
         ) : (
           <View style={styles.petIconContainer}>
-            <MaterialCommunityIcons 
-              name={iconName} 
-              size={34} 
-              color={isSelected ? '#fff' : '#1E88E5'} 
+            <MaterialCommunityIcons
+              name={iconName}
+              size={34}
+              color={isSelected ? '#fff' : '#1E88E5'}
             />
           </View>
         )}
@@ -71,7 +71,7 @@ const EmergencyFormScreen = ({ navigation }) => {
   const [emergencyType, setEmergencyType] = useState('Otro');
   const [urgencyLevel, setUrgencyLevel] = useState('Media');
   const [location, setLocation] = useState(null);
-  
+
   // Estados para el manejo de "otro animal"
   const [emergencyMode, setEmergencyMode] = useState('mascota'); // 'mascota' o 'otroAnimal'
   const [otroAnimal, setOtroAnimal] = useState({
@@ -80,10 +80,10 @@ const EmergencyFormScreen = ({ navigation }) => {
     condicion: '',
     ubicacionExacta: ''
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPets, setIsLoadingPets] = useState(true);
-  
+
   // Obtenemos la función para crear emergencia del store
   const { createEmergency } = useEmergencyStore();
   const updateUser = useAuthStore(state => state.updateUser);
@@ -157,12 +157,12 @@ const EmergencyFormScreen = ({ navigation }) => {
   const handleSubmit = async () => {
     // Validaciones básicas
     if (!description.trim()) return Alert.alert('Falta información', 'Por favor, describe la emergencia.');
-    
+
     // Validaciones específicas según el modo
     if (emergencyMode === 'mascota' && !selectedPet) {
       return Alert.alert('Falta información', 'Por favor, selecciona una mascota.');
     }
-    
+
     if (emergencyMode === 'otroAnimal') {
       // Validar información del otro animal
       if (!otroAnimal.descripcionAnimal.trim()) {
@@ -202,7 +202,7 @@ const EmergencyFormScreen = ({ navigation }) => {
           },
         },
       };
-      
+
       // Agregar datos específicos según el modo
       if (emergencyMode === 'mascota') {
         emergencyData.mascota = selectedPet.id;
@@ -224,7 +224,7 @@ const EmergencyFormScreen = ({ navigation }) => {
       setIsLoading(false);
     }
   };
-  
+
   // El resto del renderizado y estilos se mantienen igual ya que estaban correctos
   return (
     <KeyboardAvoidingView
@@ -233,34 +233,34 @@ const EmergencyFormScreen = ({ navigation }) => {
     >
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back-outline" size={28} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Solicitar Emergencia</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
+
           <View style={styles.infoBox}>
             <Ionicons name="information-circle-outline" size={24} color="#1E88E5" />
             <Text style={styles.infoText}>
               Completa los datos para encontrar un veterinario disponible cerca de ti.
             </Text>
           </View>
-          
+
           {/* Selector de modo de emergencia */}
           <Text style={styles.sectionTitle}>¿Para quién es la emergencia?</Text>
           <View style={styles.modeSelector}>
-            <TouchableOpacity 
-              style={[styles.modeOption, emergencyMode === 'mascota' && styles.modeOptionSelected]} 
+            <TouchableOpacity accessibilityRole="button"
+              style={[styles.modeOption, emergencyMode === 'mascota' && styles.modeOptionSelected]}
               onPress={() => setEmergencyMode('mascota')}
             >
               <MaterialCommunityIcons name="paw" size={24} color={emergencyMode === 'mascota' ? '#fff' : '#1E88E5'} />
               <Text style={[styles.modeOptionText, emergencyMode === 'mascota' && styles.modeOptionTextSelected]}>Mi mascota</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.modeOption, emergencyMode === 'otroAnimal' && styles.modeOptionSelected]} 
+
+            <TouchableOpacity accessibilityRole="button"
+              style={[styles.modeOption, emergencyMode === 'otroAnimal' && styles.modeOptionSelected]}
               onPress={() => setEmergencyMode('otroAnimal')}
             >
               <MaterialCommunityIcons name="map-marker-alert" size={24} color={emergencyMode === 'otroAnimal' ? '#fff' : '#1E88E5'} />
@@ -293,12 +293,12 @@ const EmergencyFormScreen = ({ navigation }) => {
           {emergencyMode === 'otroAnimal' && (
             <View style={styles.otherAnimalForm}>
               <Text style={styles.sectionTitle}>Datos del animal</Text>
-              
+
               {/* Tipo de animal */}
               <Text style={styles.fieldLabel}>Tipo de animal</Text>
               <View style={styles.typeSelector}>
                 {['Perro', 'Gato', 'Ave', 'Reptil', 'Roedor', 'Otro'].map((tipo) => (
-                  <TouchableOpacity 
+                  <TouchableOpacity accessibilityRole="button"
                     key={tipo}
                     style={[styles.typeOption, otroAnimal.tipo === tipo && styles.typeOptionSelected]}
                     onPress={() => setOtroAnimal({...otroAnimal, tipo})}
@@ -307,7 +307,7 @@ const EmergencyFormScreen = ({ navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               {/* Descripción del animal */}
               <Text style={styles.fieldLabel}>Descripción del animal</Text>
               <TextInput
@@ -318,7 +318,7 @@ const EmergencyFormScreen = ({ navigation }) => {
                 onChangeText={(text) => setOtroAnimal({...otroAnimal, descripcionAnimal: text})}
                 multiline
               />
-              
+
               {/* Condición del animal */}
               <Text style={styles.fieldLabel}>Condición del animal</Text>
               <TextInput
@@ -329,7 +329,7 @@ const EmergencyFormScreen = ({ navigation }) => {
                 onChangeText={(text) => setOtroAnimal({...otroAnimal, condicion: text})}
                 multiline
               />
-              
+
               {/* Ubicación exacta */}
               <Text style={styles.fieldLabel}>Ubicación exacta</Text>
               <TextInput
@@ -352,11 +352,11 @@ const EmergencyFormScreen = ({ navigation }) => {
             onChangeText={setDescription}
             multiline
           />
-          
+
           <Text style={styles.sectionTitle}>Tipo de emergencia</Text>
             <View style={styles.optionsContainer}>
                 {['Accidente', 'Intoxicación', 'Respiratoria', 'Herida', 'Convulsión', 'Otro'].map(type => (
-                    <TouchableOpacity
+                    <TouchableOpacity accessibilityRole="button"
                         key={type}
                         style={[styles.optionButton, emergencyType === type && styles.selectedOptionButton]}
                         onPress={() => setEmergencyType(type)}
@@ -369,7 +369,7 @@ const EmergencyFormScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Nivel de urgencia</Text>
             <View style={styles.optionsContainer}>
                 {['Baja', 'Media', 'Alta'].map(level => (
-                    <TouchableOpacity
+                    <TouchableOpacity accessibilityRole="button"
                         key={level}
                         style={[styles.optionButton, urgencyLevel === level && styles.selectedOptionButton,
                           level === 'Baja' && urgencyLevel === level && styles.selectedBaja,
@@ -383,22 +383,22 @@ const EmergencyFormScreen = ({ navigation }) => {
                 ))}
             </View>
       </ScrollView>
-      
+
       <View style={styles.footer}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[
-            styles.button, 
-            isLoading || 
-            (emergencyMode === 'mascota' && !selectedPet) || 
+            styles.button,
+            isLoading ||
+            (emergencyMode === 'mascota' && !selectedPet) ||
             (emergencyMode === 'otroAnimal' && !otroAnimal.descripcionAnimal.trim()) ||
             !description.trim()
-              ? styles.buttonDisabled 
+              ? styles.buttonDisabled
               : null
           ]}
           onPress={handleSubmit}
           disabled={
-            isLoading || 
-            (emergencyMode === 'mascota' && !selectedPet) || 
+            isLoading ||
+            (emergencyMode === 'mascota' && !selectedPet) ||
             (emergencyMode === 'otroAnimal' && !otroAnimal.descripcionAnimal.trim()) ||
             !description.trim()
           }
@@ -423,11 +423,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -441,6 +441,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
@@ -461,6 +464,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   infoText: {
+    flexShrink: 1,
     flex: 1,
     fontSize: 14,
     color: '#0D47A1',
@@ -483,11 +487,14 @@ const styles = StyleSheet.create({
   },
   // Estilos para el selector de modo de emergencia
   modeSelector: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     marginHorizontal: 15,
     marginBottom: 20,
   },
   modeOption: {
+    minWidth: 0,
     flex: 1,
     backgroundColor: '#fff',
     padding: 15,
@@ -504,12 +511,14 @@ const styles = StyleSheet.create({
     borderColor: '#1565C0',
   },
   modeOptionText: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: '500',
     color: '#424242',
     marginLeft: 8,
   },
   modeOptionTextSelected: {
+    flexShrink: 1,
     color: '#fff',
   },
   // Estilos para el formulario de otro animal
@@ -617,14 +626,8 @@ const styles = StyleSheet.create({
     color: '#212121',
     marginBottom: 4,
   },
-  petBreed: {
-    fontSize: 14,
-    color: '#757575',
-  },
-  selectedPetText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
+
+
   selectedPetBreedText: {
     color: '#E1F5FE',
   },
@@ -672,6 +675,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   levelContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 15,
@@ -724,10 +729,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    flexShrink: 0,
+
+
+
+
     backgroundColor: '#fff',
     paddingVertical: 15,
     paddingHorizontal: 20,

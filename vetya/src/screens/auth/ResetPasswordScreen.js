@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
@@ -7,10 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  ScrollView
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  Alert} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services/api';
@@ -95,7 +93,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
 
   const handleResetPassword = async () => {
     const codeString = code.join('');
-    
+
     if (codeString.length !== 6) {
       Alert.alert('Error', 'Por favor ingresa el código completo de 6 dígitos');
       return;
@@ -129,7 +127,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
 
     try {
       const result = await authService.resetPassword(email, codeString, newPassword);
-      
+
       if (result.success) {
         Alert.alert(
           '¡Contraseña Actualizada!',
@@ -152,16 +150,16 @@ const ResetPasswordScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollView}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
@@ -215,14 +213,14 @@ const ResetPasswordScreen = ({ navigation, route }) => {
                 onChangeText={setNewPassword}
                 editable={!isLoading}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowNewPassword(!showNewPassword)}
               >
-                <Ionicons 
-                  name={showNewPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
@@ -249,21 +247,21 @@ const ResetPasswordScreen = ({ navigation, route }) => {
                 onChangeText={setConfirmPassword}
                 editable={!isLoading}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               >
-                <Ionicons 
-                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
 
             {/* Botón de restablecer */}
-            <TouchableOpacity 
-              style={[styles.resetButton, isLoading && styles.resetButtonDisabled]} 
+            <TouchableOpacity accessibilityRole="button"
+              style={[styles.resetButton, isLoading && styles.resetButtonDisabled]}
               onPress={handleResetPassword}
               disabled={isLoading}
             >
@@ -291,7 +289,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -317,6 +315,7 @@ const styles = StyleSheet.create({
     marginLeft: -10,
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
@@ -367,11 +366,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 25,
-    gap: 8,
+    gap: 4,
   },
   codeInput: {
-    width: 45,
-    height: 55,
+    minHeight: 55,
+    paddingVertical: 8,
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 48,
+
+
     borderWidth: 2,
     borderColor: '#E0E0E0',
     borderRadius: 10,
@@ -386,6 +390,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3F2FD',
   },
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -393,14 +399,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     paddingHorizontal: 10,
-    height: 55,
+
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 8,
     flex: 1,
-    height: '100%',
+
     color: '#333',
     fontSize: 16,
   },
@@ -420,9 +429,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   resetButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
@@ -452,6 +463,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tipText: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#666',
     marginLeft: 8,

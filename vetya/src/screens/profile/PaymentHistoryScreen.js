@@ -1,9 +1,9 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   FlatList,
   RefreshControl,
@@ -219,7 +219,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
     const isCompleted = item.estado === "completado";
 
     return (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         style={styles.card}
         activeOpacity={0.9}
         onPress={() => handleTransactionDetails(item)}
@@ -353,7 +353,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
       {/* ─── HEADER PREMIUM ─── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.headerBtn}
             onPress={() => navigation.goBack()}
           >
@@ -374,7 +374,7 @@ const PaymentHistoryScreen = ({ navigation }) => {
           {filtrosDisponibles.map((filtro) => {
             const isActive = filterPeriod === filtro.key;
             return (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 key={filtro.key}
                 activeOpacity={0.8}
                 style={[
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -474,12 +474,14 @@ const styles = StyleSheet.create({
     width: 44,
   },
   headerTitle: {
+    minWidth: 0,
+    flexShrink: 1,
     color: COLORS.white,
     fontSize: 22,
     fontWeight: "800",
     letterSpacing: 0.5,
     flex: 1,
-    textAlign: "center",
+    textAlign: 'center',
   },
 
   // ─── FILTROS PILL ───
@@ -536,6 +538,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   totalCardLabel: {
+    flexShrink: 1,
     fontSize: 16,
     color: COLORS.white,
     marginLeft: 10,
@@ -619,12 +622,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
   cardInfo: {
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
@@ -640,7 +646,8 @@ const styles = StyleSheet.create({
   },
   concepto: { fontSize: 15, fontWeight: "bold", color: "#333", marginBottom: 2 },
   fecha: { fontSize: 12, color: "#888", fontWeight: "500" },
-  monto: { fontSize: 18, fontWeight: "900", color: "#1A237E" },
+  monto: {
+    flexShrink: 1, fontSize: 18, fontWeight: "900", color: "#1A237E" },
 
   cardFooter: {
     flexDirection: "row",
@@ -657,9 +664,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 8,
   },
-  statusText: { fontSize: 11, fontWeight: "bold", textTransform: "uppercase" },
+  statusText: {
+    flexShrink: 1, fontSize: 11, fontWeight: "bold", textTransform: "uppercase" },
   actionRow: { flexDirection: "row", alignItems: "center" },
   verReciboText: {
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: "bold",
     color: COLORS.primary,

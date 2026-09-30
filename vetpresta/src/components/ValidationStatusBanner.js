@@ -69,7 +69,7 @@ const ValidationStatusBanner = ({ navigation, style }) => {
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity accessibilityRole="button"
       style={[
         styles.banner,
         {
@@ -82,13 +82,13 @@ const ValidationStatusBanner = ({ navigation, style }) => {
       activeOpacity={0.8}
     >
       <View style={styles.content}>
-        <Ionicons 
-          name={config.icon} 
-          size={20} 
-          color={config.textColor} 
+        <Ionicons
+          name={config.icon}
+          size={20}
+          color={config.textColor}
           style={styles.icon}
         />
-        
+
         <View style={styles.textContainer}>
           <Text style={[styles.title, { color: config.textColor }]}>
             Validación {estadoValidacion.replace('_', ' ')}
@@ -97,15 +97,15 @@ const ValidationStatusBanner = ({ navigation, style }) => {
             {message}
           </Text>
         </View>
-        
+
         <View style={styles.actionContainer}>
           <Text style={[styles.actionText, { color: config.textColor }]}>
             {config.actionText}
           </Text>
-          <Ionicons 
-            name="chevron-forward" 
-            size={16} 
-            color={config.textColor} 
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={config.textColor}
           />
         </View>
       </View>
@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionText: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
     marginRight: 4,

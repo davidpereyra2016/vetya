@@ -1,14 +1,13 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Alert,
   Image
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../styles/globalStyles';
@@ -94,15 +93,15 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
 
   const petImage = mascota?.imagen || 'https://placehold.co/100x100/E3F2FD/333?text=Mascota';
   const userImage = usuario?.profilePicture;
-  
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       {/* Cabecera */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.backButton}
             onPress={() => {
               if (navigation.canGoBack()) {
@@ -118,7 +117,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
           <View style={{ width: 40 }} />
         </View>
       </View>
-      
+
       <ScrollView contentContainerStyle={styles.content}>
         {/* Información principal de la cita */}
         <View style={styles.sectionCard}>
@@ -126,7 +125,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
             <Text style={styles.serviceName}>{servicio?.nombre || 'Servicio no especificado'}</Text>
             <AppointmentStatus estado={estado} />
           </View>
-          
+
           <View style={styles.dateTimeContainer}>
             <View style={styles.dateTimeItem}>
               <Ionicons name="calendar-outline" size={18} color={COLORS.primary} />
@@ -134,14 +133,14 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
                 {new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
               </Text>
             </View>
-            
+
             <View style={styles.dateTimeItem}>
               <Ionicons name="time-outline" size={18} color={COLORS.primary} />
               <Text style={styles.dateTimeText}>{horaInicio}</Text>
             </View>
           </View>
         </View>
-        
+
         {/* Información del Cliente y Mascota */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Cliente</Text>
@@ -158,7 +157,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
             </View>
           </View>
         </View>
-        
+
         {/* Información de la mascota */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Mascota</Text>
@@ -173,7 +172,7 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
             </View>
           </View>
         </View>
-        
+
         {/* Motivo de la consulta */}
         {motivo && (
           <View style={styles.sectionCard}>
@@ -184,32 +183,32 @@ const AppointmentDetailsScreen = ({ navigation, route }) => {
           </View>
         )}
       </ScrollView>
-      
+
       {/* Botones de acción fijos en el footer */}
       <View style={styles.footerContainer}>
         {estado === 'Pendiente' && (
           <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity style={[styles.actionButton, styles.rejectButton]} onPress={() => handleAction('Cancelada', 'Rechazar')}>
+            <TouchableOpacity accessibilityRole="button" style={[styles.actionButton, styles.rejectButton]} onPress={() => handleAction('Cancelada', 'Rechazar')}>
               <Text style={styles.rejectButtonText}>Rechazar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={() => handleAction('Confirmada', 'Confirmar')}>
+            <TouchableOpacity accessibilityRole="button" style={[styles.actionButton, styles.confirmButton]} onPress={() => handleAction('Confirmada', 'Confirmar')}>
               <Text style={styles.confirmButtonText}>Confirmar</Text>
             </TouchableOpacity>
           </View>
         )}
-        
+
         {estado === 'Confirmada' && (
           <View style={styles.actionButtonsContainer}>
-             <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={() => handleAction('Cancelada', 'Cancelar')}>
+             <TouchableOpacity accessibilityRole="button" style={[styles.actionButton, styles.cancelButton]} onPress={() => handleAction('Cancelada', 'Cancelar')}>
                 <Text style={styles.cancelButtonText}>Cancelar Cita</Text>
              </TouchableOpacity>
-             <TouchableOpacity style={[styles.actionButton, styles.completeButton]} onPress={() => handleAction('Completada', 'Completar')}>
+             <TouchableOpacity accessibilityRole="button" style={[styles.actionButton, styles.completeButton]} onPress={() => handleAction('Completada', 'Completar')}>
                 <Text style={styles.completeButtonText}>Completar</Text>
              </TouchableOpacity>
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -220,7 +219,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
@@ -235,6 +234,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 22,
     fontWeight: 'bold',
     color: COLORS.white,
@@ -261,6 +261,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   serviceName: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.dark,
@@ -284,6 +285,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateTimeText: {
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.dark,
     marginLeft: 8,

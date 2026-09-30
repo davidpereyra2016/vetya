@@ -1,9 +1,9 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Image,
   Platform,
@@ -134,14 +134,14 @@ const ReceiptDetailScreen = ({ route, navigation }) => {
       {/* ─── HEADER PREMIUM (mismo estilo del resto de la app) ─── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.headerBtn}
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={24} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Recibo</Text>
-          <TouchableOpacity style={styles.headerBtn} onPress={handleShare}>
+          <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.headerBtn} onPress={handleShare}>
             <Ionicons name="share-social" size={20} color={COLORS.white} />
           </TouchableOpacity>
         </View>
@@ -233,7 +233,7 @@ const ReceiptDetailScreen = ({ route, navigation }) => {
               <Text style={styles.detailLabel}>ID de Transacción</Text>
               <View style={styles.transactionRow}>
                 <Text style={styles.detailValue}>{transaccionId}</Text>
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button" hitSlop={8}
                   onPress={copyTransactionId}
                   style={styles.copyBtn}
                 >
@@ -282,7 +282,7 @@ const ReceiptDetailScreen = ({ route, navigation }) => {
 
         {/* ─── BOTONES DE ACCIÓN ─── */}
         <View style={styles.actionsContainer}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.btnDownload}
             activeOpacity={0.85}
             onPress={handleDownload}
@@ -296,7 +296,7 @@ const ReceiptDetailScreen = ({ route, navigation }) => {
             <Text style={styles.btnDownloadText}>Descargar PDF</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.btnReport}
             activeOpacity={0.85}
             onPress={handleReport}
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   // ─── HEADER (igual que el resto de la app) ───
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -350,6 +350,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
+    minWidth: 0,
+    flexShrink: 1,
     color: COLORS.white,
     fontSize: 22,
     fontWeight: '800',
@@ -470,17 +472,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
   },
   detailRow: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 14,
   },
   detailLabel: {
+    flexShrink: 1,
     fontSize: 13,
     color: '#888',
     fontWeight: '500',
   },
   detailValue: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#333',
     fontWeight: 'bold',
@@ -580,6 +586,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   btnDownloadText: {
+    flexShrink: 1,
     color: COLORS.white,
     fontSize: 15,
     fontWeight: 'bold',
@@ -595,6 +602,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   btnReportText: {
+    flexShrink: 1,
     color: COLORS.primary,
     fontSize: 15,
     fontWeight: 'bold',

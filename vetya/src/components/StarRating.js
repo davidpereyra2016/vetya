@@ -12,22 +12,22 @@ import { Ionicons } from '@expo/vector-icons';
  * @param {string} props.color - Color de las estrellas (default: #FFD700)
  * @param {string} props.emptyColor - Color de las estrellas vacías (default: #D3D3D3)
  */
-const StarRating = ({ 
-  rating = 0, 
-  onRatingChange, 
-  readOnly = false, 
-  size = 20, 
-  color = '#FFD700', 
+const StarRating = ({
+  rating = 0,
+  onRatingChange,
+  readOnly = false,
+  size = 20,
+  color = '#FFD700',
   emptyColor = '#D3D3D3',
   style
 }) => {
   // Normalizar rating para asegurar que está entre 0-5
   const normalizedRating = Math.min(Math.max(rating, 0), 5);
-  
+
   // Manejar el cambio de valoración
   const handleRatingChange = (selectedRating) => {
     if (readOnly || !onRatingChange) return;
-    
+
     // Si ya estaba seleccionada esta estrella, permitir deseleccionar
     if (normalizedRating === selectedRating) {
       onRatingChange(0);
@@ -35,15 +35,15 @@ const StarRating = ({
       onRatingChange(selectedRating);
     }
   };
-  
+
   // Renderizar las 5 estrellas
   const renderStars = () => {
     const stars = [];
-    
+
     for (let i = 1; i <= 5; i++) {
       // Determinar qué icono mostrar basado en la valoración actual
       let iconName = 'star';
-      
+
       if (i > Math.floor(normalizedRating)) {
         // Si la valoración tiene decimales, mostrar media estrella
         if (i === Math.ceil(normalizedRating) && normalizedRating % 1 >= 0.5) {
@@ -52,27 +52,27 @@ const StarRating = ({
           iconName = 'star-outline';
         }
       }
-      
+
       stars.push(
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" hitSlop={8}
           key={i}
           style={styles.starContainer}
           activeOpacity={readOnly ? 1 : 0.7}
           onPress={() => handleRatingChange(i)}
           disabled={readOnly}
         >
-          <Ionicons 
-            name={iconName} 
-            size={size} 
-            color={iconName !== 'star-outline' ? color : emptyColor} 
+          <Ionicons
+            name={iconName}
+            size={size}
+            color={iconName !== 'star-outline' ? color : emptyColor}
           />
         </TouchableOpacity>
       );
     }
-    
+
     return stars;
   };
-  
+
   return (
     <View style={[styles.container, style]}>
       {renderStars()}

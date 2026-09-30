@@ -1,18 +1,18 @@
 import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
+import {
+  StyleSheet,
+  Text,
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const Button = ({ 
-  title, 
-  onPress, 
-  style, 
-  textStyle, 
-  iconName, 
+const Button = ({
+  title,
+  onPress,
+  style,
+  textStyle,
+  iconName,
   iconColor = '#fff',
   iconSize = 20,
   loading = false,
@@ -21,7 +21,7 @@ const Button = ({
   small = false,
   danger = false,
 }) => {
-  
+
   return (
     <TouchableOpacity
       style={[
@@ -34,6 +34,9 @@ const Button = ({
         style
       ]}
       onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       disabled={disabled || loading}
     >
       {loading ? (
@@ -41,14 +44,14 @@ const Button = ({
       ) : (
         <>
           {iconName && (
-            <Ionicons 
-              name={iconName} 
-              size={iconSize} 
-              color={iconColor} 
-              style={styles.icon} 
+            <Ionicons
+              name={iconName}
+              size={iconSize}
+              color={iconColor}
+              style={styles.icon}
             />
           )}
-          <Text 
+          <Text
             style={[
               styles.text,
               outline && styles.outlineText,
@@ -69,13 +72,17 @@ const Button = ({
 
 const styles = StyleSheet.create({
   button: {
+    flexShrink: 1,
+    maxWidth: '100%',
     backgroundColor: '#1E88E5',
     borderRadius: 8,
+    minHeight: 52,
     paddingVertical: 12,
     paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
   },
   outlineButton: {
     backgroundColor: 'transparent',
@@ -97,12 +104,14 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#E0E0E0',
     borderColor: '#E0E0E0',
+    opacity: 0.75,
   },
   text: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
+    flexShrink: 1,
   },
   outlineText: {
     color: '#1E88E5',
@@ -120,7 +129,7 @@ const styles = StyleSheet.create({
     color: '#9E9E9E',
   },
   icon: {
-    marginRight: 8,
+    marginRight: 0,
   },
 });
 

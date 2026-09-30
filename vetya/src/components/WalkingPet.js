@@ -1,11 +1,10 @@
 // src/components/WalkingPet.js
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Animated, Dimensions, View } from 'react-native';
+import { StyleSheet, Animated, useWindowDimensions, View } from 'react-native';
 import LottieView from 'lottie-react-native';
 
-const { width: screenWidth } = Dimensions.get('window');
-
 const WalkingPet = () => {
+  const { width: screenWidth } = useWindowDimensions();
   // 1. Definimos una posición inicial fuera de la pantalla a la izquierda (-100)
   const xPosition = useRef(new Animated.Value(-100)).current;
 
@@ -30,7 +29,7 @@ const WalkingPet = () => {
 
     // 5. Limpieza al desmontar el componente
     return () => loopAnimation.stop();
-  }, [xPosition]);
+  }, [xPosition, screenWidth]);
 
   return (
     // 6. Usamos un Animated.View para que pueda moverse

@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 // Archivo reorganizado y optimizado del componente EmergencyVetMapScreen
 // Se integró lógica del store: carga, procesamiento y asignación de veterinarios
 // + SIMULACIÓN DE LLEGADA (UBER STYLE)
@@ -10,9 +11,8 @@ import {
   View,
   TouchableOpacity,
   Animated,
-  ScrollView,
   Image,
-  Dimensions,
+  useWindowDimensions,
   Platform,
   ActivityIndicator,
   Alert
@@ -25,14 +25,14 @@ import { emergenciaService } from '../../services/api';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 
-const { width, height } = Dimensions.get('window');
-// Aumentamos ligeramente el ancho de la tarjeta para dar más aire al contenido
-const CARD_WIDTH = width * 0.8; 
-const SPACING_FOR_CARD_INSET = (width - CARD_WIDTH) / 2;
+
 
 const EmergencyVetMapScreen = ({ navigation, route }) => {
+  const { width } = useWindowDimensions();
+  const CARD_WIDTH = Math.max(1, width - 40);
+  const SPACING_FOR_CARD_INSET = 10;
   const { petInfo, emergencyDescription, emergencyData, emergencyId, otroAnimalInfo, emergencyMode } = route.params || {};
-  
+
   const esOtroAnimal = emergencyMode === 'otroAnimal' || emergencyData?.emergencyMode === 'otroAnimal';
 
   const [emergencyDetails, setEmergencyDetails] = useState(null);
@@ -42,7 +42,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
   const [isLoadingVisible, setIsLoadingVisible] = useState(true);
   const [isContentVisible, setIsContentVisible] = useState(false);
   // Aumentamos la altura del panel inferior para que quepan bien las tarjetas mejoradas
-  const [bottomSheetHeight, setBottomSheetHeight] = useState(280);
+
 
   // --- ESTADOS PARA LA SIMULACIÓN ---
   const [simulatedLocation, setSimulatedLocation] = useState(null);
@@ -50,7 +50,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
   const [distanceText, setDistanceText] = useState('0 km');
   const [simulationActive, setSimulationActive] = useState(false);
   const [clientLocation, setClientLocation] = useState(null);
-  const [locationLoading, setLocationLoading] = useState(true); 
+  const [locationLoading, setLocationLoading] = useState(true);
 
   const { availableVets, loadAvailableVets } = useEmergencyStore();
 
@@ -80,7 +80,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     const getClientLocation = async () => {
       try {
         const currentUser = useAuthStore.getState().user;
-        
+
         if (currentUser?.ubicacionActual?.coordinates?.lat && currentUser?.ubicacionActual?.coordinates?.lng) {
           console.log('📍 Usando ubicación guardada del usuario');
           const loc = {
@@ -119,7 +119,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     };
 
     getClientLocation();
-  }, []); 
+  }, []);
 
   const getEmergencyCoordinates = useCallback((coords) => {
     const source = coords;
@@ -134,7 +134,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     console.log('🔍 [MAP] Procesando coordenadas de veterinario:', vet?.nombre || 'Sin nombre');
     console.log('   -> ubicacionActual:', vet?.ubicacionActual?.coordenadas || 'NO TIENE');
     console.log('   -> direccion:', vet?.direccion?.coordenadas || 'NO TIENE');
-    
+
     const sourceCoords = vet?.ubicacionActual?.coordenadas || vet?.direccion?.coordenadas;
     if (!sourceCoords || (sourceCoords.lat == null && sourceCoords.lng == null && sourceCoords.latitude == null && sourceCoords.longitude == null)) {
       console.log('   ❌ No hay coordenadas válidas para:', vet?.nombre);
@@ -155,10 +155,10 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
 
   // --- LÓGICA DE SIMULACIÓN (Copiada del archivo original) ---
   const calculateDistance = (coord1, coord2) => {
-    const R = 6371; 
+    const R = 6371;
     const dLat = (coord2.latitude - coord1.latitude) * Math.PI / 180;
     const dLon = (coord2.longitude - coord1.longitude) * Math.PI / 180;
-    const a = 
+    const a =
       Math.sin(dLat/2) * Math.sin(dLat/2) +
       Math.cos(coord1.latitude * Math.PI / 180) * Math.cos(coord2.latitude * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
@@ -190,7 +190,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
 
     setSimulatedLocation(startCoords);
     setSimulationActive(true);
-    
+
     if (mapRef.current) {
         mapRef.current.fitToCoordinates([startCoords, destinationCoords], {
             edgePadding: { top: 100, right: 50, bottom: 350, left: 50 },
@@ -199,25 +199,25 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     }
 
     const realDistKm = calculateDistance(startCoords, destinationCoords);
-    const SPEED_KMH = 40; 
+    const SPEED_KMH = 40;
     const DURATION = Math.min(60000, Math.max(10000, realDistKm * 10000));
 
     const animate = () => {
       const now = Date.now();
       if (!startTimeRef.current) startTimeRef.current = now;
-      
+
       const elapsed = now - startTimeRef.current;
       const progress = Math.min(elapsed / DURATION, 1);
 
       const currentLat = startCoords.latitude + (destinationCoords.latitude - startCoords.latitude) * progress;
       const currentLng = startCoords.longitude + (destinationCoords.longitude - startCoords.longitude) * progress;
-      
+
       const currentPos = { latitude: currentLat, longitude: currentLng };
       setSimulatedLocation(currentPos);
 
       const distKm = calculateDistance(currentPos, destinationCoords);
       const distMeters = distKm * 1000;
-      
+
       if (distMeters > 1000) {
         setDistanceText(`${distKm.toFixed(2)} km`);
       } else {
@@ -249,21 +249,21 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
   const lastFetchRef = useRef(0);
   const isLoadingVetsRef = useRef(false);
   const MIN_FETCH_INTERVAL = 15000;
-  
+
   const loadVets = useCallback(async (coords) => {
     if (isLoadingVetsRef.current) return;
     const now = Date.now();
     if (lastFetchRef.current > 0 && now - lastFetchRef.current < MIN_FETCH_INTERVAL) return;
-    
+
     isLoadingVetsRef.current = true;
     lastFetchRef.current = now;
     setIsSearching(true);
-    
+
     let finalCoords = getEmergencyCoordinates(coords || emergencyCoordsRef.current);
     if (!finalCoords && clientLocationRef.current) {
         finalCoords = clientLocationRef.current;
     }
-    
+
     if (!finalCoords) {
         isLoadingVetsRef.current = false;
         setIsSearching(false);
@@ -282,7 +282,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         ? sourceVets
             .map(vet => {
               console.log('   [MAP] Procesando vet:', vet?.nombre, 'ID:', vet?._id || vet?.id);
-              
+
               const coordinate = getVetCoordinates(vet);
               if (!coordinate) {
                 console.log('   ❌ [MAP] Vet descartado - sin coordenadas válidas');
@@ -307,7 +307,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
                 estimatedTime: `${estimatedMinutes} min`,
                 lastUpdate: vet.ubicacionActual?.ultimaActualizacion || new Date(),
               };
-              
+
               console.log('   ✅ [MAP] Vet procesado:', processed.name, '->', processed.distance);
               return processed;
             })
@@ -378,7 +378,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         Alert.alert('Error', 'No se pudieron cargar los detalles.');
         navigation.goBack();
       }
-    } 
+    }
     else if (currentEmergencyData && currentEmergencyData.ubicacion?.coordenadas) {
       const coords = currentEmergencyData.ubicacion.coordenadas;
       emergencyCoordsRef.current = {
@@ -393,7 +393,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
           latitude: parseFloat(coords.latitud || coords.latitude),
           longitude: parseFloat(coords.longitud || coords.longitude)
       });
-    } 
+    }
     else if (clientLocationRef.current) {
       await loadVets(clientLocationRef.current);
     }
@@ -426,14 +426,14 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
       clearInterval(intervalId);
     };
   }, [locationLoading, fetchEmergencyData, loadVets]);
-  
+
   const prevSelectedVetIdRef = useRef(null);
   const selectedVetRef = useRef(null);
   useEffect(() => {
     selectedVetRef.current = selectedVet;
   }, [selectedVet]);
   useEffect(() => {
-    if (selectedVet && selectedVet.coordinate && clientLocationRef.current && 
+    if (selectedVet && selectedVet.coordinate && clientLocationRef.current &&
         selectedVet.id !== prevSelectedVetIdRef.current) {
       prevSelectedVetIdRef.current = selectedVet.id;
       if (animationRef.current) {
@@ -450,7 +450,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         }
       }
     }
-  }, [selectedVet?.id]); 
+  }, [selectedVet?.id]);
 
   const handleConfirmVet = async () => {
     if (!selectedVet) {
@@ -458,10 +458,10 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
       return;
     }
     setIsSearching(true);
-    
+
     try {
       let finalEmergencyId;
-      
+
       if (emergencyId) {
         finalEmergencyId = emergencyId;
       }
@@ -470,7 +470,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
       } else {
         throw new Error('No hay datos de emergencia disponibles');
       }
-      
+
       navigation.replace('EmergencyConfirmation', {
         emergencyId: finalEmergencyId,
         emergencyData,
@@ -480,7 +480,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         emergencyMode: esOtroAnimal ? 'otroAnimal' : 'mascota',
         emergencyDescription
       });
-      
+
     } catch (e) {
       console.error(e);
       Alert.alert('Error', e.message || 'No se pudo procesar la solicitud.');
@@ -490,13 +490,13 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
   };
 
   const destCoords = getEmergencyCoordinates() || clientLocation;
-  
+
   const mapRegion = destCoords ? {
     ...destCoords,
     latitudeDelta: 0.02,
     longitudeDelta: 0.02,
   } : {
-    latitude: -34.6037, 
+    latitude: -34.6037,
     longitude: -58.3816,
     latitudeDelta: 0.5,
     longitudeDelta: 0.5,
@@ -542,7 +542,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
       </MapView>
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Veterinarios cercanos</Text>
@@ -564,7 +564,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
           </View>
       )}
 
-      <View style={styles.mainContent}>
+      <ScrollView style={styles.mainContent} contentContainerStyle={styles.panelContent}>
         {(isLoadingVisible || locationLoading) && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#1E88E5" />
@@ -575,7 +575,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         )}
 
         {isContentVisible && (
-          <View style={[styles.bottomSheet, { height: bottomSheetHeight }]}>            
+          <View style={styles.bottomSheet}>
             <View style={styles.handleBar} />
             <Text style={styles.bottomSheetTitle}>
                 {vets.length > 0 ? `${vets.length} disponibles` : 'Buscando...'}
@@ -583,13 +583,14 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
             <ScrollView
               ref={vetListRef}
               horizontal
+              style={{ flexGrow: 0 }}
               showsHorizontalScrollIndicator={false}
               snapToInterval={CARD_WIDTH + 20}
               contentContainerStyle={{ paddingHorizontal: SPACING_FOR_CARD_INSET }}
               onScroll={({ nativeEvent }) => {
                 const x = nativeEvent.contentOffset.x;
                 scrollX.setValue(x);
-                const index = Math.round(x / CARD_WIDTH);
+                const index = Math.round(x / (CARD_WIDTH + 20));
                 if (index !== mapIndex.current && vets[index]) {
                   mapIndex.current = index;
                   setSelectedVet(vets[index]);
@@ -599,9 +600,9 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
             >
               {vets.length > 0 ? (
                 vets.map((vet) => (
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="button"
                     key={vet.id}
-                    style={[styles.vetCard, selectedVet?.id === vet.id && styles.selectedVetCard]}
+                    style={[styles.vetCard, { width: CARD_WIDTH }, selectedVet?.id === vet.id && styles.selectedVetCard]}
                     onPress={() => setSelectedVet(vet)}
                     activeOpacity={0.9}
                   >
@@ -618,7 +619,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
                             <Ionicons name="shield-checkmark" size={12} color="#fff" />
                         </View>
                       </View>
-                      
+
                       <View style={styles.vetInfo}>
                         <View>
                             <Text style={styles.vetName} numberOfLines={2} ellipsizeMode="tail">
@@ -628,7 +629,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
                                 {vet.specialty || 'Medicina general'}
                             </Text>
                         </View>
-                        
+
                         <View style={styles.vetStatsRow}>
                             <View style={styles.metricBadge}>
                                 <Ionicons name="star" size={12} color="#FF9800" />
@@ -639,7 +640,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
                                 <Text style={[styles.metricTextBold, {color: '#1E88E5'}]}>{vet.distance || '1.0 km'}</Text>
                             </View>
                         </View>
-                        
+
                         <View style={styles.priceContainer}>
                              <Text style={styles.priceLabel}>Tarifa base</Text>
                              <Text style={styles.priceText}>
@@ -651,7 +652,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
                   </TouchableOpacity>
                 ))
               ) : (
-                <View style={styles.noVetsContainer}>
+                <View style={[styles.noVetsContainer, { width: CARD_WIDTH }]}>
                   <Ionicons name="search-outline" size={40} color="#ccc" />
                   <Text style={styles.noVetsText}>Buscando veterinarios cercanos...</Text>
                 </View>
@@ -663,7 +664,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
 
         {isContentVisible && selectedVet && (
           <View style={styles.fixedActionContainer}>
-            <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmVet}>
+            <TouchableOpacity accessibilityRole="button" style={styles.confirmButton} onPress={handleConfirmVet}>
               <Text style={styles.confirmButtonText}>
                 Solicitar a {selectedVet.name?.split(' ')[0] || 'Veterinario'}
               </Text>
@@ -671,14 +672,15 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
-  
+  panelContent: { flexGrow: 1, justifyContent: 'flex-end' },
+
   // Estilos de Mapa y Marcadores
   markerContainer: {
       alignItems: 'center',
@@ -734,10 +736,11 @@ const styles = StyleSheet.create({
 
   // Panel de Simulación
   simulationPanel: {
-      position: 'absolute',
-      top: 100, 
-      left: 20,
-      right: 20,
+    margin: 16,
+
+
+
+
       backgroundColor: 'white',
       borderRadius: 15,
       padding: 15,
@@ -763,12 +766,13 @@ const styles = StyleSheet.create({
       fontSize: 22,
       fontWeight: 'bold',
       color: '#333',
-      fontVariant: ['tabular-nums'], 
+      fontVariant: ['tabular-nums'],
   },
 
   noVetsContainer: {
-    width: CARD_WIDTH * 0.9,
-    height: 140,
+    minHeight: 140,
+
+
     margin: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -786,12 +790,12 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    position: 'absolute', 
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(30, 136, 229, 0.9)', 
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+
+
+
+
+    backgroundColor: 'rgba(30, 136, 229, 0.9)',
+    paddingTop: 16,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -807,11 +811,14 @@ const styles = StyleSheet.create({
     marginRight: 15
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     fontSize: 22,
     fontWeight: '700',
     color: '#fff'
   },
-  mainContent: { flex: 1 },
+  mainContent: { flex: 1, },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255,255,255,0.8)',
@@ -820,17 +827,17 @@ const styles = StyleSheet.create({
     zIndex: 30
   },
   loadingText: { marginTop: 20, fontSize: 16, color: '#333', fontWeight: 'bold' },
-  
+
   bottomSheet: {
-    position: 'absolute',
-    bottom: 0, 
-    left: 0,
-    right: 0,
+
+
+
+
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 10,
-    paddingBottom: 90, 
+    paddingBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -854,11 +861,12 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1
   },
-  
+
   // ESTILOS MEJORADOS DE LA TARJETA
   vetCard: {
-    width: CARD_WIDTH,
-    height: 145, // Altura fija para consistencia
+    minHeight: 145,
+
+     // Altura fija para consistencia
     marginHorizontal: 10,
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -880,7 +888,8 @@ const styles = StyleSheet.create({
     elevation: 6
   },
   vetCardContent: {
-    flex: 1,
+    minWidth: 0,
+
     flexDirection: 'row',
     padding: 12,
   },
@@ -919,22 +928,25 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff'
   },
-  vetInfo: { 
+  vetInfo: {
+    minWidth: 0,
     flex: 1,
     justifyContent: 'space-between', // Distribuye el espacio verticalmente
     paddingVertical: 2
   },
-  vetName: { 
-    fontSize: 16, 
-    fontWeight: '700', 
+  vetName: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#333',
     marginBottom: 2
   },
-  vetSpecialty: { 
-    fontSize: 13, 
+  vetSpecialty: {
+    fontSize: 13,
     color: '#757575',
   },
   vetStatsRow: {
+    flexWrap: 'wrap',
+    gap: 4,
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6
@@ -948,6 +960,7 @@ const styles = StyleSheet.create({
       borderRadius: 6
   },
   metricTextBold: {
+    flexShrink: 1,
     fontSize: 12,
     marginLeft: 4,
     color: '#333',
@@ -969,10 +982,11 @@ const styles = StyleSheet.create({
     marginTop: -2
   },
   fixedActionContainer: {
-    position: 'absolute',
-    bottom: 25,
-    left: 0,
-    right: 0,
+    padding: 16,
+
+
+
+
     alignItems: 'center',
     paddingHorizontal: 20,
     zIndex: 40,
@@ -991,7 +1005,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
   },
-  confirmButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
+  confirmButtonText: {
+    flexShrink: 1, color: '#fff', fontWeight: 'bold', fontSize: 16 }
 });
 
 export default EmergencyVetMapScreen;

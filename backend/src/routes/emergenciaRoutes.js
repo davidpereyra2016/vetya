@@ -1,5 +1,6 @@
+import { createServiceCheckout, notificationUrl as buildNotificationUrl } from '../services/mercadoPagoService.js';
 import express from 'express';
-import mongoose from 'mongoose';  
+import mongoose from 'mongoose';
 import Emergencia from "../models/Emergencia.js";
 import Mascota from "../models/Mascota.js";
 import Prestador from "../models/Prestador.js";
@@ -10,7 +11,6 @@ import Pago from "../models/Pago.js";
 import cloudinary from "../lib/cloudinary.js";
 import protectRoute from "../middleware/auth.middleware.js";
 import { enviarNotificacionPush, esTokenValido } from "../utils/notificacionesUtils.js";
-import { createMarketplacePreference } from "../lib/mercadopago.js";
 import { emitEmergencyCreated, emitEmergencyUpdated } from "../services/socketService.js";
 import {
   assertPrestadorCanAcceptCash,
@@ -25,7 +25,6 @@ import {
 } from "../utils/idempotency.js";
 
 const router = express.Router();
-const MARKETPLACE_PERCENTAGE = 0.3;
 
 async function obtenerPoliticaEmergencia() {
   const servicioEmergencia = await Servicio.findOne({
@@ -264,11 +263,11 @@ router.get("/", protectRoute, async (req, res) => {
       .select("+otroAnimal")
       .sort({ fechaSolicitud: -1 })
       .lean();
-    
+
     // Agregar mascotaInfo a cada emergencia
     const emergenciasConMascotaInfo = emergencias.map(emergencia => {
       const emergenciaObj = { ...emergencia };
-      
+
       let mascotaInfo = null;
       if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) {
         mascotaInfo = {
@@ -294,11 +293,11 @@ router.get("/", protectRoute, async (req, res) => {
           imagen: emergencia.mascota.imagen
         };
       }
-      
+
       emergenciaObj.mascotaInfo = mascotaInfo;
       return emergenciaObj;
     });
-    
+
     res.status(200).json(emergenciasConMascotaInfo);
   } catch (error) {
     console.log(error);
@@ -313,8 +312,8 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
     if (!estados.includes(req.params.estado)) {
       return res.status(400).json({ message: "Estado de emergencia inválido" });
     }
-    
-    const emergencias = await Emergencia.find({ 
+
+    const emergencias = await Emergencia.find({
       usuario: req.user._id,
       estado: req.params.estado
     })
@@ -323,11 +322,11 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
       .select("+otroAnimal")
       .sort({ fechaSolicitud: -1 })
       .lean();
-    
+
     // Agregar mascotaInfo a cada emergencia
     const emergenciasConMascotaInfo = emergencias.map(emergencia => {
       const emergenciaObj = { ...emergencia };
-      
+
       let mascotaInfo = null;
       if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) {
         mascotaInfo = {
@@ -353,11 +352,11 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
           imagen: emergencia.mascota.imagen
         };
       }
-      
+
       emergenciaObj.mascotaInfo = mascotaInfo;
       return emergenciaObj;
     });
-    
+
     res.status(200).json(emergenciasConMascotaInfo);
   } catch (error) {
     console.log(error);
@@ -369,8 +368,8 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
 router.get("/activas", protectRoute, async (req, res) => {
   try {
     const estadosActivos = ["Solicitada", "Asignada", "Confirmada", "En camino", "En atención"];
-    
-    const emergencias = await Emergencia.find({ 
+
+    const emergencias = await Emergencia.find({
       usuario: req.user._id,
       estado: { $in: estadosActivos }
     })
@@ -378,11 +377,11 @@ router.get("/activas", protectRoute, async (req, res) => {
       .populate("veterinario", "nombre especialidades imagen rating")
       .select("+otroAnimal")
       .lean();
-    
+
     // Agregar mascotaInfo a cada emergencia
     const emergenciasConMascotaInfo = emergencias.map(emergencia => {
       const emergenciaObj = { ...emergencia };
-      
+
       let mascotaInfo = null;
       if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) {
         mascotaInfo = {
@@ -408,11 +407,11 @@ router.get("/activas", protectRoute, async (req, res) => {
           imagen: emergencia.mascota.imagen
         };
       }
-      
+
       emergenciaObj.mascotaInfo = mascotaInfo;
       return emergenciaObj;
     });
-    
+
     res.status(200).json(emergenciasConMascotaInfo);
   } catch (error) {
     console.log(error);
@@ -425,21 +424,21 @@ router.get("/asignadas", protectRoute, async (req, res) => {
   try {
     // Verificar que el usuario sea un prestador de tipo veterinario
     const prestador = await Prestador.findOne({ usuario: req.user._id });
-    
+
     console.log(`🔍 Buscando emergencias para veterinario:`, {
       prestadorId: prestador?._id,
       tipo: prestador?.tipo,
       usuarioId: req.user._id
     });
-    
+
     if (!prestador || prestador.tipo !== "Veterinario") {
       return res.status(403).json({ message: "Solo los veterinarios pueden acceder a emergencias asignadas" });
     }
-    
+
     // Primero verificar cuántas emergencias tiene este veterinario en TOTAL
     const totalEmergencias = await Emergencia.countDocuments({ veterinario: prestador._id });
     console.log(`📊 Total de emergencias del veterinario en BD: ${totalEmergencias}`);
-    
+
     // Obtener TODAS las emergencias asignadas a este veterinario (activas + historial)
     // Incluye: Solicitada, Asignada, Confirmada, En camino, En atención, Atendida, Cancelada
     const emergencias = await Emergencia.find({
@@ -451,7 +450,7 @@ router.get("/asignadas", protectRoute, async (req, res) => {
       .select("+otroAnimal") // Asegurarse de incluir otroAnimal
       .sort({ fechaSolicitud: -1 })
       .lean(); // Ordenar por fecha de solicitud (más reciente primero)
-    
+
     console.log(`✅ Encontradas ${emergencias.length} emergencias (activas + historial) del veterinario ${prestador._id}`);
     if (emergencias.length > 0) {
       console.log(`   Estados: ${emergencias.map(e => e.estado).join(', ')}`);
@@ -464,18 +463,18 @@ router.get("/asignadas", protectRoute, async (req, res) => {
         console.log(`   Estados encontrados: ${todasEmergencias.map(e => e.estado).join(', ')}`);
       }
     }
-    
+
     // Obtener ubicación actual del veterinario para calcular distancias
     const vetLat = prestador.ubicacionActual?.coordenadas?.lat || prestador.direccion?.coordenadas?.lat || 0;
     const vetLng = prestador.ubicacionActual?.coordenadas?.lng || prestador.direccion?.coordenadas?.lng || 0;
-    
+
     // Agregar mascotaInfo y calcular distancia para cada emergencia
     const emergenciasConMascotaInfo = emergencias.map(emergencia => {
       const emergenciaObj = { ...emergencia };
-      
+
       // Preparar información de la mascota
       let mascotaInfo = null;
-      
+
       if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) {
         // Es otro animal no registrado
         mascotaInfo = {
@@ -507,9 +506,9 @@ router.get("/asignadas", protectRoute, async (req, res) => {
           imagen: emergencia.mascota.imagen
         };
       }
-      
+
       emergenciaObj.mascotaInfo = mascotaInfo;
-      
+
       // Calcular distancia si hay coordenadas válidas
       if (emergencia.ubicacion?.coordenadas?.lat && emergencia.ubicacion?.coordenadas?.lng && vetLat && vetLng) {
         const distanciaReal = calcularDistancia(
@@ -525,10 +524,10 @@ router.get("/asignadas", protectRoute, async (req, res) => {
         emergenciaObj.distancia = null;
         emergenciaObj.tiempoEstimado = null;
       }
-      
+
       return emergenciaObj;
     });
-    
+
     res.status(200).json(emergenciasConMascotaInfo);
   } catch (error) {
     console.log("Error al obtener emergencias asignadas:", error);
@@ -540,7 +539,7 @@ router.get("/asignadas", protectRoute, async (req, res) => {
 router.get("/:id", protectRoute, async (req, res) => {
   try {
     console.log('Solicitud de emergencia por ID:', req.params.id, 'Usuario:', req.user._id);
-    
+
     // Buscamos primero al prestador si el usuario es un prestador (veterinario)
     let prestador = null;
     try {
@@ -549,20 +548,20 @@ router.get("/:id", protectRoute, async (req, res) => {
     } catch (err) {
       console.log('Error al buscar prestador:', err);
     }
-    
+
     // Primero obtenemos la emergencia sin populate para verificar permisos
     const emergenciaBase = await Emergencia.findById(req.params.id);
-    
+
     if (!emergenciaBase) {
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar si el usuario actual es el propietario o el veterinario asignado
     const esCliente = emergenciaBase.usuario.toString() === req.user._id.toString();
     // Si es prestador, verificamos si el ID del prestador coincide con el veterinario asignado
-    const esVeterinarioAsignado = prestador && emergenciaBase.veterinario && 
+    const esVeterinarioAsignado = prestador && emergenciaBase.veterinario &&
       emergenciaBase.veterinario.toString() === prestador._id.toString();
-    
+
     console.log('Verificando permisos detallados:', {
       usuarioId: req.user._id,
       prestadorId: prestador ? prestador._id : null,
@@ -571,12 +570,12 @@ router.get("/:id", protectRoute, async (req, res) => {
       usuarioEmergencia: emergenciaBase.usuario.toString(),
       veterinarioEmergencia: emergenciaBase.veterinario ? emergenciaBase.veterinario.toString() : null
     });
-    
+
     if (!esCliente && !esVeterinarioAsignado) {
       console.log('Acceso denegado - No es cliente ni veterinario asignado');
       return res.status(401).json({ message: "No autorizado para ver esta emergencia" });
     }
-    
+
     // Si está autorizado, ahora obtenemos la emergencia con todos los datos populados
     const emergencia = await Emergencia.findById(req.params.id)
       .populate("mascota", "nombre tipo raza imagen edad genero color peso")
@@ -586,10 +585,10 @@ router.get("/:id", protectRoute, async (req, res) => {
         model: "Prestador",
         select: "nombre especialidades imagen rating telefono email precioEmergencia ubicacionActual"
       });
-    
+
     // Preparar respuesta con información de la mascota (registrada u otro animal)
     let mascotaInfo = null;
-    
+
     if (emergencia.otroAnimal && emergencia.otroAnimal.esOtroAnimal) {
       // Es otro animal no registrado
       mascotaInfo = {
@@ -622,11 +621,11 @@ router.get("/:id", protectRoute, async (req, res) => {
         imagen: emergencia.mascota.imagen
       };
     }
-    
+
     // Crear objeto de respuesta con mascotaInfo incluida
     const emergenciaResponse = emergencia.toObject();
     emergenciaResponse.mascotaInfo = mascotaInfo;
-    
+
     console.log('Emergencia enviada al cliente:', {
       id: emergencia._id,
       estado: emergencia.estado,
@@ -635,7 +634,7 @@ router.get("/:id", protectRoute, async (req, res) => {
       usuario: emergencia.usuario ? emergencia.usuario.email : null,
       veterinario: emergencia.veterinario ? emergencia.veterinario.nombre : null
     });
-    
+
     res.status(200).json(emergenciaResponse);
   } catch (error) {
     console.log(error);
@@ -647,16 +646,16 @@ router.get("/:id", protectRoute, async (req, res) => {
 router.post("/", protectRoute, async (req, res) => {
   try {
     const { mascota, descripcion, tipoEmergencia, nivelUrgencia, ubicacion, imagenes, otroAnimal } = req.body;
-    
+
     // Verificar si el usuario ya tiene una emergencia activa o reciente (dentro de los últimos 5 minutos)
     const tiempoLimite = new Date(Date.now() - 5 * 60 * 1000); // 5 minutos atrás
-    
+
     const emergenciasRecientes = await Emergencia.find({
       usuario: req.user._id,
       estado: { $in: ['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'En atención'] },
       fechaSolicitud: { $gte: tiempoLimite }
     });
-    
+
     if (emergenciasRecientes.length > 0) {
       console.log(`El usuario ${req.user._id} ya tiene una emergencia activa o reciente`);
       return res.status(429).json({
@@ -665,31 +664,42 @@ router.post("/", protectRoute, async (req, res) => {
         emergenciaActiva: emergenciasRecientes[0]
       });
     }
-    
+
     // Validar campos obligatorios comunes
-    if (!descripcion || !tipoEmergencia || !ubicacion) {
+    if (typeof descripcion !== 'string' || !descripcion.trim() || !tipoEmergencia || !ubicacion) {
       return res.status(400).json({ message: "Por favor completa todos los campos obligatorios" });
     }
-    
+
+    const latitud = ubicacion.coordenadas?.latitud;
+    const longitud = ubicacion.coordenadas?.longitud;
+    if (!Number.isFinite(latitud) || !Number.isFinite(longitud) ||
+        Math.abs(latitud) > 90 || Math.abs(longitud) > 180) {
+      return res.status(400).json({ message: "Por favor proporciona coordenadas válidas" });
+    }
+
     // Determinar si es una emergencia para mascota registrada o para otro animal
     const esOtroAnimal = req.body.esOtroAnimal === true;
     console.log(`Tipo de emergencia: ${esOtroAnimal ? 'Otro animal' : 'Mascota registrada'}`);
     console.log(`Datos de otro animal:`, JSON.stringify(otroAnimal));
-    
+
     // Validaciones específicas según el tipo de emergencia
     if (esOtroAnimal) {
       // Validar datos mínimos para otro animal
-      if (!otroAnimal.tipo || !otroAnimal.descripcionAnimal) {
+      if (!otroAnimal?.tipo || typeof otroAnimal.descripcionAnimal !== 'string' || !otroAnimal.descripcionAnimal.trim()) {
         return res.status(400).json({ message: "Por favor completa la información del animal" });
       }
-      
+
       console.log('Creando emergencia para animal no registrado:', otroAnimal);
     } else {
       // Validar datos para mascota registrada
       if (!mascota) {
         return res.status(400).json({ message: "Por favor selecciona una mascota" });
       }
-      
+
+      if (!mongoose.isObjectIdOrHexString(mascota)) {
+        return res.status(400).json({ message: "ID de mascota inválido" });
+      }
+
       // Verificar que la mascota exista y pertenezca al usuario
       const mascotaExiste = await Mascota.findById(mascota);
       if (!mascotaExiste) {
@@ -698,10 +708,10 @@ router.post("/", protectRoute, async (req, res) => {
       if (mascotaExiste.propietario.toString() !== req.user._id.toString()) {
         return res.status(401).json({ message: "No autorizado para solicitar emergencia con esta mascota" });
       }
-      
+
       console.log('Creando emergencia para mascota registrada ID:', mascota);
     }
-    
+
     // Procesar imágenes si se proporcionan
     let imagenesUrls = [];
     if (imagenes && imagenes.length > 0) {
@@ -717,19 +727,19 @@ router.post("/", protectRoute, async (req, res) => {
         }
       }
     }
-    
+
     // Adaptar el formato de ubicación para que coincida con el modelo
     let ubicacionFormateada = {
       direccion: ubicacion.direccion || 'Dirección no especificada',
       ciudad: ubicacion.ciudad || 'Ciudad no especificada',
       coordenadas: {
-        lat: ubicacion.coordenadas?.latitud || 0,
-        lng: ubicacion.coordenadas?.longitud || 0
+        lat: latitud,
+        lng: longitud
       }
     };
-    
+
     console.log('Ubicación formateada:', JSON.stringify(ubicacionFormateada));
-    
+
     // Crear el objeto de emergencia según el tipo (mascota registrada o no)
     const nuevaEmergencia = new Emergencia({
       usuario: req.user._id,
@@ -740,7 +750,7 @@ router.post("/", protectRoute, async (req, res) => {
       fechaSolicitud: new Date(),
       imagenes: imagenesUrls
     });
-    
+
     // Asignar datos específicos según el tipo de emergencia
     if (esOtroAnimal) {
       nuevaEmergencia.otroAnimal = {
@@ -756,18 +766,29 @@ router.post("/", protectRoute, async (req, res) => {
       // Mantenemos otroAnimal.esOtroAnimal como false (valor por defecto)
     }
 
-    await nuevaEmergencia.save();
-    
-    // Buscar veterinarios cercanos (esto es un ejemplo, en una implementación real 
+    // Atomic per-user claim closes the find-then-insert race across backend instances.
+    const claimUntil = new Date(Date.now() + 5 * 60 * 1000);
+    const claimed = await User.findOneAndUpdate({ _id: req.user._id,
+      $or: [{ emergencyCreateUntil: { $exists: false } }, { emergencyCreateUntil: { $lte: new Date() } }],
+    }, { $set: { emergencyCreateUntil: claimUntil } });
+    if (!claimed) return res.status(429).json({ message: 'Ya hay una solicitud de emergencia en curso' });
+    try {
+      await nuevaEmergencia.save();
+    } catch (error) {
+      await User.updateOne({ _id: req.user._id, emergencyCreateUntil: claimUntil }, { $unset: { emergencyCreateUntil: 1 } });
+      throw error;
+    }
+
+    // Buscar veterinarios cercanos (esto es un ejemplo, en una implementación real
     // podrías usar geolocalización para encontrar los veterinarios más cercanos)
-    
+
     // Populate para devolver la información completa
     const emergenciaCompletada = await Emergencia.findById(nuevaEmergencia._id)
       .populate("mascota", "nombre tipo raza imagen")
       .populate("veterinario", "nombre especialidad imagen rating");
 
     emitEmergencyCreated(emergenciaCompletada);
-    
+
     res.status(201).json(emergenciaCompletada);
   } catch (error) {
     console.log(error);
@@ -779,16 +800,16 @@ router.post("/", protectRoute, async (req, res) => {
 router.get("/verificar-expiracion/:id", protectRoute, async (req, res) => {
   try {
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar si el usuario actual es el propietario
     if (emergencia.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para verificar esta emergencia" });
     }
-    
+
     let expiracionOcurrida = false;
     let mensajeExpiracion = '';
 
@@ -820,7 +841,7 @@ router.get("/verificar-expiracion/:id", protectRoute, async (req, res) => {
         emergencia
       });
     }
-    
+
     // Calcular tiempo restante en segundos para la próxima expiración relevante
     let tiempoRestante = 0;
     let proximaExpiracion = null;
@@ -834,7 +855,7 @@ router.get("/verificar-expiracion/:id", protectRoute, async (req, res) => {
     if (proximaExpiracion) {
       tiempoRestante = Math.max(0, Math.floor((proximaExpiracion - new Date()) / 1000));
     }
-    
+
     return res.status(200).json({
       message: 'Emergencia válida',
       tiempoRestante,
@@ -850,24 +871,24 @@ router.get("/verificar-expiracion/:id", protectRoute, async (req, res) => {
 router.post("/:id/cancelar", protectRoute, async (req, res) => {
   try {
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar que el usuario sea el propietario de la emergencia
     if (emergencia.usuario.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "No autorizado para cancelar esta emergencia" });
     }
-    
+
     // Verificar que la emergencia esté en un estado que permita cancelación
     const estadosPermitidos = ["Solicitada", "Asignada"];
     if (!estadosPermitidos.includes(emergencia.estado)) {
-      return res.status(400).json({ 
-        message: `No se puede cancelar una emergencia en estado ${emergencia.estado}` 
+      return res.status(400).json({
+        message: `No se puede cancelar una emergencia en estado ${emergencia.estado}`
       });
     }
-    
+
     // Actualizar estado
     emergencia.estado = "Cancelada";
     emergencia.expirada = true;
@@ -875,8 +896,8 @@ router.post("/:id/cancelar", protectRoute, async (req, res) => {
     await emergencia.save();
 
     emitEmergencyUpdated(emergencia, 'cancelled');
-    
-    return res.status(200).json({ 
+
+    return res.status(200).json({
       message: "Emergencia cancelada exitosamente",
       emergencia
     });
@@ -894,50 +915,50 @@ router.post("/:id/cancelar", protectRoute, async (req, res) => {
 router.patch("/:id/asignar-veterinario", protectRoute, async (req, res) => {
   try {
     const { veterinarioId } = req.body;
-    
+
     if (!veterinarioId) {
       return res.status(400).json({ message: "ID del veterinario es requerido" });
     }
-    
+
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar que el prestador (veterinario) exista
     const veterinario = await Prestador.findById(veterinarioId);
     if (!veterinario || veterinario.tipo !== "Veterinario") {
       return res.status(404).json({ message: "Prestador de tipo Veterinario no encontrado" });
     }
-    
+
     // Solo se puede asignar a emergencias solicitadas
     if (emergencia.estado !== "Solicitada") {
       return res.status(400).json({ message: "Solo se puede asignar veterinario a emergencias solicitadas" });
     }
-    
+
     emergencia.veterinario = veterinarioId;
     // El estado no se cambia aquí, se mantiene como 'Solicitada'
     // El cambio de estado a 'Asignada' o 'Confirmada' se hará en el paso de confirmación del usuario.
     emergencia.fechaAsignacion = new Date();
-    
+
     await emergencia.save();
-    
+
     const emergenciaActualizada = await Emergencia.findById(emergencia._id)
       .populate("mascota", "nombre tipo raza imagen")
       .populate("usuario", "nombre")
       .populate("veterinario", "nombre especialidades imagen rating precioEmergencia ubicacionActual");
-    
+
     // Crear notificaciones para el veterinario y el usuario
     try {
       // Obtener información del usuario, veterinario y mascota para las notificaciones
       const veterinario = await Prestador.findById(veterinarioId).populate('usuario');
       const usuarioData = await User.findById(emergencia.usuario);
-      
+
       // Determinar si es mascota registrada u otro animal
       let mascotaNombre = "Animal";
       let mascotaTipo = "";
-      
+
       if (!emergencia.otroAnimal?.esOtroAnimal && emergencia.mascota) {
         const mascota = await Mascota.findById(emergencia.mascota);
         if (mascota) {
@@ -948,7 +969,7 @@ router.patch("/:id/asignar-veterinario", protectRoute, async (req, res) => {
         mascotaNombre = emergencia.otroAnimal.nombre || "Animal no registrado";
         mascotaTipo = emergencia.otroAnimal.tipo || "";
       }
-      
+
       // 1. Crear notificación para el VETERINARIO
       if (veterinario && veterinario.usuario) {
         const notificacionVeterinario = new Notificacion({
@@ -984,10 +1005,10 @@ router.patch("/:id/asignar-veterinario", protectRoute, async (req, res) => {
           prioridad: 'Alta',
           accion: 'confirmar_emergencia'
         });
-        
+
         await notificacionVeterinario.save();
         console.log('Notificación creada para el veterinario:', veterinario.nombre);
-        
+
         // Enviar notificación push si el veterinario tiene un token
         if (veterinario.usuario.deviceToken && esTokenValido(veterinario.usuario.deviceToken)) {
           await enviarNotificacionPush(
@@ -1004,7 +1025,7 @@ router.patch("/:id/asignar-veterinario", protectRoute, async (req, res) => {
           );
         }
       }
-      
+
       // 2. Crear notificación para el USUARIO/CLIENTE
       if (emergencia.usuario) {
         const notificacionUsuario = new Notificacion({
@@ -1030,10 +1051,10 @@ router.patch("/:id/asignar-veterinario", protectRoute, async (req, res) => {
           prioridad: 'Alta',
           accion: 'ver_detalle'
         });
-        
+
         await notificacionUsuario.save();
         console.log('Notificación creada para el usuario:', usuarioData?.email || emergencia.usuario);
-        
+
         // Enviar notificación push al usuario si tiene token
         if (usuarioData?.deviceToken && esTokenValido(usuarioData.deviceToken)) {
           await enviarNotificacionPush(
@@ -1053,7 +1074,7 @@ router.patch("/:id/asignar-veterinario", protectRoute, async (req, res) => {
       console.log('Error al crear notificaciones:', notifError);
       // No interrumpimos el flujo principal si falla la notificación
     }
-    
+
     emitEmergencyUpdated(emergenciaActualizada, 'assigned');
 
     res.status(200).json(emergenciaActualizada);
@@ -1068,11 +1089,11 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   const R = 6371; // Radio de la Tierra en km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
+  const a =
     Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   const d = R * c; // Distancia en km
   return d;
 }
@@ -1081,114 +1102,114 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 router.patch("/:id/estado", protectRoute, async (req, res) => {
   try {
     const { estado } = req.body;
-    
+
     console.log(`\n📥 ============ PATCH /emergencias/${req.params.id}/estado ============`);
     console.log(`   Usuario: ${req.user._id} (${req.user.username || req.user.email})`);
     console.log(`   Estado nuevo: ${estado}`);
     console.log(`   Body completo:`, req.body);
-    
+
     if (!estado) {
       console.log('❌ Estado no proporcionado');
       return res.status(400).json({ message: "El estado es requerido" });
     }
-    
+
     // Validar que el estado sea válido
     const estadosValidos = ['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'En atención', 'Atendida', 'Cancelada'];
     if (!estadosValidos.includes(estado)) {
       console.log('❌ Estado no válido:', estado);
       return res.status(400).json({ message: "Estado no válido" });
     }
-    
+
     console.log('🔍 Buscando emergencia en BD...');
     const emergencia = await Emergencia.findById(req.params.id);
     console.log('✅ Emergencia encontrada:', emergencia ? 'SÍ' : 'NO');
-    
+
     if (!emergencia) {
       console.log('❌ Emergencia no encontrada en BD');
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     console.log('🔍 Estado actual de la emergencia:', emergencia.estado);
-    
+
     // Determinar si el usuario es el cliente propietario o el veterinario asignado
     console.log('🔍 Verificando permisos...');
     const esClientePropietario = emergencia.usuario.toString() === req.user._id.toString();
     console.log('   Es cliente propietario:', esClientePropietario);
-    
+
     const prestador = await Prestador.findOne({ usuario: req.user._id });
     console.log('   Prestador encontrado:', prestador ? prestador._id : 'NO');
-    
-    const esVeterinarioAsignado = prestador && 
-                                  prestador.tipo === "Veterinario" && 
-                                  emergencia.veterinario && 
+
+    const esVeterinarioAsignado = prestador &&
+                                  prestador.tipo === "Veterinario" &&
+                                  emergencia.veterinario &&
                                   emergencia.veterinario.toString() === prestador._id.toString();
     console.log('   Es veterinario asignado:', esVeterinarioAsignado);
-    
+
     // Verificar autorización según el estado que se quiere cambiar
     console.log('🔒 Verificando autorización para estado:', estado);
     if (estado === 'En camino' || estado === 'Atendida') {
       // Solo el veterinario puede marcar como "En camino" o "Atendida"
       if (!esVeterinarioAsignado) {
         console.log('❌ No autorizado: no es veterinario asignado');
-        return res.status(403).json({ 
-          message: "No autorizado: solo el veterinario asignado puede cambiar a este estado" 
+        return res.status(403).json({
+          message: "No autorizado: solo el veterinario asignado puede cambiar a este estado"
         });
       }
       console.log('✅ Autorización concedida: es veterinario asignado');
     } else if (estado === 'Cancelada') {
       // Tanto el cliente como el veterinario pueden cancelar
       if (!esClientePropietario && !esVeterinarioAsignado) {
-        return res.status(403).json({ 
-          message: "No autorizado para cancelar esta emergencia" 
+        return res.status(403).json({
+          message: "No autorizado para cancelar esta emergencia"
         });
       }
     } else if (estado === 'En atención') {
       // Solo el cliente puede confirmar que el veterinario llegó (cambiar a "En atención")
       if (!esClientePropietario) {
-        return res.status(403).json({ 
-          message: "No autorizado: solo el cliente puede confirmar la llegada del veterinario" 
+        return res.status(403).json({
+          message: "No autorizado: solo el cliente puede confirmar la llegada del veterinario"
         });
       }
     } else {
       // Para otros estados, verificar que sea el cliente o el veterinario
       if (!esClientePropietario && !esVeterinarioAsignado) {
-        return res.status(403).json({ 
-          message: "No autorizado para modificar esta emergencia" 
+        return res.status(403).json({
+          message: "No autorizado para modificar esta emergencia"
         });
       }
     }
-    
+
     // Si está cambiando a Atendida, validar pago y registrar fecha de atención
     if (estado === 'Atendida') {
       console.log('📝 Validando requisitos para marcar como Atendida...');
-      
+
       // Si el método de pago es MercadoPago, verificar que el pago esté completado
       if (emergencia.metodoPago === 'MercadoPago') {
         console.log('💳 Método de pago: MercadoPago - Verificando estado del pago...');
-        
+
         const pagoEmergencia = await Pago.findOne({
           'referencia.tipo': 'Emergencia',
           'referencia.id': emergencia._id,
           metodoPago: 'MercadoPago'
         });
-        
+
         if (!pagoEmergencia) {
           console.log('❌ No se encontró registro de pago para esta emergencia');
-          return res.status(400).json({ 
-            message: "No se puede marcar como atendida. No se encontró el registro de pago." 
+          return res.status(400).json({
+            message: "No se puede marcar como atendida. No se encontró el registro de pago."
           });
         }
-        
+
         // Verificar que el pago esté en estado completado
         if (!['Pagado', 'Capturado', 'Completado'].includes(pagoEmergencia.estado)) {
           console.log(`❌ Estado del pago: ${pagoEmergencia.estado} - No está completado`);
-          return res.status(400).json({ 
+          return res.status(400).json({
             message: `No se puede marcar como atendida. El cliente debe completar el pago con Mercado Pago primero. Estado actual: ${pagoEmergencia.estado}`,
             pagoEstado: pagoEmergencia.estado,
             initPoint: pagoEmergencia.mercadoPago?.initPoint
           });
         }
-        
+
         console.log(`✅ Pago verificado - Estado: ${pagoEmergencia.estado}`);
         emergencia.pagado = true;
       } else if (emergencia.metodoPago === 'Efectivo') {
@@ -1205,10 +1226,10 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
       } else {
         console.log(`💵 Método de pago: ${emergencia.metodoPago || 'Por definir'} - No requiere verificación adicional`);
       }
-      
+
       console.log('📝 Registrando fecha de atención y actualizando historial...');
       emergencia.fechaAtencion = new Date();
-      
+
       // Registrar esto en el historial de emergencias
       if (!emergencia.historial) {
         console.log('⚠️ Creando array de historial (no existía)');
@@ -1222,7 +1243,7 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
       });
       console.log('✅ Historial actualizado');
     }
-    
+
     // Si está cambiando a En camino, registrar fecha
     if (estado === 'En camino') {
       emergencia.fechaEnCamino = new Date();
@@ -1236,23 +1257,23 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
         notas: 'Veterinario en camino'
       });
     }
-    
+
     // Actualizar el estado
     const estadoAnterior = emergencia.estado;
     emergencia.estado = estado;
     await emergencia.save();
-    
+
     console.log(`✅ Estado de emergencia ${emergencia._id} actualizado: ${estadoAnterior} → ${estado}`);
     console.log(`   Veterinario: ${prestador?._id || 'N/A'}`);
     console.log(`   Cliente: ${emergencia.usuario}`);
-    
+
     // Enviar notificación al cliente
     try {
       if (emergencia.usuario) {
         // Determinar si es mascota registrada u otro animal
         let mascotaNombre = "Animal";
         let mascotaTipo = "";
-        
+
         if (!emergencia.otroAnimal?.esOtroAnimal && emergencia.mascota) {
           const mascota = await Mascota.findById(emergencia.mascota);
           if (mascota) {
@@ -1263,17 +1284,17 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
           mascotaNombre = emergencia.otroAnimal.nombre || "Animal no registrado";
           mascotaTipo = emergencia.otroAnimal.tipo || "";
         }
-        
+
         // 1. Obtener información relevante para la notificación
         const usuarioData = await User.findById(emergencia.usuario);
-        
+
         // Diferentes mensajes según el estado
         let notificacionTipo = 'emergencia_actualizada';
         let notificacionTitulo = `Emergencia ${estado}`;
         let notificationText = `El estado de tu emergencia ha cambiado a: ${estado}`;
         let notificacionIcono = 'information-circle';
         let notificacionColor = '#1E88E5';
-        
+
         // Personalizar según el estado específico
         if (estado === 'Atendida') {
           notificacionTipo = 'emergencia_atendida';
@@ -1281,11 +1302,11 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
           notificationText = `Tu emergencia para ${mascotaNombre} ha sido atendida por el veterinario ${prestador.nombre}`;
           notificacionIcono = 'checkmark-done-circle';
           notificacionColor = '#43A047';
-          
+
           // Actualizar la notificación original del veterinario (marcarla como finalizada)
           await Notificacion.updateMany(
-            { 
-              prestador: prestador._id, 
+            {
+              prestador: prestador._id,
               'datos.emergenciaId': emergencia._id.toString(),
               $or: [{ tipo: 'emergencia_asignada' }, { tipo: 'emergencia_confirmada' }]
             },
@@ -1304,7 +1325,7 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
           notificacionIcono = 'navigate';
           notificacionColor = '#FB8C00';
         }
-        
+
         // Crear notificación en la base de datos
         const notificacionUsuario = new Notificacion({
           usuario: emergencia.usuario,
@@ -1330,10 +1351,10 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
           accion: 'ver_detalle',
           leida: false
         });
-        
+
         await notificacionUsuario.save();
         console.log(`Notificación de estado ${estado} creada para el usuario:`, usuarioData?.email || emergencia.usuario);
-        
+
         // Enviar notificación push al usuario si tiene token
         if (usuarioData?.deviceToken && esTokenValido(usuarioData.deviceToken)) {
           await enviarNotificacionPush(
@@ -1353,15 +1374,15 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
       console.log('Error al crear notificación:', notifError);
       // No interrumpimos el flujo principal si falla la notificación
     }
-    
+
     // Retornar la emergencia actualizada con todos los datos poblados
     const emergenciaActualizada = await Emergencia.findById(emergencia._id)
       .populate("mascota", "nombre tipo raza imagen edad genero color")
       .populate("usuario", "username telefono email profilePicture")
       .populate("veterinario", "nombre especialidad imagen rating telefono");
-    
+
     console.log(`📤 Retornando emergencia actualizada con estado: ${emergenciaActualizada.estado}`);
-    
+
     console.log('✅ Estado actualizado exitosamente a:', estado);
     console.log(`============ FIN PATCH /emergencias/${req.params.id}/estado ============\n`);
     emitEmergencyUpdated(emergenciaActualizada, 'status_changed');
@@ -1379,32 +1400,32 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
 router.get("/:id/ubicacion-veterinario", protectRoute, async (req, res) => {
   try {
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar si el usuario actual es el propietario de la emergencia
     if (emergencia.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para ver esta información" });
     }
-    
+
     // Verificar si hay un veterinario asignado
     if (!emergencia.veterinario) {
       return res.status(400).json({ message: "No hay veterinario asignado a esta emergencia" });
     }
-    
+
     // Buscar el prestador (veterinario) para obtener su ubicación actual
     const veterinario = await Prestador.findById(emergencia.veterinario);
-    
+
     if (!veterinario || !veterinario.ubicacionActual || !veterinario.ubicacionActual.coordenadas) {
       return res.status(404).json({ message: "No se encontró la ubicación del veterinario" });
     }
-    
+
     // Coordenadas del cliente y veterinario
     const clienteLat = emergencia.ubicacion.coordenadas.lat;
     const clienteLng = emergencia.ubicacion.coordenadas.lng;
-    
+
     // Verificar que las coordenadas del veterinario sean válidas
     const coordsVeterinario = obtenerCoordenadasNormalizadas(veterinario.ubicacionActual.coordenadas);
     if (!coordsVeterinario) {
@@ -1412,21 +1433,21 @@ router.get("/:id/ubicacion-veterinario", protectRoute, async (req, res) => {
     }
     const vetLat = coordsVeterinario.lat;
     const vetLng = coordsVeterinario.lng;
-    
+
     // Asegurarse de que las coordenadas son números válidos
     if (isNaN(clienteLat) || isNaN(clienteLng) || isNaN(vetLat) || isNaN(vetLng)) {
       return res.status(400).json({ message: "Coordenadas inválidas" });
     }
-    
+
     // Calcular distancia real (usando la fórmula haversine)
     const distanciaReal = calcularDistancia(clienteLat, clienteLng, vetLat, vetLng);
-    
+
     // Aplicar radio de privacidad (mínimo 1km)
     const distanciaAjustada = Math.max(1.0, distanciaReal);
-    
+
     // Calcular tiempo estimado (asumiendo 30km/h en entorno urbano)
     const tiempoEstimadoMin = Math.ceil(distanciaAjustada * 2); // 2 min por km
-    
+
     res.status(200).json({
       distancia: {
         valor: distanciaAjustada,
@@ -1438,7 +1459,7 @@ router.get("/:id/ubicacion-veterinario", protectRoute, async (req, res) => {
       },
       ultimaActualizacion: veterinario.ubicacionActual.ultimaActualizacion || new Date()
     });
-    
+
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Error al obtener la ubicación del veterinario" });
@@ -1513,31 +1534,31 @@ router.post("/:id/ubicacion-veterinario", protectRoute, async (req, res) => {
 router.post("/:id/imagen", protectRoute, async (req, res) => {
   try {
     const { imagen } = req.body;
-    
+
     if (!imagen) {
       return res.status(400).json({ message: "La imagen es requerida" });
     }
-    
+
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar si el usuario actual es el propietario
     if (emergencia.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para modificar esta emergencia" });
     }
-    
+
     // Subir imagen a Cloudinary
     const uploadResponse = await cloudinary.uploader.upload(imagen, {
       folder: "emergencias"
     });
-    
+
     // Agregar URL de la imagen a la emergencia
     emergencia.imagenes.push(uploadResponse.secure_url);
     await emergencia.save();
-    
+
     res.status(200).json(emergencia);
   } catch (error) {
     console.log(error);
@@ -1549,11 +1570,11 @@ router.post("/:id/imagen", protectRoute, async (req, res) => {
 router.post("/cercanas", protectRoute, async (req, res) => {
   try {
     const { lat, lng, radio } = req.body;
-    
+
     if (!lat || !lng) {
       return res.status(400).json({ message: "La ubicación es requerida" });
     }
-    
+
     // En una implementación real, aquí usarías geolocalización para encontrar emergencias cercanas
     // Este es un ejemplo simplificado para demostración
     const emergencias = await Emergencia.find({
@@ -1571,7 +1592,7 @@ router.post("/cercanas", protectRoute, async (req, res) => {
       .populate("mascota", "nombre tipo raza imagen")
       .sort({ fechaSolicitud: -1 })
       .lean();
-    
+
     res.status(200).json(emergencias);
   } catch (error) {
     console.log(error);
@@ -1584,19 +1605,19 @@ router.get("/cercanas/disponibles", protectRoute, async (req, res) => {
   try {
     // Verificar que el usuario sea un prestador de tipo veterinario
     const prestador = await Prestador.findOne({ usuario: req.user._id });
-    
+
     if (!prestador || prestador.tipo !== "Veterinario") {
       return res.status(403).json({ message: "Solo los veterinarios pueden acceder a emergencias cercanas" });
     }
-    
+
     // Obtener ubicación del veterinario
     if (!prestador.ubicacion || !prestador.ubicacion.coordenadas) {
       return res.status(400).json({ message: "El veterinario no tiene ubicación registrada" });
     }
-    
+
     const lat = prestador.ubicacion.coordenadas.lat;
     const lng = prestador.ubicacion.coordenadas.lng;
-    
+
     // Buscar emergencias solicitadas cercanas a la ubicación del veterinario
     const emergencias = await Emergencia.find({
       estado: "Solicitada",
@@ -1615,7 +1636,7 @@ router.get("/cercanas/disponibles", protectRoute, async (req, res) => {
       .sort({ fechaSolicitud: -1 })
       .limit(10)
       .lean(); // Limitar a 10 emergencias para no sobrecargar
-    
+
     // Añadir información de distancia para cada emergencia
     const emergenciasConDistancia = emergencias.map(emergencia => {
       const emergenciaObj = { ...emergencia };
@@ -1625,20 +1646,20 @@ router.get("/cercanas/disponibles", protectRoute, async (req, res) => {
         emergencia.ubicacion.coordenadas.lat,
         emergencia.ubicacion.coordenadas.lng
       );
-      
+
       // Aplicar radio de privacidad de 1km
       const distanciaAjustada = Math.max(distancia, 1.0);
-      
+
       // Calcular tiempo estimado basado en velocidad promedio de 30km/h
       const tiempoEstimado = Math.ceil(distanciaAjustada / 30 * 60); // en minutos
-      
+
       return {
         ...emergenciaObj,
         distancia: distanciaAjustada,
         tiempoEstimado: tiempoEstimado
       };
     });
-    
+
     console.log(`Encontradas ${emergenciasConDistancia.length} emergencias cercanas disponibles para el veterinario ${prestador._id}`);
     res.status(200).json(emergenciasConDistancia);
   } catch (error) {
@@ -1655,49 +1676,80 @@ router.post("/:id/aceptar", protectRoute, async (req, res) => {
       console.log(`ID de emergencia inválido: ${req.params.id}`);
       return res.status(400).json({ message: "ID de emergencia inválido" });
     }
-    
+
     // Buscar emergencia
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       console.log(`Emergencia no encontrada con ID: ${req.params.id}`);
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar que el prestador (veterinario) exista
     const prestador = await Prestador.findOne({ usuario: req.user._id });
     if (!prestador || prestador.tipo !== "Veterinario") {
       return res.status(403).json({ message: "Solo los veterinarios pueden aceptar emergencias" });
     }
-    
+
     // Verificar que el veterinario que acepta sea el asignado a la emergencia
     if (emergencia.veterinario && emergencia.veterinario.toString() !== prestador._id.toString()) {
       return res.status(403).json({ message: "No autorizado: solo el veterinario asignado puede actualizar esta emergencia" });
     }
-    
-    // Cambiar estado a "En camino"
-    emergencia.estado = "En camino";
-    emergencia.fechaEnCamino = new Date();
-    
-    await emergencia.save();
-    
-    console.log('✅ Veterinario acepta y va en camino. Preferencia MP se creará cuando el cliente confirme llegada.');
-    
-    const emergenciaActualizada = await Emergencia.findById(emergencia._id)
+
+    const emergenciaActualizada = await Emergencia.findOneAndUpdate(
+      {
+        _id: emergencia._id,
+        estado: { $in: ["Solicitada", "Asignada", "Confirmada"] },
+        $or: [
+          { veterinario: prestador._id },
+          { veterinario: null },
+          { veterinario: { $exists: false } }
+        ]
+      },
+      {
+        $set: {
+          veterinario: prestador._id,
+          estado: "En camino",
+          fechaEnCamino: new Date(),
+          expirada: false
+        },
+        $unset: {
+          expiraEn: "",
+          expiraRespuestaVetEn: ""
+        }
+      },
+      { new: true, runValidators: true }
+    )
       .populate("mascota", "nombre tipo raza imagen edad genero color")
       .populate("usuario", "nombre email telefono profilePicture")
       .populate("veterinario", "nombre especialidad imagen rating");
-    
+
+    if (!emergenciaActualizada) {
+      const emergenciaActual = await Emergencia.findById(req.params.id).select("estado veterinario").lean();
+      if (
+        emergenciaActual?.veterinario &&
+        emergenciaActual.veterinario.toString() !== prestador._id.toString()
+      ) {
+        return res.status(403).json({ message: "No autorizado: esta emergencia fue tomada por otro veterinario" });
+      }
+
+      return res.status(409).json({
+        message: `No se puede aceptar una emergencia en estado ${emergenciaActual?.estado || "desconocido"}`
+      });
+    }
+
+    console.log('✅ Veterinario acepta y va en camino. Preferencia MP se creará cuando el cliente confirme llegada.');
+
     // Crear notificación para el usuario de tipo "emergencia_confirmada"
     try {
       if (emergencia.usuario) {
         // 1. Obtener información relevante para la notificación
         const usuarioData = await User.findById(emergencia.usuario);
-        
+
         // Determinar si es mascota registrada u otro animal
         let mascotaNombre = "Animal";
         let mascotaTipo = "";
-        
+
         if (!emergencia.otroAnimal?.esOtroAnimal && emergencia.mascota) {
           const mascota = await Mascota.findById(emergencia.mascota);
           if (mascota) {
@@ -1708,7 +1760,7 @@ router.post("/:id/aceptar", protectRoute, async (req, res) => {
           mascotaNombre = emergencia.otroAnimal.nombre || "Animal no registrado";
           mascotaTipo = emergencia.otroAnimal.tipo || "";
         }
-        
+
         // 2. Crear notificación para el usuario
         const notificacionUsuario = new Notificacion({
           tipo: 'emergencia_confirmada',
@@ -1733,10 +1785,10 @@ router.post("/:id/aceptar", protectRoute, async (req, res) => {
           prioridad: 'Alta',
           accion: 'ver_detalle'
         });
-        
+
         await notificacionUsuario.save();
         console.log('Notificación de confirmación creada para el usuario:', usuarioData?.email || emergencia.usuario);
-        
+
         // Enviar notificación push al usuario si tiene token
         if (usuarioData?.deviceToken && esTokenValido(usuarioData.deviceToken)) {
           await enviarNotificacionPush(
@@ -1751,11 +1803,11 @@ router.post("/:id/aceptar", protectRoute, async (req, res) => {
             }
           );
         }
-        
+
         // 3. Actualizar la notificación original del veterinario (marcarla como atendida)
         await Notificacion.updateMany(
-          { 
-            prestador: prestador._id, 
+          {
+            prestador: prestador._id,
             'datos.emergenciaId': emergencia._id.toString(),
             tipo: 'emergencia_asignada'
           },
@@ -1772,7 +1824,7 @@ router.post("/:id/aceptar", protectRoute, async (req, res) => {
       console.log('Error al crear/actualizar notificaciones:', notifError);
       // No interrumpimos el flujo principal si falla la notificación
     }
-    
+
     console.log(`Emergencia ${emergencia._id} aceptada por el veterinario ${prestador._id} y puesta en camino`);
     emitEmergencyUpdated(emergenciaActualizada, 'accepted');
     res.status(200).json(emergenciaActualizada);
@@ -1790,48 +1842,67 @@ router.post("/:id/rechazar", protectRoute, async (req, res) => {
       console.log(`ID de emergencia inválido: ${req.params.id}`);
       return res.status(400).json({ message: "ID de emergencia inválido" });
     }
-    
+
     // Buscar emergencia
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       console.log(`Emergencia no encontrada con ID: ${req.params.id}`);
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar que el prestador (veterinario) exista
     const prestador = await Prestador.findOne({ usuario: req.user._id });
     if (!prestador || prestador.tipo !== "Veterinario") {
       return res.status(403).json({ message: "Solo los veterinarios pueden rechazar emergencias" });
     }
-    
+
     // Verificar que el veterinario que rechaza sea el asignado a la emergencia
     if (emergencia.veterinario && emergencia.veterinario.toString() !== prestador._id.toString()) {
       return res.status(403).json({ message: "No autorizado: solo el veterinario asignado puede actualizar esta emergencia" });
     }
-    
-    // Cambiar estado a "Cancelada"
-    emergencia.estado = "Cancelada";
-    emergencia.fechaCancelacion = new Date();
-    emergencia.motivoCancelacion = "Rechazada por el veterinario";
-    
-    await emergencia.save();
-    
-    const emergenciaActualizada = await Emergencia.findById(emergencia._id)
+
+    const emergenciaActualizada = await Emergencia.findOneAndUpdate(
+      {
+        _id: emergencia._id,
+        veterinario: prestador._id,
+        estado: { $in: ["Solicitada", "Asignada", "Confirmada"] }
+      },
+      {
+        $set: {
+          estado: "Cancelada",
+          fechaCancelacion: new Date(),
+          motivoCancelacion: "Rechazada por el veterinario",
+          expirada: true
+        }
+      },
+      { new: true, runValidators: true }
+    )
       .populate("mascota", "nombre tipo raza imagen")
       .populate("usuario", "nombre email telefono profilePicture")
       .populate("veterinario", "nombre especialidad imagen rating");
-    
+
+    if (!emergenciaActualizada) {
+      const emergenciaActual = await Emergencia.findById(req.params.id).select("estado veterinario").lean();
+      if (!emergenciaActual?.veterinario) {
+        return res.status(409).json({ message: "La emergencia aun no tiene un veterinario asignado para rechazarla" });
+      }
+
+      return res.status(409).json({
+        message: `No se puede rechazar una emergencia en estado ${emergenciaActual.estado}`
+      });
+    }
+
     // Crear notificación para el usuario de tipo "emergencia_cancelada"
     try {
       if (emergencia.usuario) {
         // 1. Obtener información relevante para la notificación
         const usuarioData = await User.findById(emergencia.usuario);
-        
+
         // Determinar si es mascota registrada u otro animal
         let mascotaNombre = "Animal";
         let mascotaTipo = "";
-        
+
         if (!emergencia.otroAnimal?.esOtroAnimal && emergencia.mascota) {
           const mascota = await Mascota.findById(emergencia.mascota);
           if (mascota) {
@@ -1842,7 +1913,7 @@ router.post("/:id/rechazar", protectRoute, async (req, res) => {
           mascotaNombre = emergencia.otroAnimal.nombre || "Animal no registrado";
           mascotaTipo = emergencia.otroAnimal.tipo || "";
         }
-        
+
         // 2. Crear notificación para el usuario
         const notificacionUsuario = new Notificacion({
           tipo: 'emergencia_cancelada',
@@ -1867,10 +1938,10 @@ router.post("/:id/rechazar", protectRoute, async (req, res) => {
           prioridad: 'Alta',
           accion: 'ver_detalle'
         });
-        
+
         await notificacionUsuario.save();
         console.log('Notificación de rechazo creada para el usuario:', usuarioData?.email || emergencia.usuario);
-        
+
         // Enviar notificación push al usuario si tiene token
         if (usuarioData?.deviceToken && esTokenValido(usuarioData.deviceToken)) {
           await enviarNotificacionPush(
@@ -1885,11 +1956,11 @@ router.post("/:id/rechazar", protectRoute, async (req, res) => {
             }
           );
         }
-        
+
         // 3. Actualizar la notificación original del veterinario (marcarla como leída e inactiva)
         await Notificacion.updateMany(
-          { 
-            prestador: prestador._id, 
+          {
+            prestador: prestador._id,
             'datos.emergenciaId': emergencia._id.toString(),
             tipo: 'emergencia_asignada'
           },
@@ -1906,7 +1977,7 @@ router.post("/:id/rechazar", protectRoute, async (req, res) => {
       console.log('Error al crear/actualizar notificaciones:', notifError);
       // No interrumpimos el flujo principal si falla la notificación
     }
-    
+
     console.log(`Emergencia ${emergencia._id} rechazada por el veterinario ${prestador._id} y marcada como cancelada`);
     emitEmergencyUpdated(emergenciaActualizada, 'rejected');
     res.status(200).json(emergenciaActualizada);
@@ -1927,15 +1998,15 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
     if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: "ID de emergencia inválido" });
     }
-    
+
     // Buscar la emergencia
-    const emergencia = await Emergencia.findById(req.params.id);
-    
+    let emergencia = await Emergencia.findById(req.params.id);
+
     // Verificar que la emergencia existe
     if (!emergencia) {
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Verificar que el usuario es el dueño de la emergencia
     if (emergencia.usuario.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "No tienes permiso para confirmar esta emergencia" });
@@ -1947,36 +2018,59 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
     if (!idempotency.isNew) {
       return replayIdempotencyResult(res, idempotency.record);
     }
-    
-    // Verificar que la emergencia está en estado "En camino"
-    if (emergencia.estado !== "En camino") {
-      return res.status(400).json({ message: "La emergencia debe estar en estado 'En camino' para confirmar llegada" });
+
+    if (emergencia.estado === 'En atención' && emergencia.metodoPago === 'MercadoPago') {
+      const existing = await Pago.findOne({ 'referencia.tipo': 'Emergencia', 'referencia.id': emergencia._id, metodoPago: 'MercadoPago' });
+      if (existing?.mercadoPago?.initPoint) {
+        const body = { emergencia, preferenciaMP: { id: existing.mercadoPago.preferenceId, initPoint: existing.mercadoPago.initPoint } };
+        await completeIdempotency(idempotencyRecord, { statusCode: 200, body, pago: existing._id });
+        return res.status(200).json(body);
+      }
+      if (existing) throw Object.assign(new Error('Checkout pendiente de conciliación; no se creará otro cobro'), { status: 503 });
     }
-    
-    // Actualizar la emergencia para confirmar llegada y cambiar a estado "En atención"
-    emergencia.llegadaConfirmada = true;
-    emergencia.fechaLlegadaConfirmada = new Date();
-    emergencia.estado = "En atención";
-    
-    // Verificar y crear el historial si no existe
-    if (!emergencia.historial) {
-      emergencia.historial = [];
+
+    const fechaLlegadaConfirmada = new Date();
+    const emergenciaConfirmada = emergencia.estado === 'En atención' && emergencia.metodoPago === 'MercadoPago'
+      ? emergencia : await Emergencia.findOneAndUpdate(
+      {
+        _id: emergencia._id,
+        usuario: req.user._id,
+        estado: "En camino"
+      },
+      {
+        $set: {
+          llegadaConfirmada: true,
+          llegadaConfirmadaPorCliente: true,
+          fechaLlegadaConfirmada,
+          estado: "En atención",
+          expirada: false
+        },
+        $unset: {
+          expiraEn: "",
+          expiraRespuestaVetEn: ""
+        },
+        $push: {
+          historial: {
+            estado: "En atención",
+            fecha: fechaLlegadaConfirmada,
+            usuario: req.user._id,
+            notas: "Llegada del veterinario confirmada por el cliente"
+          }
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!emergenciaConfirmada) {
+      return res.status(409).json({ message: "La emergencia debe estar en estado 'En camino' para confirmar llegada" });
     }
-    
-    // Agregar al historial
-    emergencia.historial.push({
-      estado: "En atención",
-      fecha: new Date(),
-      usuario: req.user._id,
-      notas: "Llegada del veterinario confirmada por el cliente"
-    });
-    
-    await emergencia.save();
-    
+
+    emergencia = emergenciaConfirmada;
+
     // 💰 CREAR REGISTRO DE PAGO SEGÚN MÉTODO
     let preferenciaMP = null;
     let pagoCreado = null;
-    const prestador = await Prestador.findById(emergencia.veterinario).select("+mercadoPago.accessToken +mercadoPago.refreshToken precioEmergencia emergenciaGratisAdmin");
+    const prestador = await Prestador.findById(emergencia.veterinario).select("+mercadoPago.accessToken +mercadoPago.refreshToken mercadoPago.conectado mercadoPago.userId mercadoPago.liveMode precioEmergencia emergenciaGratisAdmin");
     const pricingEmergencia = await resolverCostoEmergencia(prestador);
     const monto = pricingEmergencia.costo;
     emergencia.costoTotal = monto;
@@ -1986,12 +2080,12 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
       emergencia.pagado = true;
       await emergencia.save();
     }
-    
+
     if (!pricingEmergencia.esGratis && emergencia.metodoPago === 'Efectivo') {
       // 💵 CREAR PAGO EN EFECTIVO
       try {
         console.log('💵 [CONFIRMAR LLEGADA] Creando registro de pago en efectivo para emergencia:', emergencia._id);
-        
+
         const nuevoPago = new Pago({
           usuario: emergencia.usuario,
           concepto: 'Emergencia',
@@ -2006,30 +2100,30 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
           idempotencyKey: idempotency.key,
           fechaPago: null // Se actualizará cuando se complete el pago
         });
-        
+
         await nuevoPago.save();
         pagoCreado = nuevoPago;
-        
+
         console.log('✅ [CONFIRMAR LLEGADA] Pago en efectivo registrado:', {
           pagoId: nuevoPago._id,
           monto: monto,
           estado: 'Pendiente'
         });
-        
+
       } catch (efectivoError) {
         console.error('❌ [CONFIRMAR LLEGADA] Error al registrar pago en efectivo:', {
           message: efectivoError.message,
           error: efectivoError
         });
-        // No bloqueamos el flujo
+        throw Object.assign(new Error("No se pudo registrar el pago en efectivo de la emergencia"), { status: 503 });
       }
     } else if (!pricingEmergencia.esGratis && emergencia.metodoPago === 'MercadoPago') {
       // 💳 CREAR PREFERENCIA DE MERCADO PAGO
       try {
         console.log('💳 [CONFIRMAR LLEGADA] Creando preferencia de Mercado Pago para emergencia:', emergencia._id);
-        
+
         const usuarioData = await User.findById(emergencia.usuario);
-        
+
         console.log('📊 Datos para preferencia MP:', {
           emergenciaId: emergencia._id,
           metodoPago: emergencia.metodoPago,
@@ -2037,7 +2131,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
           monto: monto,
           usuario: usuarioData?.email
         });
-        
+
         // Determinar descripción según tipo de mascota
         let descripcion = `Emergencia Veterinaria - ${emergencia.tipoEmergencia}`;
         if (!emergencia.otroAnimal?.esOtroAnimal && emergencia.mascota) {
@@ -2046,7 +2140,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
             descripcion += ` (${mascota.nombre})`;
           }
         }
-        
+
         // URLs para Mercado Pago: usar deep links del app para volver al flujo móvil
         const backUrls = {
           success: 'vetya://pago-exitoso',
@@ -2054,10 +2148,10 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
           pending: 'vetya://pago-pendiente'
         };
 
-        const notificationUrl = `${process.env.BACKEND_URL || 'http://192.168.100.32:3000'}/api/pagos/mercadopago/webhook`;
-        
+        const notificationUrl = buildNotificationUrl();
+
         console.log(' URLs configuradas para MP:', { backUrls, notificationUrl });
-        
+
         if (!prestador.mercadoPago?.conectado || !prestador.mercadoPago?.accessToken) {
           throw new Error("El prestador debe conectar su cuenta de Mercado Pago antes de recibir pagos con Mercado Pago");
         }
@@ -2092,73 +2186,42 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
           }
         };
 
-        const { preference, split } = await createMarketplacePreference({
-          sellerAccessToken: prestador.mercadoPago.accessToken,
-          preferenceData,
-          marketplacePercentage: MARKETPLACE_PERCENTAGE,
+        const { pago: nuevoPago, preference } = await createServiceCheckout({
+          prestador, preferenceData,
+          pagoData: { usuario: emergencia.usuario, concepto: 'Emergencia',
+            referencia: { tipo: 'Emergencia', id: emergencia._id }, prestador: prestador._id,
+            monto, metodoPago: 'MercadoPago', idempotencyKey: idempotency.key },
         });
-        
         preferenciaMP = preference;
-        
-        // Crear registro de pago en la BD
-        const nuevoPago = new Pago({
-          usuario: emergencia.usuario,
-          concepto: 'Emergencia',
-          referencia: {
-            tipo: 'Emergencia',
-            id: emergencia._id
-          },
-          prestador: prestador._id,
-          monto: monto,
-          metodoPago: 'MercadoPago',
-          estado: 'Pendiente',
-          idempotencyKey: idempotency.key,
-          mercadoPago: {
-            preferenceId: preference.id,
-            initPoint: preference.init_point,
-            metadata: {
-              emergenciaId: emergencia._id.toString(),
-              prestadorId: prestador._id.toString(),
-              marketplace_fee: split.marketplaceFee,
-              seller_net_amount: split.netAmount,
-              marketplace_percentage: split.marketplacePercentage
-            },
-            marketplaceFee: split.marketplaceFee,
-            sellerNetAmount: split.netAmount,
-            marketplacePercentage: split.marketplacePercentage
-          }
-        });
-        
-        await nuevoPago.save();
         pagoCreado = nuevoPago;
-        
+
         console.log('✅ [CONFIRMAR LLEGADA] Preferencia MP creada:', {
           preferenceId: preference.id,
           initPoint: preference.init_point,
           pagoId: nuevoPago._id,
           monto: monto
         });
-        
+
       } catch (mpError) {
         console.error('❌ [CONFIRMAR LLEGADA] Error al crear preferencia MP:', {
           message: mpError.message,
           error: mpError.error,
           status: mpError.status
         });
-        // No bloqueamos el flujo
+        throw Object.assign(new Error("Llegada registrada; checkout pendiente. Consulta el pago del servicio antes de reintentar."), { status: 503 });
       }
     }
-    
+
     // Crear notificación para el veterinario
     try {
       if (emergencia.veterinario) {
         const veterinario = await Prestador.findById(emergencia.veterinario).populate('usuario');
-        
+
         if (veterinario && veterinario.usuario) {
           // Determinar si es mascota registrada u otro animal
           let mascotaNombre = "Animal";
           let mascotaTipo = "";
-          
+
           if (!emergencia.otroAnimal?.esOtroAnimal && emergencia.mascota) {
             const mascota = await Mascota.findById(emergencia.mascota);
             if (mascota) {
@@ -2169,7 +2232,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
             mascotaNombre = emergencia.otroAnimal.nombre || "Animal no registrado";
             mascotaTipo = emergencia.otroAnimal.tipo || "";
           }
-          
+
           // Crear notificación para el veterinario
           const notificacion = new Notificacion({
             tipo: 'llegada_confirmada',
@@ -2191,10 +2254,10 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
             prioridad: 'Alta',
             accion: 'ver_emergencia'
           });
-          
+
           await notificacion.save();
           console.log('Notificación de llegada confirmada creada para el veterinario');
-          
+
           // Enviar notificación push si el veterinario tiene un token
           if (veterinario.usuario.deviceToken && esTokenValido(veterinario.usuario.deviceToken)) {
             await enviarNotificacionPush(
@@ -2215,14 +2278,14 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
       console.error('Error al enviar notificación de confirmación de llegada:', notifError);
       // No bloqueamos el flujo por errores en notificaciones
     }
-    
+
     // Devolver la emergencia actualizada con info de pago
     const emergenciaActualizada = await Emergencia.findById(emergencia._id)
       .populate("mascota", "nombre tipo raza imagen")
       .populate("veterinario", "nombre especialidad imagen rating");
-    
+
     console.log(`Llegada del veterinario a emergencia ${emergencia._id} confirmada por el cliente ${req.user._id}`);
-    
+
     // Incluir link de pago si se creó preferencia MP
     const response = {
       emergencia: emergenciaActualizada,
@@ -2231,7 +2294,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
         initPoint: preferenciaMP.init_point
       } : null
     };
-    
+
     console.log('📤 [CONFIRMAR LLEGADA] Respuesta al cliente:', {
       emergenciaId: emergenciaActualizada._id,
       estado: emergenciaActualizada.estado,
@@ -2245,7 +2308,7 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
       body: response,
       pago: pagoCreado?._id || null,
     });
-    
+
     res.status(200).json(response);
   } catch (error) {
     console.error(`Error al confirmar llegada: ${error.message}`, error);
@@ -2263,29 +2326,29 @@ router.patch("/:id/confirmar", protectRoute, async (req, res) => {
   try {
     const { metodoPago, veterinarioId } = req.body;
     console.log(`Recibida solicitud para confirmar emergencia ${req.params.id} con método de pago: ${metodoPago}`);
-    
+
     // Validación de ID
     if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
       console.log(`ID de emergencia inválido: ${req.params.id}`);
       return res.status(400).json({ message: "ID de emergencia inválido" });
     }
-    
+
     // Buscar emergencia
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       console.log(`Emergencia no encontrada con ID: ${req.params.id}`);
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     console.log(`Emergencia encontrada: ${emergencia._id}, estado actual: ${emergencia.estado}`);
-    
+
     // Verificar si el usuario actual es el propietario
     if (emergencia.usuario && emergencia.usuario.toString() !== req.user._id.toString()) {
       console.log(`Usuario no autorizado: ${req.user._id} vs propietario: ${emergencia.usuario}`);
       return res.status(401).json({ message: "No autorizado para confirmar esta emergencia" });
     }
-    
+
     let veterinarioAsignadoEnEstaConfirmacion = false;
     const veterinarioFinalId = emergencia.veterinario?.toString() || veterinarioId;
 
@@ -2315,21 +2378,21 @@ router.patch("/:id/confirmar", protectRoute, async (req, res) => {
     const pricingEmergencia = await resolverCostoEmergencia(veterinarioPago);
     emergencia.costoTotal = pricingEmergencia.costo;
     emergencia.esGratis = pricingEmergencia.esGratis;
-    
+
     // Verificar estado válido para confirmar
     const estadosValidos = ["Solicitada", "Asignada"];
     if (!estadosValidos.includes(emergencia.estado)) {
       console.log(`Estado no válido para confirmar: ${emergencia.estado}`);
-      return res.status(400).json({ 
-        message: `No se puede confirmar una emergencia en estado ${emergencia.estado}. Debe estar en estado Solicitada o Asignada` 
+      return res.status(400).json({
+        message: `No se puede confirmar una emergencia en estado ${emergencia.estado}. Debe estar en estado Solicitada o Asignada`
       });
     }
-    
+
     // Actualizar método de pago
     // El estado NO se cambia aquí, se mantiene como "Solicitada"
     // El estado cambiará a "Asignada" cuando el veterinario acepte la emergencia
     // emergencia.estado = "Asignada"; // ❌ ELIMINADO
-    
+
     if (pricingEmergencia.esGratis) {
       emergencia.metodoPago = "Por definir";
       emergencia.pagado = true;
@@ -2342,18 +2405,18 @@ router.patch("/:id/confirmar", protectRoute, async (req, res) => {
     if (!pricingEmergencia.esGratis && emergencia.metodoPago === "Efectivo") {
       await assertPrestadorCanAcceptCash(veterinarioFinalId);
     }
-    
+
     // Registrar fecha de confirmación
     emergencia.fechaConfirmacion = new Date();
-    
+
     console.log(`Guardando emergencia con estado: ${emergencia.estado} y método de pago: ${emergencia.metodoPago}`);
     await emergencia.save();
-    
+
     // Devolver los datos actualizados de la emergencia
     const emergenciaActualizada = await Emergencia.findById(emergencia._id)
       .populate("mascota", "nombre tipo raza imagen")
       .populate("veterinario", "nombre especialidad email telefono imagen rating");
-    
+
     if (veterinarioAsignadoEnEstaConfirmacion) {
       await notificarAsignacionEmergencia(emergencia, emergencia.veterinario);
     }
@@ -2374,36 +2437,36 @@ router.patch("/:id/confirmar", protectRoute, async (req, res) => {
 router.patch("/:id/confirmacion-veterinario", protectRoute, async (req, res) => {
   try {
     const { confirmado } = req.body;
-    
+
     if (confirmado === undefined) {
       return res.status(400).json({ message: "Se requiere indicar si confirma o rechaza la emergencia" });
     }
-    
+
     const emergencia = await Emergencia.findById(req.params.id);
-    
+
     if (!emergencia) {
       return res.status(404).json({ message: "Emergencia no encontrada" });
     }
-    
+
     // Buscar si el usuario actual es un prestador
     const prestador = await Prestador.findOne({ usuario: req.user._id });
-    
+
     if (!prestador) {
       return res.status(401).json({ message: "No autorizado: solo prestadores pueden confirmar emergencias" });
     }
-    
+
     // Verificar que este prestador sea el asignado a la emergencia
     if (emergencia.veterinario.toString() !== prestador._id.toString()) {
       return res.status(401).json({ message: "No autorizado: solo el veterinario asignado puede confirmar" });
     }
-    
+
     // Verificar que la emergencia esté en estado solicitada
     if (emergencia.estado !== "Solicitada") {
-      return res.status(400).json({ 
-        message: `No se puede ${confirmado ? 'confirmar' : 'rechazar'} una emergencia que no está en estado 'Solicitada'` 
+      return res.status(400).json({
+        message: `No se puede ${confirmado ? 'confirmar' : 'rechazar'} una emergencia que no está en estado 'Solicitada'`
       });
     }
-    
+
     if (confirmado) {
       // El veterinario confirma que atenderá la emergencia
       emergencia.estado = "Asignada";
@@ -2411,10 +2474,10 @@ router.patch("/:id/confirmacion-veterinario", protectRoute, async (req, res) => 
       if (!emergencia.fechaAsignacion) {
         emergencia.fechaAsignacion = new Date();
       }
-      
+
       // Guardar cambios
       await emergencia.save();
-      
+
       // Crear notificación para el cliente
       const nuevaNotificacion = new Notificacion({
         tipo: 'emergencia_confirmada',
@@ -2429,9 +2492,9 @@ router.patch("/:id/confirmacion-veterinario", protectRoute, async (req, res) => 
         fechaEnvio: new Date(),
         accion: 'ver_emergencia'
       });
-      
+
       await nuevaNotificacion.save();
-      
+
       // Enviar notificación push al cliente
       try {
         const cliente = await User.findById(emergencia.usuario);
@@ -2444,10 +2507,10 @@ router.patch("/:id/confirmacion-veterinario", protectRoute, async (req, res) => 
             coordsPrestador?.lat || 0,
             coordsPrestador?.lng || 0
           ));
-          
+
           // Calcular tiempo estimado de llegada (2 min por km a 30km/h en promedio)
           const tiempoEstimadoMin = Math.ceil(distancia * 2);
-          
+
           await enviarNotificacionPush(
             cliente.deviceToken,
             'Emergencia confirmada',
@@ -2466,7 +2529,7 @@ router.patch("/:id/confirmacion-veterinario", protectRoute, async (req, res) => 
         console.log('Error al enviar notificación al cliente:', notifError);
         // No interrumpimos el flujo principal
       }
-      
+
       // Devolver emergencia actualizada
       const emergenciaActualizada = await Emergencia.findById(emergencia._id)
         .populate("mascota", "nombre tipo raza imagen")
@@ -2474,7 +2537,7 @@ router.patch("/:id/confirmacion-veterinario", protectRoute, async (req, res) => 
         .populate("usuario", "nombre");
 
       emitEmergencyUpdated(emergenciaActualizada, 'vet_confirmed');
-      
+
       return res.status(200).json({
         message: "Emergencia confirmada exitosamente",
         emergencia: emergenciaActualizada
@@ -2485,11 +2548,11 @@ router.patch("/:id/confirmacion-veterinario", protectRoute, async (req, res) => 
       emergencia.veterinario = null;
       emergencia.fechaAsignacion = null;
       // Se mantiene como solicitada para poder asignarla a otro veterinario
-      
+
       // Guardar cambios
       await emergencia.save();
       emitEmergencyUpdated(emergencia, 'vet_declined');
-      
+
       // Devolver mensaje de éxito
       return res.status(200).json({
         message: "Emergencia rechazada exitosamente",
@@ -2506,20 +2569,20 @@ router.patch("/:id/confirmacion-veterinario", protectRoute, async (req, res) => 
 router.get("/cantidad-emergencias", protectRoute, async (req, res) => {
   try {
     const prestador = await Prestador.findOne({ usuario: req.user._id });
-    
+
     if (!prestador || prestador.tipo !== "Veterinario") {
       return res.status(403).json({ message: "Solo los veterinarios pueden acceder a esta información" });
     }
-    
+
     // Obtener todas las emergencias del veterinario
     const todasEmergencias = await Emergencia.find({ veterinario: prestador._id });
-    
+
     // Filtrar las emergencias atendidas
-    const emergenciasAtendidas = await Emergencia.find({ 
+    const emergenciasAtendidas = await Emergencia.find({
       veterinario: prestador._id,
       estado: "Atendida"
     });
-    
+
     res.status(200).json({
       cantidad: todasEmergencias.length,
       cantidadAtendidas: emergenciasAtendidas.length,

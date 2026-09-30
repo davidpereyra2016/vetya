@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, StatusBar, Platform, LogBox, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar, LogBox, Alert } from 'react-native';
+import AppFrame from './src/components/common/AppFrame';
 import 'react-native-gesture-handler';
 import axios from 'axios';
 
@@ -44,33 +44,33 @@ console.log('[App.js] baseURL configurada:', API_URL);
 export default function App() {
   // Estado para controlar la visibilidad de la pantalla de splash
   const [isSplashVisible, setIsSplashVisible] = useState(true);
-  
+
   // Referencias para los listeners de notificaciones
   const notificationListener = useRef();
   const responseListener = useRef();
-  
+
   // Store de notificaciones
   const { updateUnreadCount } = useNotificacionStore();
-  
+
   // La restauración del token se maneja en checkAuth() de useAuthStore
   // que lee directamente de AsyncStorage si Zustand persist aún no rehidrató
   useEffect(() => {
     console.log('[App.js] Inicialización completada - checkAuth manejará la restauración del token');
   }, []);
-  
+
   // Configurar notificaciones push
   useEffect(() => {
     // Configurar el handler de notificaciones (cómo se muestran)
     configurePushNotifications();
-    
+
     // Registrar para notificaciones push cuando el usuario esté autenticado
     const initializePushNotifications = async () => {
       const { token, isAuthenticated } = useAuthStore.getState();
-      
+
       if (token && isAuthenticated) {
         console.log('🔔 Inicializando notificaciones push...');
         const pushToken = await registerForPushNotifications();
-        
+
         if (pushToken) {
           console.log('✅ Token de push registrado:', pushToken);
         } else {
@@ -78,9 +78,9 @@ export default function App() {
         }
       }
     };
-    
+
     initializePushNotifications();
-    
+
     // Listener para notificaciones recibidas (app en primer plano)
     notificationListener.current = addNotificationReceivedListener(notification => {
       console.log('📬 Notificación recibida:', notification);
@@ -88,13 +88,13 @@ export default function App() {
       // Actualizar conteo de no leídas
       updateUnreadCount();
     });
-    
+
     // Listener para respuestas a notificaciones (usuario toca la notificación)
     responseListener.current = addNotificationResponseReceivedListener(response => {
       console.log('👆 Usuario tocó notificación:', response);
       handleNotificationResponse(response);
     });
-    
+
     // Cleanup al desmontar
     return () => {
       if (notificationListener.current) {
@@ -105,7 +105,7 @@ export default function App() {
       }
     };
   }, []);
-  
+
   // Ignorar advertencias específicas
   useEffect(() => {
     LogBox.ignoreLogs([
@@ -114,34 +114,26 @@ export default function App() {
       'expo-notifications', // Ignorar advertencias de notificaciones en desarrollo
     ]);
   }, []);
-  
+
   // Manejar finalización de splash screen
   const handleSplashFinish = () => {
     setIsSplashVisible(false);
   };
-  
+
   // Renderizar splash screen o navegación principal
   if (isSplashVisible) {
-    return <AppSplashScreen onFinish={handleSplashFinish} />;
+    return <AppFrame><AppSplashScreen onFinish={handleSplashFinish} /></AppFrame>;
   }
-  
+
   // Renderizar navegación principal
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar 
-        style="auto" 
-        backgroundColor="#1E88E5" 
+    <AppFrame>
+      <StatusBar
+        style="auto"
+        backgroundColor="#1E88E5"
         barStyle="light-content"
       />
       <AppNavigator />
-    </SafeAreaView>
+    </AppFrame>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  },
-});

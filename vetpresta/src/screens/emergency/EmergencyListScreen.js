@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  FlatList, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  FlatList,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -21,10 +21,10 @@ import {
 
 const EmergencyListScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('active');
-  
+
   // Obtenemos las emergencias del store
   const { fetchEmergencies, isLoading, error } = useEmergencyStore();
-  
+
   // Estado local para organizar las emergencias
   const [emergencies, setEmergencies] = useState({
     active: [],
@@ -78,7 +78,7 @@ const EmergencyListScreen = ({ navigation }) => {
   const processEmergencies = (emergenciesData) => {
     const active = [];
     const history = [];
-    
+
     // Separar las emergencias según su estado
     emergenciesData.forEach(emergency => {
       // Formatear la fecha y hora
@@ -88,13 +88,13 @@ const EmergencyListScreen = ({ navigation }) => {
         month: 'long',
         year: 'numeric'
       });
-      
+
       // Formatear la hora
       const horaFormateada = fecha.toLocaleTimeString('es-ES', {
         hour: '2-digit',
         minute: '2-digit'
       });
-      
+
       // Determinar nombre de la mascota (puede ser mascota registrada u "otro animal")
       let petName = 'No especificada';
       if (emergency.otroAnimal?.esOtroAnimal) {
@@ -104,7 +104,7 @@ const EmergencyListScreen = ({ navigation }) => {
         // Es mascota registrada
         petName = emergency.mascota.nombre;
       }
-      
+
       // Procesar la emergencia
       const processedEmergency = {
         id: emergency._id,
@@ -122,22 +122,22 @@ const EmergencyListScreen = ({ navigation }) => {
         lastUpdate: emergency.updatedAt,
         originalData: emergency // Guardamos los datos originales para referencia
       };
-      
+
       // Clasificar según estado
       // Activas: en proceso o pendientes de atención
       if (['Asignada', 'Confirmada', 'En camino', 'En atención'].includes(emergency.estado)) {
         active.push(processedEmergency);
-      } 
+      }
       // Historial: completadas o canceladas
       else if (['Atendida', 'Cancelada'].includes(emergency.estado)) {
         history.push(processedEmergency);
       }
     });
-    
+
     // Ordenar por fecha (más reciente primero)
     active.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     history.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
+
     setEmergencies({ active, history });
   };
 
@@ -178,8 +178,8 @@ const EmergencyListScreen = ({ navigation }) => {
   };
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.emergencyCard} 
+    <TouchableOpacity accessibilityRole="button"
+      style={styles.emergencyCard}
       onPress={() => navigation.navigate('EmergencyDetails', { emergencyId: item.id })}
     >
       <View style={styles.emergencyHeader}>
@@ -196,7 +196,7 @@ const EmergencyListScreen = ({ navigation }) => {
           </View>
         </View>
       </View>
-      
+
       <View style={styles.emergencyDetails}>
         <View style={styles.detailRow}>
           <Ionicons name="time-outline" size={16} color="#666" />
@@ -219,9 +219,9 @@ const EmergencyListScreen = ({ navigation }) => {
           <Text style={styles.detailText} numberOfLines={1}>{item.address}</Text>
         </View>
       </View>
-      
+
       <View style={styles.buttonsContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={styles.detailsButton}
           onPress={() => navigation.navigate('EmergencyDetails', { emergencyId: item.id })}
         >
@@ -235,10 +235,10 @@ const EmergencyListScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
           style={styles.backButton}
           onPress={() => {
             if (navigation.canGoBack()) {
@@ -253,10 +253,10 @@ const EmergencyListScreen = ({ navigation }) => {
         <Text style={styles.headerTitle}>Mis Emergencias</Text>
         <View style={{ width: 24 }} />
       </View>
-      
+
       {/* Tabs */}
       <View style={styles.tabsContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.tab, activeTab === 'active' && styles.activeTab]}
           onPress={() => setActiveTab('active')}
         >
@@ -264,7 +264,7 @@ const EmergencyListScreen = ({ navigation }) => {
             Activas ({emergencies.active.length})
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.tab, activeTab === 'history' && styles.activeTab]}
           onPress={() => setActiveTab('history')}
         >
@@ -273,7 +273,7 @@ const EmergencyListScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* Content */}
       {isLoading ? (
         <View style={styles.emptyContainer}>
@@ -284,7 +284,7 @@ const EmergencyListScreen = ({ navigation }) => {
         <View style={styles.emptyContainer}>
           <Ionicons name="alert-circle" size={80} color="#F44336" style={styles.emptyIcon} />
           <Text style={styles.emptyText}>Error al cargar emergencias</Text>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button"
             style={styles.emptyButton}
             onPress={() => loadEmergencias()}
           >
@@ -304,8 +304,8 @@ const EmergencyListScreen = ({ navigation }) => {
         <View style={styles.emptyContainer}>
           <Ionicons name="medkit" size={80} color="#1E88E5" style={styles.emptyIcon} />
           <Text style={styles.emptyText}>
-            {activeTab === 'active' 
-              ? 'No tienes emergencias activas' 
+            {activeTab === 'active'
+              ? 'No tienes emergencias activas'
               : 'No tienes historial de emergencias'
             }
           </Text>
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingTop: 16,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -335,6 +335,9 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
@@ -382,6 +385,8 @@ const styles = StyleSheet.create({
     borderLeftColor: '#1E88E5',
   },
   emergencyHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -392,14 +397,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateText: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: 'bold',
     color: '#333',
     marginLeft: 5,
   },
   badgesContainer: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
-    gap: 5,
+    gap: 8,
   },
   urgencyBadge: {
     paddingVertical: 4,
@@ -430,12 +437,15 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   detailText: {
+    flexShrink: 1,
     marginLeft: 8,
     fontSize: 14,
     color: '#666',
     flex: 1,
   },
   buttonsContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     borderTopWidth: 1,
@@ -451,6 +461,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   detailsButtonText: {
+    flexShrink: 1,
     color: '#1E88E5',
     fontWeight: '600',
     marginLeft: 5,

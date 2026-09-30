@@ -1,3 +1,5 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import usePetStore from '../../store/usePetStore';
 import { mascotaService } from '../../services/api';
@@ -5,11 +7,9 @@ import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   Image,
   TouchableOpacity,
   Alert,
-  Modal,
   TextInput,
   Switch,
   Platform,
@@ -34,7 +34,7 @@ const PetDetailScreen = ({ route, navigation }) => {
         setLoading(true);
         const { fetchPetById } = usePetStore.getState();
         const result = await fetchPetById(petId);
-        
+
         if (result.success) {
           setPet(result.data);
           // Asegurarnos que todos los campos estén presentes para la edición
@@ -68,7 +68,7 @@ const PetDetailScreen = ({ route, navigation }) => {
   // Función para confirmar eliminación de mascota
   const confirmDeletePet = () => {
     if (!pet) return;
-    
+
     Alert.alert(
       "Eliminar mascota",
       `¿Estás seguro de que deseas eliminar a ${pet.nombre}?`,
@@ -89,11 +89,11 @@ const PetDetailScreen = ({ route, navigation }) => {
   // Función para eliminar mascota
   const deletePet = async () => {
     if (!pet) return;
-    
+
     try {
       const { deletePet } = usePetStore.getState();
       const result = await deletePet(pet._id);
-      
+
       if (result.success) {
         navigation.goBack();
         // Agregar notificación de éxito
@@ -112,7 +112,7 @@ const PetDetailScreen = ({ route, navigation }) => {
   // Función para guardar cambios de mascota
   const savePetChanges = async () => {
     if (!pet || !editedPet) return;
-    
+
     try {
       const { updatePet } = usePetStore.getState();
       const petData = {
@@ -120,7 +120,7 @@ const PetDetailScreen = ({ route, navigation }) => {
         ...(selectedPetImage?.base64 ? { imagen: selectedPetImage.base64 } : {})
       };
       const result = await updatePet(pet._id, petData);
-      
+
       if (result.success) {
         setPet(result.data);
         setEditedPet({
@@ -211,7 +211,7 @@ const PetDetailScreen = ({ route, navigation }) => {
       <View style={[styles.container, styles.centerContent]}>
         <Ionicons name="alert-circle" size={60} color="#F44336" />
         <Text style={styles.errorText}>{error || 'No se encontró la mascota'}</Text>
-        <TouchableOpacity style={styles.backButtonError} onPress={() => navigation.goBack()}>
+        <TouchableOpacity accessibilityRole="button" style={styles.backButtonError} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonErrorText}>Volver</Text>
         </TouchableOpacity>
       </View>
@@ -238,18 +238,18 @@ const PetDetailScreen = ({ route, navigation }) => {
 
           {/* Header flotante (glassmorphism) */}
           <View style={styles.floatingHeader}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassButton}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} onPress={() => navigation.goBack()} style={styles.glassButton}>
               <Ionicons name="arrow-back" size={22} color="#FFF" />
             </TouchableOpacity>
 
             <View style={styles.headerActions}>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
                 onPress={() => setIsEditModalVisible(true)}
                 style={[styles.glassButton, { marginRight: 10 }]}
               >
                 <Ionicons name="pencil" size={18} color="#FFF" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={confirmDeletePet} style={styles.glassDeleteButton}>
+              <TouchableOpacity accessibilityRole="button" hitSlop={8} onPress={confirmDeletePet} style={styles.glassDeleteButton}>
                 <Ionicons name="trash" size={18} color="#FFF" />
               </TouchableOpacity>
             </View>
@@ -354,7 +354,7 @@ const PetDetailScreen = ({ route, navigation }) => {
 
       {/* ─── BOTTOM BAR (sticky) ─── */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.fabButton}
           activeOpacity={0.9}
           onPress={() => setIsEditModalVisible(true)}
@@ -379,7 +379,7 @@ const PetDetailScreen = ({ route, navigation }) => {
             <View style={styles.modalDragIndicator} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Editar Mascota</Text>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}
                 onPress={closeEditModal}
                 style={styles.modalCloseBtn}
               >
@@ -389,7 +389,7 @@ const PetDetailScreen = ({ route, navigation }) => {
 
             <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
               <View style={styles.photoContainer}>
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   style={styles.photoButton}
                   onPress={handleSelectPetImage}
                   activeOpacity={0.85}
@@ -406,7 +406,7 @@ const PetDetailScreen = ({ route, navigation }) => {
                     </View>
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleSelectPetImage} activeOpacity={0.85}>
+                <TouchableOpacity accessibilityRole="button" onPress={handleSelectPetImage} activeOpacity={0.85}>
                   <Text style={styles.changePhotoText}>
                     {editedPet.imagen || selectedPetImage ? 'Cambiar foto de mascota' : 'Agregar foto de mascota'}
                   </Text>
@@ -485,7 +485,7 @@ const PetDetailScreen = ({ route, navigation }) => {
                 />
               </View>
 
-              <TouchableOpacity style={styles.saveButton} onPress={savePetChanges} activeOpacity={0.9}>
+              <TouchableOpacity accessibilityRole="button" style={styles.saveButton} onPress={savePetChanges} activeOpacity={0.9}>
                 <Ionicons name="checkmark-circle" size={20} color="#FFF" style={{ marginRight: 8 }} />
                 <Text style={styles.saveButtonText}>Guardar cambios</Text>
               </TouchableOpacity>
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   scrollContent: {
-    paddingBottom: 100, // espacio para el bottom bar
+    paddingBottom: 24, // espacio para el bottom bar
   },
 
   // ─── LOADING / ERROR (estados originales preservados) ───
@@ -540,8 +540,9 @@ const styles = StyleSheet.create({
 
   // ─── HERO SECTION ───
   heroSection: {
+    aspectRatio: 1,
     width: '100%',
-    height: 400,
+
     position: 'relative',
   },
   heroImage: {
@@ -564,7 +565,7 @@ const styles = StyleSheet.create({
   },
   floatingHeader: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 40,
+    top: 16,
     left: 20,
     right: 20,
     flexDirection: 'row',
@@ -576,8 +577,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   glassButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
@@ -586,8 +589,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
   },
   glassDeleteButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     borderRadius: 22,
     backgroundColor: 'rgba(244,67,54,0.85)',
     justifyContent: 'center',
@@ -628,6 +633,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   petName: {
+    minWidth: 0,
+    flexShrink: 1,
     flex: 1,
     fontSize: 30,
     fontWeight: '900',
@@ -652,6 +659,8 @@ const styles = StyleSheet.create({
 
   // ─── STATS GRID ───
   statsGrid: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 25,
@@ -766,7 +775,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  specialNeedsInfo: { flex: 1, paddingTop: 4 },
+  specialNeedsInfo: {
+    minWidth: 0, flex: 1, paddingTop: 4 },
   specialNeedsText: {
     fontSize: 13,
     color: '#E65100',
@@ -776,14 +786,15 @@ const styles = StyleSheet.create({
 
   // ─── BOTTOM BAR ───
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    flexShrink: 0,
+
+
+
+
     backgroundColor: '#FFF',
     paddingHorizontal: 20,
     paddingTop: 15,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderColor: '#F0F0F0',
     shadowColor: '#000',
@@ -793,11 +804,15 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   fabButton: {
+    flexShrink: 1,
+    minWidth: 0,
+    minHeight: 54,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    height: 54,
+
     borderRadius: 16,
     shadowColor: '#1E88E5',
     shadowOffset: { width: 0, height: 4 },
@@ -806,6 +821,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fabText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 15,
     fontWeight: 'bold',
@@ -846,11 +862,14 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
   },
   modalTitle: {
+    flexShrink: 1,
     fontSize: 22,
     fontWeight: 'bold',
     color: '#1A237E',
   },
   modalCloseBtn: {
+    minWidth: 48,
+    minHeight: 48,
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -859,6 +878,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalScrollView: {
+    flexShrink: 1,
     paddingHorizontal: 25,
   },
   photoContainer: {
@@ -918,7 +938,9 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   textArea: {
-    height: 100,
+    minHeight: 100,
+    paddingVertical: 12,
+
     textAlignVertical: 'top',
   },
   switchGroup: {
@@ -934,10 +956,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   switchLabelWrap: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
   },
   switchLabel: {
+    flexShrink: 1,
     fontSize: 15,
     color: '#333',
     fontWeight: '600',
@@ -959,6 +984,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   saveButtonText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',

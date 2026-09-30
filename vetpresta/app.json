@@ -21,7 +21,8 @@
         "NSLocationWhenInUseUsageDescription": "Esta app necesita acceso a tu ubicación para mostrar veterinarios cercanos.",
         "UIBackgroundModes": [
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

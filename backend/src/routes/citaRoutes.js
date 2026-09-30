@@ -24,7 +24,7 @@ const router = express.Router();
  * Cancela automáticamente las citas en estado "Pendiente" que ya pasaron
  * su fecha y hora programada. Esta función se ejecuta automáticamente
  * antes de retornar citas al cliente/prestador.
- * 
+ *
  * Flujo de estados de una cita:
  * 1. Pendiente: Cliente solicita la cita (inicial)
  * 2. Confirmada: Prestador acepta la cita
@@ -40,37 +40,37 @@ async function autoCancelarCitasVencidas(prestadorId = null) {
       estado: 'Pendiente',
       fecha: { $lt: ahora }
     };
-    
+
     // Si se proporciona prestadorId, filtrar solo sus citas
     if (prestadorId) {
       filtroBase.prestador = prestadorId;
     }
-    
+
     // Buscar citas vencidas
     const citasVencidas = await Cita.find(filtroBase)
       .select("_id notas fecha horaInicio")
       .lean();
-    
+
     if (citasVencidas.length > 0) {
       const citasIds = citasVencidas.map(cita => cita._id);
-      
+
       // Actualizar todas las citas vencidas a "Cancelada"
       await Cita.updateMany(
         { _id: { $in: citasIds } },
-        { 
-          $set: { 
+        {
+          $set: {
             estado: 'Cancelada',
             notas: (citasVencidas[0].notas || '') + ' [Auto-cancelada: La cita venció sin confirmación del prestador]'
-          } 
+          }
         }
       );
-      
+
       console.log(`⏰ Auto-canceladas ${citasVencidas.length} citas vencidas`);
       citasVencidas.forEach(cita => {
         console.log(`   - Cita ${cita._id}: ${new Date(cita.fecha).toLocaleDateString()} ${cita.horaInicio}`);
       });
     }
-    
+
     return citasVencidas.length;
   } catch (error) {
     console.error('�R Error al auto-cancelar citas vencidas:', error);
@@ -237,23 +237,62 @@ async function registrarReservaDisponibilidad({ disponibilidadId, fecha, horaIni
     return;
   }
 
-  const disponibilidad = await Disponibilidad.findById(disponibilidadId);
-  if (!disponibilidad) {
+  const inicioDia = new Date(fecha);
+  inicioDia.setHours(0, 0, 0, 0);
+  const finDia = new Date(inicioDia);
+  finDia.setDate(finDia.getDate() + 1);
+
+  const conflictFreeQuery = {
+    _id: disponibilidadId,
+    reservas: {
+      $not: {
+        $elemMatch: {
+          cita: { $ne: citaId },
+          fecha: { $gte: inicioDia, $lt: finDia },
+          horaInicio: { $lt: horaFin },
+          horaFin: { $gt: horaInicio }
+        }
+      }
+    }
+  };
+
+  const updatedExisting = await Disponibilidad.updateOne(
+    {
+      ...conflictFreeQuery,
+      "reservas.cita": citaId
+    },
+    {
+      $set: {
+        "reservas.$.fecha": fecha,
+        "reservas.$.horaInicio": horaInicio,
+        "reservas.$.horaFin": horaFin
+      }
+    }
+  );
+
+  if (updatedExisting.matchedCount > 0) {
     return;
   }
 
-  disponibilidad.reservas = disponibilidad.reservas.filter((reserva) => {
-    return !(reserva.cita && reserva.cita.toString() === citaId.toString());
-  });
+  const result = await Disponibilidad.updateOne(
+    conflictFreeQuery,
+    {
+      $push: {
+        reservas: {
+          fecha,
+          horaInicio,
+          horaFin,
+          cita: citaId
+        }
+      }
+    }
+  );
 
-  disponibilidad.reservas.push({
-    fecha,
-    horaInicio,
-    horaFin,
-    cita: citaId
-  });
-
-  await disponibilidad.save();
+  if (result.matchedCount === 0) {
+    const error = new Error("El horario seleccionado acaba de ser reservado por otro cliente");
+    error.status = 409;
+    throw error;
+  }
 }
 
 async function validarHorarioCita({ prestadorId, servicioId, fecha, horaInicio, citaExcluirId = null }) {
@@ -518,46 +557,46 @@ async function notificarClienteCambioEstadoCita({ cita, usuario, prestador, serv
 router.post("/verificar-citas-vencidas", protectRoute, async (req, res) => {
   try {
     const { horaLocal } = req.body;
-    
+
     if (!horaLocal) {
       return res.status(400).json({ message: "La hora local es requerida" });
     }
-    
+
     console.log('=== VERIFICANDO CITAS VENCIDAS ===');
     console.log('Hora local recibida:', horaLocal);
-    
+
     // Convertir la hora local a objeto Date
     const fechaHoraActual = new Date(horaLocal);
-    
+
     // Encontrar todas las citas pendientes cuyo inicio real ya quedó atrás
     const citasVencidas = await Cita.find({
       estado: 'Pendiente',
       fecha: { $lt: fechaHoraActual }
     });
-    
+
     console.log(`Se encontraron ${citasVencidas.length} citas vencidas`);
-    
+
     // Actualizar todas las citas vencidas a estado "Cancelada"
     if (citasVencidas.length > 0) {
       const citasIds = citasVencidas.map(cita => cita._id);
-      
+
       await Cita.updateMany(
         { _id: { $in: citasIds } },
         { $set: { estado: 'Cancelada' } }
       );
-      
+
       console.log('Citas actualizadas a estado Cancelada:', citasIds);
     }
-    
-    res.status(200).json({ 
-      message: "Verificación completada", 
-      citasCanceladas: citasVencidas.length 
+
+    res.status(200).json({
+      message: "Verificación completada",
+      citasCanceladas: citasVencidas.length
     });
   } catch (error) {
     console.error('Error al verificar citas vencidas:', error);
-    res.status(500).json({ 
-      message: "Error al verificar citas vencidas", 
-      error: error.message 
+    res.status(500).json({
+      message: "Error al verificar citas vencidas",
+      error: error.message
     });
   }
 });
@@ -574,21 +613,21 @@ router.get("/", protectRoute, async (req, res) => {
       estado: 'Pendiente',
       fecha: { $lt: ahora }
     }).select("_id").lean();
-    
+
     if (citasVencidasUsuario.length > 0) {
       const citasIds = citasVencidasUsuario.map(cita => cita._id);
       await Cita.updateMany(
         { _id: { $in: citasIds } },
-        { 
-          $set: { 
+        {
+          $set: {
             estado: 'Cancelada',
             notas: '[Auto-cancelada: La cita venció sin confirmación del prestador]'
-          } 
+          }
         }
       );
       console.log(`⏰ Cliente ${req.user._id}: ${citasVencidasUsuario.length} citas auto-canceladas por vencimiento`);
     }
-    
+
     const citas = await Cita.find({ usuario: req.user._id })
       .populate("mascota", "nombre tipo raza imagen")
       .populate({
@@ -599,7 +638,7 @@ router.get("/", protectRoute, async (req, res) => {
       .populate("servicio", "nombre icono color")
       .sort({ fecha: 1 })
       .lean();
-    
+
     res.status(200).json(citas);
   } catch (error) {
     console.log(error);
@@ -611,7 +650,7 @@ router.get("/", protectRoute, async (req, res) => {
 router.post("/verificar-disponibilidad", protectRoute, async (req, res) => {
   try {
     const { prestadorId, servicioId, fecha, horaInicio } = req.body;
-    
+
     // 1. Validar entrada
     if (!prestadorId || !servicioId || !fecha || !horaInicio) {
       return res.status(400).json({ message: "Datos incompletos" });
@@ -655,34 +694,34 @@ async function verificarSlotDisponible(disponibilidad, inicio, fin) {
   // Verificar contra horarios regulares
   const dia = inicio.getDay();
   const horarioDia = disponibilidad.horarioEspecifico.horarios.find(h => h.dia === dia);
-  
+
   if (!horarioDia) return false;
 
   // Verificar turno mañana/tarde
   const horaInicio = inicio.getHours() + inicio.getMinutes() / 60;
   const horaFin = fin.getHours() + fin.getMinutes() / 60;
-  
+
   const enManana = horarioDia.manana?.activo &&
                   horaInicio >= parseHora(horarioDia.manana.apertura) &&
                   horaFin <= parseHora(horarioDia.manana.cierre);
-  
+
   const enTarde = horarioDia.tarde?.activo &&
                  horaInicio >= parseHora(horarioDia.tarde.apertura) &&
                  horaFin <= parseHora(horarioDia.tarde.cierre);
-  
+
   if (!enManana && !enTarde) return false;
 
   // Verificar reservas existentes
   const conflicto = disponibilidad.reservas.some(reserva => {
     const rInicio = new Date(reserva.fecha);
     const rFin = new Date(rInicio);
-    
+
     const [rHora, rMinuto] = reserva.horaInicio.split(':').map(Number);
     rInicio.setHours(rHora, rMinuto);
-    
+
     const [rHoraFin, rMinutoFin] = reserva.horaFin.split(':').map(Number);
     rFin.setHours(rHoraFin, rMinutoFin);
-    
+
     return (inicio < rFin && fin > rInicio);
   });
 
@@ -701,7 +740,7 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
     if (!estados.includes(req.params.estado)) {
       return res.status(400).json({ message: "Estado de cita inválido" });
     }
-    
+
     // ⏰ AUTO-CANCELAR CITAS VENCIDAS del usuario antes de retornar
     const ahora = new Date();
 
@@ -710,22 +749,22 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
       estado: 'Pendiente',
       fecha: { $lt: ahora }
     }).select("_id").lean();
-    
+
     if (citasVencidasUsuario.length > 0) {
       const citasIds = citasVencidasUsuario.map(cita => cita._id);
       await Cita.updateMany(
         { _id: { $in: citasIds } },
-        { 
-          $set: { 
+        {
+          $set: {
             estado: 'Cancelada',
             notas: '[Auto-cancelada: La cita venció sin confirmación del prestador]'
-          } 
+          }
         }
       );
       console.log(`⏰ Cliente ${req.user._id}: ${citasVencidasUsuario.length} citas auto-canceladas por vencimiento`);
     }
-    
-    const citas = await Cita.find({ 
+
+    const citas = await Cita.find({
       usuario: req.user._id,
       estado: req.params.estado
     })
@@ -734,7 +773,7 @@ router.get("/estado/:estado", protectRoute, async (req, res) => {
       .populate("servicio", "nombre icono color")
       .sort({ fecha: 1 })
       .lean();
-    
+
     res.status(200).json(citas);
   } catch (error) {
     console.log(error);
@@ -767,9 +806,9 @@ router.get("/prestadores/consulta-general", protectRoute, async (req, res) => {
     res.status(200).json(prestadoresConsultaGeneral);
   } catch (error) {
     console.error('Error al obtener prestadores con consulta general:', error);
-    res.status(500).json({ 
-      message: "Error interno al buscar prestadores", 
-      error: error.message 
+    res.status(500).json({
+      message: "Error interno al buscar prestadores",
+      error: error.message
     });
   }
 });
@@ -812,15 +851,15 @@ router.get("/prestadores/:prestadorId/disponibilidad", protectRoute, async (req,
     // 3. Obtener el servicio si se proporcionó servicioId
     let servicio;
     if (servicioId) {
-      servicio = await Servicio.findOne({ 
-        _id: servicioId, 
-        prestadorId: prestador._id 
+      servicio = await Servicio.findOne({
+        _id: servicioId,
+        prestadorId: prestador._id
       });
-      
+
       if (!servicio) {
         console.log('Servicio no encontrado o no pertenece al prestador');
-        return res.status(404).json({ 
-          message: "Este prestador no ofrece el servicio solicitado" 
+        return res.status(404).json({
+          message: "Este prestador no ofrece el servicio solicitado"
         });
       }
       console.log('Servicio encontrado:', servicio.nombre, 'Duración:', servicio.duracion || 30);
@@ -892,7 +931,7 @@ router.get("/prestadores/:prestadorId/disponibilidad", protectRoute, async (req,
       }
 
       const slotsDisponibles = [];
-      
+
       // Procesar turno mañana
       if (horarioDia.manana?.activo) {
         console.log(`- Día ${diaSemana} (${obtenerNombreDia(diaSemana)}): Turno mañana ${horarioDia.manana.apertura} a ${horarioDia.manana.cierre}`);
@@ -936,9 +975,9 @@ router.get("/prestadores/:prestadorId/disponibilidad", protectRoute, async (req,
     res.status(200).json(disponibilidad);
   } catch (error) {
     console.error('Error en endpoint disponibilidad:', error);
-    res.status(500).json({ 
-      message: "Error al obtener disponibilidad", 
-      error: error.message 
+    res.status(500).json({
+      message: "Error al obtener disponibilidad",
+      error: error.message
     });
   }
 });
@@ -948,34 +987,34 @@ function generarSlotsDisponibles(horaInicio, horaFin, duracionMinutos, fecha, ci
   const slots = [];
   const [inicioHora, inicioMinuto] = horaInicio.split(':').map(Number);
   const [finHora, finMinuto] = horaFin.split(':').map(Number);
-  
+
   let horaActual = inicioHora;
   let minutoActual = inicioMinuto;
   const finEnMinutos = finHora * 60 + finMinuto;
-  
+
   while (horaActual * 60 + minutoActual < finEnMinutos) {
     const horaFinSlot = new Date(fecha);
     horaFinSlot.setHours(horaActual, minutoActual + duracionMinutos, 0, 0);
-    
+
     // Verificar si este slot está ocupado por alguna cita existente (solo Pendiente y Confirmada)
     const slotInicio = new Date(fecha);
     slotInicio.setHours(horaActual, minutoActual, 0, 0);
-    
+
     const estaOcupado = citasExistentes.some(cita => {
       // Verificar que la cita sea del mismo día
       const citaFecha = new Date(cita.fecha);
       const mismaFecha = citaFecha.toDateString() === fecha.toDateString();
-      
+
       if (!mismaFecha) return false;
-      
+
       const citaInicio = new Date(cita.fecha);
       const [citaHora, citaMinuto] = cita.horaInicio.split(':').map(Number);
       citaInicio.setHours(citaHora, citaMinuto, 0, 0);
-      
+
       const citaFin = new Date(cita.fecha);
       const [citaFinHora, citaFinMinuto] = cita.horaFin.split(':').map(Number);
       citaFin.setHours(citaFinHora, citaFinMinuto, 0, 0);
-      
+
       // Verificar si hay conflicto de horarios
       return (
         (slotInicio >= citaInicio && slotInicio < citaFin) ||
@@ -983,17 +1022,17 @@ function generarSlotsDisponibles(horaInicio, horaFin, duracionMinutos, fecha, ci
         (slotInicio <= citaInicio && horaFinSlot >= citaFin)
       );
     });
-    
+
     // Agregar TODOS los slots (disponibles y ocupados)
     const slotStr = `${horaActual.toString().padStart(2, '0')}:${minutoActual.toString().padStart(2, '0')}`;
-    
+
     slots.push({
       id: `slot-${fecha.toISOString()}-${horaActual}-${minutoActual}`, // ID único
       inicio: slotStr,
       fin: horaFinSlot.toTimeString().substring(0, 5),
       disponible: !estaOcupado // true si está libre, false si está ocupado
     });
-    
+
     // Avanzar al siguiente slot
     minutoActual += duracionMinutos;
     if (minutoActual >= 60) {
@@ -1018,16 +1057,16 @@ router.get("/:id", protectRoute, async (req, res) => {
       .populate("prestador", "nombre especialidades imagen rating experiencia ubicacion")
       .populate("servicio", "nombre descripcion icono color precio duracion");
 
-    
+
     if (!cita) {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
-    
+
     // Verificar si el usuario actual es el propietario
     if (cita.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para ver esta cita" });
     }
-    
+
     res.status(200).json(cita);
   } catch (error) {
     console.log(error);
@@ -1040,10 +1079,10 @@ router.get("/:id", protectRoute, async (req, res) => {
 router.post("/", protectRoute, async (req, res) => {
   try {
     const { mascota, prestador, servicio, fecha, horaInicio, motivo, ubicacion, metodoPago } = req.body;
-    
+
     console.log('=== INICIO DE CREACI�N DE CITA ===');
     console.log('Datos recibidos:', { mascota, prestador, servicio, fecha, horaInicio, motivo, ubicacion });
-    
+
     // 1. Validación básica
     if (!mascota || !prestador || !servicio || !fecha || !horaInicio) {
       console.log('Error: Datos incompletos');
@@ -1061,7 +1100,7 @@ router.post("/", protectRoute, async (req, res) => {
     const [hora, minuto] = horaInicio.split(':').map(Number);
     const fechaInicio = new Date(fecha);
     fechaInicio.setHours(hora, minuto, 0, 0);
-    
+
     const fechaFin = new Date(fechaInicio.getTime() + duracion * 60000);
     const horaFin = fechaFin.toTimeString().substring(0, 5);
     console.log('Rango horario calculado:', horaInicio, '-', horaFin);
@@ -1071,7 +1110,7 @@ router.post("/", protectRoute, async (req, res) => {
       prestador: prestador,
       servicio: servicio
     });
-    
+
     // Variable para controlar si usamos horario específico o general
     let usandoHorarioGeneral = false;
     let estaDisponible = false;
@@ -1080,23 +1119,23 @@ router.post("/", protectRoute, async (req, res) => {
     if (!esServicioGratis && metodoPago === "Efectivo") {
       await assertPrestadorCanAcceptCash(prestador);
     }
-    
+
     // 4.1 Si no hay disponibilidad específica o no está activa, usar horarios generales del prestador
     if (!disponibilidad || !disponibilidad.horarioEspecifico || !disponibilidad.horarioEspecifico.activo) {
       console.log('No se encontró disponibilidad específica para el servicio o no está activa');
       console.log('Buscando prestador para usar horario general...');
-      
+
       // Buscar el prestador para usar sus horarios generales
       prestadorObj = await Prestador.findById(prestador);
-      
+
       if (!prestadorObj) {
         console.log('Error: Prestador no encontrado');
-        return res.status(400).json({ 
-          message: "Error creando cita", 
-          error: "Prestador no encontrado" 
+        return res.status(400).json({
+          message: "Error creando cita",
+          error: "Prestador no encontrado"
         });
       }
-      
+
       // Verificar si el prestador tiene horarios generales configurados
       if (!prestadorObj.horarios || prestadorObj.horarios.length === 0) {
         console.log('Error: El prestador no tiene configurado un horario general');
@@ -1105,14 +1144,14 @@ router.post("/", protectRoute, async (req, res) => {
           error: "El prestador no tiene configurado un horario general"
         });
       }
-      
+
       console.log('Usando horario general del prestador con', prestadorObj.horarios.length, 'días configurados');
       usandoHorarioGeneral = true;
-      
+
       // Verificar disponibilidad con los horarios generales
       const diaSemana = fechaInicio.getDay(); // 0=Domingo, 1=Lunes, ...
       const horarioDia = prestadorObj.horarios.find(h => h.dia === diaSemana);
-      
+
       if (!horarioDia) {
         console.log(`Error: El prestador no trabaja los ${obtenerNombreDia(diaSemana)}`);
         return res.status(400).json({
@@ -1120,25 +1159,25 @@ router.post("/", protectRoute, async (req, res) => {
           error: `El prestador no atiende los ${obtenerNombreDia(diaSemana)}`
         });
       }
-      
+
       // Verificar si la hora está dentro del horario de trabajo del prestador
       const horaNum = hora + minuto / 60;
       const horaFinNum = parseFloat(horaFin.split(':')[0]) + parseFloat(horaFin.split(':')[1]) / 60;
-      
+
       // Verificar turno de mañana
       const enManana = horarioDia.manana && horarioDia.manana.activo &&
-                       horaNum >= parseHora(horarioDia.manana.apertura) && 
+                       horaNum >= parseHora(horarioDia.manana.apertura) &&
                        horaFinNum <= parseHora(horarioDia.manana.cierre);
-      
+
       // Verificar turno de tarde
       const enTarde = horarioDia.tarde && horarioDia.tarde.activo &&
-                     horaNum >= parseHora(horarioDia.tarde.apertura) && 
+                     horaNum >= parseHora(horarioDia.tarde.apertura) &&
                      horaFinNum <= parseHora(horarioDia.tarde.cierre);
-      
+
       // La cita es válida si está dentro de alguno de los turnos
       estaDisponible = enManana || enTarde;
       console.log('Verificación con horario general:', estaDisponible ? 'DISPONIBLE' : 'NO DISPONIBLE');
-      
+
       // Si no hay disponibilidad específica, crearla para este servicio usando los horarios generales
       if (!disponibilidad && estaDisponible) {
         console.log('Creando registro de disponibilidad para este servicio basado en horarios generales');
@@ -1190,18 +1229,29 @@ router.post("/", protectRoute, async (req, res) => {
       disponibilidad: disponibilidad._id
     });
 
-    const citaCreada = await nuevaCita.save();
+    let reservaRegistrada = false;
+    try {
+      await registrarReservaDisponibilidad({
+        disponibilidadId: disponibilidad._id,
+        fecha: fechaInicio,
+        horaInicio,
+        horaFin,
+        citaId: nuevaCita._id
+      });
+      reservaRegistrada = true;
+      await nuevaCita.save();
+    } catch (error) {
+      if (reservaRegistrada) {
+        await Disponibilidad.updateOne(
+          { _id: disponibilidad._id },
+          { $pull: { reservas: { cita: nuevaCita._id } } }
+        );
+      }
+      throw error;
+    }
+
+    const citaCreada = nuevaCita;
     console.log('Cita creada con ID:', citaCreada._id);
-
-    // 6. Actualizar disponibilidad con la reserva
-    disponibilidad.reservas.push({
-      fecha: fechaInicio,
-      horaInicio,
-      horaFin,
-      cita: citaCreada._id
-    });
-
-    await disponibilidad.save();
     console.log('Disponibilidad actualizada con la nueva reserva');
 
     // 7. Obtener la cita con los datos poblados antes de devolverla
@@ -1241,34 +1291,36 @@ router.post("/", protectRoute, async (req, res) => {
 router.patch("/:id/estado", protectRoute, async (req, res) => {
   try {
     const { estado } = req.body;
+    if (estado !== 'Cancelada') return res.status(403).json({ message: 'El cliente solo puede cancelar; la aceptación corresponde al prestador' });
     const estados = ["Pendiente", "Confirmada", "Cancelada", "Completada"];
-    
+
     if (!estado || !estados.includes(estado)) {
       return res.status(400).json({ message: "Estado de cita inválido" });
     }
-    
+
     const cita = await Cita.findById(req.params.id);
-    
+
     if (!cita) {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
-    
+
     // Verificar si el usuario actual es el propietario
     if (cita.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para modificar esta cita" });
     }
-    
+
+    if (!['Pendiente', 'Confirmada', 'Cancelada'].includes(cita.estado)) return res.status(409).json({ message: 'La cita ya finalizó' });
     const estadoAnterior = cita.estado;
     cita.estado = estado;
 
     if (estado === "Cancelada" && estadoAnterior !== "Cancelada") {
       await liberarReservaDisponibilidad(cita);
     }
-    
+
     // Si se completa la cita, agregar automáticamente al historial médico de la mascota
     if (estado === "Completada" && estadoAnterior !== "Completada") {
       const mascota = await Mascota.findById(cita.mascota);
-      
+
       if (mascota) {
         mascota.historialMedico.push({
           fecha: cita.fecha,
@@ -1276,19 +1328,19 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
           veterinario: cita.veterinario,
           tipoVisita: "Consulta"
         });
-        
+
         mascota.ultimaVisita = cita.fecha;
         await mascota.save();
       }
     }
-    
+
     await cita.save();
-    
+
     const citaActualizada = await Cita.findById(cita._id)
       .populate("mascota", "nombre tipo raza imagen")
       .populate("prestador", "nombre especialidad imagen")
       .populate("servicio", "nombre icono color");
-    
+
     res.status(200).json(citaActualizada);
   } catch (error) {
     console.log(error);
@@ -1336,6 +1388,7 @@ router.patch("/:id/reprogramar", protectRoute, async (req, res) => {
     }
 
     const estadoAnterior = cita.estado;
+    const disponibilidadAnteriorId = cita.disponibilidad;
     const horarioValidado = await validarHorarioCita({
       prestadorId: cita.prestador._id,
       servicioId: cita.servicio._id,
@@ -1343,8 +1396,6 @@ router.patch("/:id/reprogramar", protectRoute, async (req, res) => {
       horaInicio,
       citaExcluirId: cita._id
     });
-
-    await liberarReservaDisponibilidad(cita);
 
     cita.fecha = horarioValidado.fechaInicio;
     cita.horaInicio = horaInicio;
@@ -1355,7 +1406,6 @@ router.patch("/:id/reprogramar", protectRoute, async (req, res) => {
     cita.disponibilidad = horarioValidado.disponibilidad._id;
     cita.notas = `${cita.notas || ""}${cita.notas ? " " : ""}[Reprogramada por el cliente el ${new Date().toLocaleString("es-AR")}]`;
 
-    await cita.save();
     await registrarReservaDisponibilidad({
       disponibilidadId: horarioValidado.disponibilidad._id,
       fecha: horarioValidado.fechaInicio,
@@ -1363,6 +1413,16 @@ router.patch("/:id/reprogramar", protectRoute, async (req, res) => {
       horaFin: horarioValidado.horaFin,
       citaId: cita._id
     });
+    await cita.save();
+    if (
+      disponibilidadAnteriorId &&
+      disponibilidadAnteriorId.toString() !== horarioValidado.disponibilidad._id.toString()
+    ) {
+      await Disponibilidad.updateOne(
+        { _id: disponibilidadAnteriorId },
+        { $pull: { reservas: { cita: cita._id } } }
+      );
+    }
 
     const citaActualizada = await Cita.findById(cita._id)
       .populate("mascota", "nombre tipo raza imagen")
@@ -1413,21 +1473,21 @@ router.patch("/:id/reprogramar", protectRoute, async (req, res) => {
 router.delete("/:id", protectRoute, async (req, res) => {
   try {
     const cita = await Cita.findById(req.params.id);
-    
+
     if (!cita) {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
-    
+
     // Verificar si el usuario actual es el propietario
     if (cita.usuario.toString() !== req.user._id.toString()) {
       return res.status(401).json({ message: "No autorizado para eliminar esta cita" });
     }
-    
+
     // Solo se pueden eliminar citas pendientes o canceladas
     if (cita.estado !== "Pendiente" && cita.estado !== "Cancelada") {
       return res.status(400).json({ message: "Solo se pueden eliminar citas pendientes o canceladas" });
     }
-    
+
     await liberarReservaDisponibilidad(cita);
     await Cita.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Cita eliminada con éxito" });
@@ -1444,45 +1504,45 @@ router.delete("/:id", protectRoute, async (req, res) => {
 /**
  * Obtener todas las citas para un prestador, filtradas por estado
  * GET /api/citas/prestador/:prestadorId?estado=Pendiente
- * 
+ *
  * IMPORTANTE: Esta ruta auto-cancela las citas vencidas antes de retornar
  */
 router.get("/prestador/:prestadorId", protectRoute, async (req, res) => {
   try {
     const { prestadorId } = req.params;
     const { estado } = req.query;
-    
+
     // Verificar que el prestadorId sea válido
     if (!mongoose.Types.ObjectId.isValid(prestadorId)) {
       return res.status(400).json({ message: "ID de prestador inválido" });
     }
-    
+
     // Verificar que el usuario actual tenga acceso al prestador
     const prestador = await Prestador.findById(prestadorId);
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
     }
-    
+
     // Verificar que el usuario actual sea el propietario del prestador
     if (prestador.usuario.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "No autorizado para ver citas de este prestador" });
     }
-    
+
     // ⏰ AUTO-CANCELAR CITAS VENCIDAS antes de retornar
     // Esto asegura que las citas pendientes que ya pasaron se marquen como canceladas
     const citasCanceladas = await autoCancelarCitasVencidas(prestadorId);
     if (citasCanceladas > 0) {
       console.log(`�x9 Prestador ${prestadorId}: ${citasCanceladas} citas auto-canceladas por vencimiento`);
     }
-    
+
     // Construir filtro de búsqueda
     const filtro = { prestador: prestadorId };
-    
+
     // Filtrar por estado si se proporciona
     if (estado && ["Pendiente", "Confirmada", "Cancelada", "Completada"].includes(estado)) {
       filtro.estado = estado;
     }
-    
+
     // Obtener citas filtradas con populate de los datos relevantes
     const citas = await Cita.find(filtro)
       .populate("mascota", "nombre tipo raza imagen edad")
@@ -1493,7 +1553,7 @@ router.get("/prestador/:prestadorId", protectRoute, async (req, res) => {
         model: "User"
       })
       .sort({ fecha: 1, horaInicio: 1 });
-    
+
     res.status(200).json(citas);
   } catch (error) {
     console.log('Error al obtener citas del prestador:', error);
@@ -1509,54 +1569,54 @@ router.patch("/prestador/:prestadorId/cita/:citaId", protectRoute, async (req, r
   try {
     const { prestadorId, citaId } = req.params;
     const { estado } = req.body;
-    
+
     // Validar estado
     if (!estado || !["Confirmada", "Completada", "Cancelada"].includes(estado)) {
-      return res.status(400).json({ 
-        message: "Estado inválido. Debe ser 'Confirmada', 'Completada' o 'Cancelada'" 
+      return res.status(400).json({
+        message: "Estado inválido. Debe ser 'Confirmada', 'Completada' o 'Cancelada'"
       });
     }
-    
+
     // Validar IDs
     if (!mongoose.Types.ObjectId.isValid(prestadorId) || !mongoose.Types.ObjectId.isValid(citaId)) {
       return res.status(400).json({ message: "IDs inválidos" });
     }
-    
+
     // Verificar que el prestador exista y pertenezca al usuario autenticado
     const prestador = await Prestador.findById(prestadorId);
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
     }
-    
+
     if (prestador.usuario.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "No autorizado para modificar citas de este prestador" });
     }
-    
+
     // Buscar la cita y verificar que pertenezca al prestador
     const cita = await Cita.findById(citaId);
     if (!cita) {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
-    
+
     if (cita.prestador.toString() !== prestadorId) {
       return res.status(403).json({ message: "Esta cita no corresponde al prestador indicado" });
     }
-    
+
     // Verificar transiciones de estado válidas
     if (cita.estado === "Pendiente" && estado === "Completada") {
-      return res.status(400).json({ 
-        message: "No se puede marcar como completada una cita pendiente. Primero debe confirmarla" 
+      return res.status(400).json({
+        message: "No se puede marcar como completada una cita pendiente. Primero debe confirmarla"
       });
     }
-    
+
     if (cita.estado === "Cancelada") {
       return res.status(400).json({ message: "No se puede modificar una cita ya cancelada" });
     }
-    
+
     if (cita.estado === "Completada") {
       return res.status(400).json({ message: "No se puede modificar una cita ya completada" });
     }
-    
+
     // Actualizar estado
     const estadoAnterior = cita.estado;
     cita.estado = estado;
@@ -1564,7 +1624,7 @@ router.patch("/prestador/:prestadorId/cita/:citaId", protectRoute, async (req, r
     if (estado === "Cancelada" && estadoAnterior !== "Cancelada") {
       await liberarReservaDisponibilidad(cita);
     }
-    
+
     // Si se completa la cita, agregar al historial médico de la mascota
     if (estado === "Completada") {
       const pagoSincronizado = await sincronizarPagoCitaCompletada(cita);
@@ -1575,7 +1635,7 @@ router.patch("/prestador/:prestadorId/cita/:citaId", protectRoute, async (req, r
       }
 
       const mascota = await Mascota.findById(cita.mascota);
-      
+
       if (mascota) {
         mascota.historialMedico = mascota.historialMedico || [];
         mascota.historialMedico.push({
@@ -1584,15 +1644,15 @@ router.patch("/prestador/:prestadorId/cita/:citaId", protectRoute, async (req, r
           prestador: cita.prestador,
           tipoVisita: "Consulta"
         });
-        
+
         mascota.ultimaVisita = cita.fecha;
         await mascota.save();
         console.log(`Historial médico actualizado para mascota ${mascota._id}`);
       }
     }
-    
+
     await cita.save();
-    
+
     // Devolver cita actualizada con datos populados
     const citaActualizada = await Cita.findById(citaId)
       .populate("mascota", "nombre tipo raza imagen edad")
@@ -1629,7 +1689,7 @@ router.patch("/prestador/:prestadorId/cita/:citaId", protectRoute, async (req, r
       mensaje: mensajeNotificacion,
       prioridad: estado === "Cancelada" ? "Alta" : "Media"
     });
-    
+
     res.status(200).json(citaActualizada);
   } catch (error) {
     console.log('Error al actualizar estado de cita:', error);
@@ -1646,24 +1706,24 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
   try {
     const { prestadorId, citaId } = req.params;
     const { metodoPago } = req.body; // 'MercadoPago' o 'Efectivo'
-    
+
     console.log('=== REGISTRAR PAGO EN CITA PENDIENTE ===');
     console.log('Prestador ID:', prestadorId);
     console.log('Cita ID:', citaId);
     console.log('Método de pago:', metodoPago);
-    
+
     // Validar que sea solo efectivo
     if (metodoPago !== 'Efectivo') {
-      return res.status(400).json({ 
-        message: "Esta ruta es solo para pagos en efectivo. Para Mercado Pago, use el flujo de creación de preferencia." 
+      return res.status(400).json({
+        message: "Esta ruta es solo para pagos en efectivo. Para Mercado Pago, use el flujo de creación de preferencia."
       });
     }
-    
+
     // Validar IDs
     if (!mongoose.Types.ObjectId.isValid(prestadorId) || !mongoose.Types.ObjectId.isValid(citaId)) {
       return res.status(400).json({ message: "IDs inválidos" });
     }
-    
+
     // Verificar que el prestador exista
     const prestador = await Prestador.findById(prestadorId);
     if (!prestador) {
@@ -1671,37 +1731,37 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
     }
 
     await assertPrestadorCanAcceptCash(prestador._id);
-    
+
     // Buscar la cita y verificar que pertenezca al prestador
     const cita = await Cita.findById(citaId)
       .populate('usuario', 'nombre email')
       .populate('servicio', 'nombre precio');
-    
+
     if (!cita) {
       return res.status(404).json({ message: "Cita no encontrada" });
     }
-    
+
     if (cita.prestador.toString() !== prestadorId) {
       return res.status(403).json({ message: "Esta cita no corresponde al prestador indicado" });
     }
-    
+
     // Verificar que el usuario autenticado sea el cliente que creó la cita
     if (cita.usuario._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "No autorizado para modificar esta cita" });
     }
-    
+
     // Verificar que la cita esté en estado pendiente
     if (cita.estado !== "Pendiente") {
-      return res.status(400).json({ 
-        message: "Solo se puede registrar el pago de citas en estado 'Pendiente'" 
+      return res.status(400).json({
+        message: "Solo se puede registrar el pago de citas en estado 'Pendiente'"
       });
     }
-    
+
     // Registrar método de pago sin aprobar la cita
     cita.metodoPago = 'Efectivo';
-    
+
     await cita.save();
-    
+
     // Devolver cita actualizada
     const citaActualizada = await Cita.findById(citaId)
       .populate("mascota", "nombre tipo raza imagen edad")
@@ -1711,19 +1771,19 @@ router.patch("/prestador/:prestadorId/cita/:citaId/confirmar-pago", protectRoute
         select: "username apellido email telefono profilePicture deviceToken",
         model: "User"
       });
-    
+
     console.log('�S& Método de pago en efectivo registrado para cita pendiente');
 
     res.status(200).json({
       cita: citaActualizada,
       message: 'Método de pago registrado. La cita continúa pendiente hasta la aprobación del prestador.'
     });
-    
+
   } catch (error) {
     console.error('�R Error al confirmar cita con pago:', error);
-    res.status(500).json({ 
-      message: "Error al confirmar cita con método de pago", 
-      error: error.message 
+    res.status(500).json({
+      message: "Error al confirmar cita con método de pago",
+      error: error.message
     });
   }
 });
@@ -1736,45 +1796,45 @@ router.get("/prestador/:prestadorId/resumen", protectRoute, async (req, res) => 
   try {
     const { prestadorId } = req.params;
     console.log("Prestador ID:", prestadorId);
-    
+
     // Verificar que el prestadorId sea válido
     if (!mongoose.Types.ObjectId.isValid(prestadorId)) {
       return res.status(400).json({ message: "ID de prestador inválido" });
     }
-    
+
     // Verificar que el usuario actual tenga acceso al prestador
     const prestador = await Prestador.findById(prestadorId);
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
     }
-    
+
     // Verificar que el usuario actual sea el propietario del prestador
     if (prestador.usuario.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "No autorizado para ver citas de este prestador" });
     }
-    
+
     // Fecha actual (sin hora)
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    
+
     const manana = new Date(hoy);
     manana.setDate(hoy.getDate() + 1);
-    
+
     const proximaSemana = new Date(hoy);
     proximaSemana.setDate(hoy.getDate() + 7);
-    
+
     // Citas pendientes
-    const citasPendientes = await Cita.countDocuments({ 
+    const citasPendientes = await Cita.countDocuments({
       prestador: prestadorId,
       estado: "Pendiente"
     });
-    
+
     // Citas confirmadas
-    const citasConfirmadas = await Cita.countDocuments({ 
+    const citasConfirmadas = await Cita.countDocuments({
       prestador: prestadorId,
       estado: "Confirmada"
     });
-    
+
     // Citas para hoy
     const citasHoy = await Cita.countDocuments({
       prestador: prestadorId,
@@ -1784,7 +1844,7 @@ router.get("/prestador/:prestadorId/resumen", protectRoute, async (req, res) => 
       },
       estado: { $in: ["Pendiente", "Confirmada"] }
     });
-    
+
     // Citas para esta semana
     const citasSemana = await Cita.countDocuments({
       prestador: prestadorId,
@@ -1794,11 +1854,11 @@ router.get("/prestador/:prestadorId/resumen", protectRoute, async (req, res) => 
       },
       estado: { $in: ["Pendiente", "Confirmada"] }
     });
-    
+
     // Citas completadas este mes
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-    
+
     const citasCompletadasMes = await Cita.countDocuments({
       prestador: prestadorId,
       estado: "Completada",
@@ -1807,7 +1867,7 @@ router.get("/prestador/:prestadorId/resumen", protectRoute, async (req, res) => 
         $lte: finMes
       }
     });
-    
+
     // Próximas 3 citas
     const proximasCitas = await Cita.find({
       prestador: prestadorId,
@@ -1823,7 +1883,7 @@ router.get("/prestador/:prestadorId/resumen", protectRoute, async (req, res) => 
       model: "User"
     })
     .populate("servicio", "nombre precio");
-    
+
     res.status(200).json({
       pendientes: citasPendientes,
       confirmadas: citasConfirmadas,
@@ -1832,7 +1892,7 @@ router.get("/prestador/:prestadorId/resumen", protectRoute, async (req, res) => 
       completadasMes: citasCompletadasMes,
       proximasCitas
     });
-    
+
   } catch (error) {
     console.log('Error al obtener resumen de citas:', error);
     res.status(500).json({ message: "Error al obtener resumen de citas", error: error.message });
@@ -1843,36 +1903,36 @@ router.get("/prestador/:prestadorId/resumen", protectRoute, async (req, res) => 
 router.get("/horarios-disponibles/:veterinarioId/:fecha", async (req, res) => {
   try {
     const { veterinarioId, fecha } = req.params;
-    
+
     // Verificar que el veterinario exista
     const veterinario = await Veterinario.findById(veterinarioId);
     if (!veterinario) {
       return res.status(404).json({ message: "Veterinario no encontrado" });
     }
-    
+
     // Convertir la fecha a objeto Date
     const fechaConsulta = new Date(fecha);
     const diaSemana = fechaConsulta.getDay(); // 0: Domingo, 1: Lunes, etc.
-    
+
     // Mapear el día de la semana a su nombre en español
     const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const nombreDia = diasSemana[diaSemana];
-    
+
     // Verificar si el veterinario trabaja ese día
     const horarioDia = veterinario.horarios.find(h => h.dia === nombreDia && h.disponible);
     if (!horarioDia) {
       return res.status(400).json({ message: "El veterinario no atiende este día" });
     }
-    
+
     // Obtener las horas de inicio y fin del horario del veterinario
     const [horaInicioStr, minInicioStr] = horarioDia.horaInicio.split(':');
     const [horaFinStr, minFinStr] = horarioDia.horaFin.split(':');
-    
+
     const horaInicio = parseInt(horaInicioStr);
     const minInicio = parseInt(minInicioStr || 0);
     const horaFin = parseInt(horaFinStr);
     const minFin = parseInt(minFinStr || 0);
-    
+
     // Generar bloques de 30 minutos
     const bloquesDisponibles = [];
     for (let hora = horaInicio; hora < horaFin; hora++) {
@@ -1881,12 +1941,12 @@ router.get("/horarios-disponibles/:veterinarioId/:fecha", async (req, res) => {
         if (hora === horaInicio && min < minInicio) continue;
         // Si es la hora de fin, verificar los minutos
         if (hora === horaFin && min >= minFin) continue;
-        
+
         const horaFormateada = `${hora.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
         bloquesDisponibles.push(horaFormateada);
       }
     }
-    
+
     // Obtener citas existentes para ese día y veterinario
     const citasExistentes = await Cita.find({
       veterinario: veterinarioId,
@@ -1896,17 +1956,17 @@ router.get("/horarios-disponibles/:veterinarioId/:fecha", async (req, res) => {
       },
       estado: { $in: ["Pendiente", "Confirmada"] }
     }).select("horaInicio horaFin");
-    
+
     // Filtrar bloques que ya están ocupados
     const bloquesOcupados = citasExistentes.flatMap(cita => {
       const [horaInicioStr, minInicioStr] = cita.horaInicio.split(':');
       const [horaFinStr, minFinStr] = cita.horaFin.split(':');
-      
+
       const horaInicioCita = parseInt(horaInicioStr);
       const minInicioCita = parseInt(minInicioStr || 0);
       const horaFinCita = parseInt(horaFinStr);
       const minFinCita = parseInt(minFinStr || 0);
-      
+
       const bloques = [];
       for (let hora = horaInicioCita; hora <= horaFinCita; hora++) {
         for (let min = 0; min < 60; min += 30) {
@@ -1914,16 +1974,16 @@ router.get("/horarios-disponibles/:veterinarioId/:fecha", async (req, res) => {
           if (hora === horaInicioCita && min < minInicioCita) continue;
           // Si es la hora de fin, verificar los minutos
           if (hora === horaFinCita && min >= minFinCita) continue;
-          
+
           const horaFormateada = `${hora.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
           bloques.push(horaFormateada);
         }
       }
       return bloques;
     });
-    
+
     const horariosDisponibles = bloquesDisponibles.filter(bloque => !bloquesOcupados.includes(bloque));
-    
+
     res.status(200).json(horariosDisponibles);
   } catch (error) {
     console.log(error);
@@ -1932,4 +1992,3 @@ router.get("/horarios-disponibles/:veterinarioId/:fecha", async (req, res) => {
 });
 
 export default router;
-

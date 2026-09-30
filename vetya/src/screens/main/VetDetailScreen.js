@@ -1,19 +1,17 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Image,
-  Modal,
   TextInput,
   Alert,
   Platform,
   KeyboardAvoidingView,
-  ActivityIndicator,
-  Dimensions
-} from 'react-native';
+  ActivityIndicator} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import useValoracionesStore from '../../store/useValoracionesStore';
@@ -59,14 +57,14 @@ const VetDetailScreen = ({ route, navigation }) => {
   // IDs del prestador
   const prestadorId = vet._id || vet.id;
   const matriculaRef = useRef(`MP-${Math.floor(10000 + Math.random() * 90000)}`);
-  
+
   // Estado desde Zustand stores
   const {
-    valoracionesPrestador, 
+    valoracionesPrestador,
     misValoraciones,
-    estadisticasPrestador, 
+    estadisticasPrestador,
     puedeValorar,
-    isLoading, 
+    isLoading,
     error,
     fetchValoracionesByPrestador,
     fetchEstadisticasPrestador,
@@ -75,13 +73,13 @@ const VetDetailScreen = ({ route, navigation }) => {
     crearValoracion,
     clearErrors
   } = useValoracionesStore();
-  
+
   const {
     pastAppointments,
     fetchUserAppointments,
     isLoading: isLoadingCitas
   } = useCitaStore();
-  
+
   // Estado para el conteo de pacientes atendidos
   const {
     totalPacientes,
@@ -89,18 +87,18 @@ const VetDetailScreen = ({ route, navigation }) => {
     isLoading: isLoadingPacientes,
     fetchTotalPacientes
   } = useCountPacientesStore();
-  
+
   // Comprobar elegibilidad desde las citas completadas en el frontend
   const localEligibilityCheck = useMemo(() => {
     if (!prestadorId || !pastAppointments || pastAppointments.length === 0) return false;
-    
+
     // Buscar si hay alguna cita completada con este prestador
     return pastAppointments.some(cita => {
       const citaPrestadorId = cita.prestador?._id || cita.prestador;
       return citaPrestadorId === prestadorId && cita.estado === 'Completada';
     });
   }, [prestadorId, pastAppointments]);
-  
+
   // Combinar elegibilidad local y del backend
   const alreadyRatedThisPrestador = useMemo(() => {
     if (!prestadorId || !Array.isArray(misValoraciones) || misValoraciones.length === 0) {
@@ -114,7 +112,7 @@ const VetDetailScreen = ({ route, navigation }) => {
   }, [prestadorId, misValoraciones]);
 
   const canRate = (puedeValorar || localEligibilityCheck) && !alreadyRatedThisPrestador;
-  
+
   // Cargar valoraciones, estadísticas, citas y total de pacientes al montar
   useEffect(() => {
     const loadData = async () => {
@@ -129,9 +127,9 @@ const VetDetailScreen = ({ route, navigation }) => {
         ]);
       }
     };
-    
+
     loadData();
-    
+
     // Limpiar errores y estado al desmontar
     return () => clearErrors();
   }, [prestadorId]);
@@ -148,12 +146,12 @@ const VetDetailScreen = ({ route, navigation }) => {
       );
       return;
     }
-    
+
     if (userRating === 0) {
       Alert.alert("Valoración requerida", "Por favor selecciona un número de estrellas.");
       return;
     }
-    
+
     // Preparar los datos de valoración
     const valoracionData = {
       prestador: prestadorId,
@@ -161,14 +159,14 @@ const VetDetailScreen = ({ route, navigation }) => {
       comentario: userComment || '',
       tipoServicio: 'Cita' // Por defecto, podría cambiarse según la interacción real
     };
-    
+
     console.log('DEBUG - Frontend - Enviando valoración:', {
       prestador: prestadorId,
       calificacion: userRating,
       comentario: userComment || '',
       tipoServicio: 'Cita'
     });
-    
+
     // Crear una valoración temporal para actualizar optimistamente la UI
     const tempValoracion = {
       _id: 'temp_' + Date.now(),
@@ -178,7 +176,7 @@ const VetDetailScreen = ({ route, navigation }) => {
       createdAt: new Date().toISOString(),
       prestador: prestadorId
     };
-    
+
     // Actualizar optimistamente
     const updatedRatings = [tempValoracion, ...valoracionesPrestador];
     // Actualizar estadísticas temporalmente
@@ -190,31 +188,31 @@ const VetDetailScreen = ({ route, navigation }) => {
       (sum, [rating, count]) => sum + (Number(rating) * count), 0
     );
     tempStats.promedio = totalStars / tempStats.total;
-    
+
     // Actualizar UI inmediatamente
     useValoracionesStore.setState({
       valoracionesPrestador: updatedRatings,
       estadisticasPrestador: tempStats,
       puedeValorar: false // Ya no podrá valorar después de enviar
     });
-    
+
     // Cerrar modal y limpiar
     setShowRatingModal(false);
     setUserRating(0);
     setUserComment('');
-    
+
     // Enviar la valoración al servidor
     console.log('DEBUG - Frontend - Llamando a crearValoracion con:', valoracionData);
     const result = await crearValoracion(valoracionData);
     console.log('DEBUG - Frontend - Respuesta de crearValoracion:', result);
-    
+
     if (!result.success) {
       console.log('DEBUG - Frontend - Error al crear valoración:', result.error);
       // Si falla, revertir los cambios optimistas
       await fetchValoracionesByPrestador(prestadorId);
       await fetchEstadisticasPrestador(prestadorId);
       await checkPuedeValorar(prestadorId);
-      
+
       Alert.alert(
         "Error",
         result.error || "No se pudo enviar la valoración. Intenta de nuevo más tarde."
@@ -270,7 +268,7 @@ const VetDetailScreen = ({ route, navigation }) => {
   const RatingSelector = () => (
     <View style={styles.ratingSelector}>
       {[1, 2, 3, 4, 5].map((star) => (
-        <TouchableOpacity key={star} onPress={() => setUserRating(star)}>
+        <TouchableOpacity accessibilityRole="button" key={star} onPress={() => setUserRating(star)}>
           <Text>
             <Ionicons
               name={userRating >= star ? "star" : "star-outline"}
@@ -289,7 +287,7 @@ const VetDetailScreen = ({ route, navigation }) => {
   const vetName = ensureString(vet.nombre, 'Sin nombre');
   const vetTipo = ensureString(vet.tipo, 'Prestador'); // Tipo del prestador (Veterinario, Peluquero, etc)
   const vetSpecialty = ensureString(vet.especialidad, 'General');
-  const vetSpecialties = Array.isArray(vet.especialidades) ? vet.especialidades : [vetSpecialty]; 
+  const vetSpecialties = Array.isArray(vet.especialidades) ? vet.especialidades : [vetSpecialty];
   const vetBio = ensureString(vet.descripcion, 'Sin descripción disponible.');
   const vetAddress = ensureString(vet.ubicacion, 'Sin ubicación especificada');
   const vetPhone = ensureString(vet.telefono, 'No disponible');
@@ -334,14 +332,14 @@ const VetDetailScreen = ({ route, navigation }) => {
       <View style={styles.heroSection}>
         {/* Controles Superiores */}
         <View style={styles.headerTopBar}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassButton} activeOpacity={0.8}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} onPress={() => navigation.goBack()} style={styles.glassButton} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 12 }}>
-            <TouchableOpacity style={styles.glassButton} activeOpacity={0.8}>
+            <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.glassButton} activeOpacity={0.8}>
               <Ionicons name="share-outline" size={20} color="#FFF" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.glassButton} activeOpacity={0.8}>
+            <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.glassButton} activeOpacity={0.8}>
               <Ionicons name="heart-outline" size={20} color="#FFF" />
             </TouchableOpacity>
           </View>
@@ -413,7 +411,7 @@ const VetDetailScreen = ({ route, navigation }) => {
                 <Text style={styles.locationTitle}>{ensureString(vet.clinica || vet.nombreClinica, vetTipo)}</Text>
                 <Text style={styles.locationAddress}>{vetAddressDisplay}</Text>
               </View>
-              <TouchableOpacity style={styles.navigateBtn} activeOpacity={0.8}>
+              <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.navigateBtn} activeOpacity={0.8}>
                 <Ionicons name="navigate" size={16} color="#1E88E5" />
               </TouchableOpacity>
             </View>
@@ -437,7 +435,7 @@ const VetDetailScreen = ({ route, navigation }) => {
           <View style={styles.reviewsHeader}>
             <Text style={styles.sectionTitle}>Reseñas ({vetReviews})</Text>
             {canRate && (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 style={styles.rateButton}
                 onPress={() => setShowRatingModal(true)}
                 activeOpacity={0.8}
@@ -488,7 +486,7 @@ const VetDetailScreen = ({ route, navigation }) => {
                 No hay reseñas disponibles para este prestador.
               </Text>
               {canRate && (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   style={styles.beFirstButton}
                   onPress={() => setShowRatingModal(true)}
                 >
@@ -509,7 +507,7 @@ const VetDetailScreen = ({ route, navigation }) => {
       {/* BOTÓN FLOTANTE INFERIOR (Sticky Bottom Bar)    */}
       {/* ============================================== */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.fabButton}
           activeOpacity={0.9}
           onPress={scheduleAppointment}
@@ -532,10 +530,10 @@ const VetDetailScreen = ({ route, navigation }) => {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
+          <ScrollView style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Escribir Reseña</Text>
-              <TouchableOpacity onPress={() => setShowRatingModal(false)}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={() => setShowRatingModal(false)}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
@@ -551,10 +549,10 @@ const VetDetailScreen = ({ route, navigation }) => {
               onChangeText={setUserComment}
               placeholderTextColor="#999"
             />
-            <TouchableOpacity style={styles.submitButton} onPress={submitRating}>
+            <TouchableOpacity accessibilityRole="button" style={styles.submitButton} onPress={submitRating}>
               <Text style={styles.submitButtonText}>Enviar Reseña</Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
     </View>
@@ -570,7 +568,7 @@ const styles = StyleSheet.create({
   // ─── HERO SECTION ───
   heroSection: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 70,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -591,8 +589,10 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   glassButton: {
+    minHeight: 42,
+    paddingVertical: 12,
     width: 42,
-    height: 42,
+
     borderRadius: 21,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
@@ -729,6 +729,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statValue: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: '900',
     color: '#333',
@@ -813,6 +814,7 @@ const styles = StyleSheet.create({
 
   // ─── SECCIONES TEXTO ───
   sectionTitle: {
+    flexShrink: 1,
     fontSize: 17,
     fontWeight: 'bold',
     color: '#1565C0',
@@ -835,6 +837,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   rateButtonText: {
+    flexShrink: 1,
     fontSize: 12,
     fontWeight: 'bold',
     color: '#FF9800',
@@ -916,14 +919,15 @@ const styles = StyleSheet.create({
 
   // ─── BOTTOM BAR (Cita) ───
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    flexShrink: 0,
+
+
+
+
     backgroundColor: '#FFF',
     paddingHorizontal: 20,
     paddingTop: 15,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderColor: '#F0F0F0',
     shadowColor: '#000',
@@ -934,11 +938,13 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   fabButton: {
+    minHeight: 56,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    height: 56,
+
     borderRadius: 16,
     shadowColor: '#1E88E5',
     shadowOffset: { width: 0, height: 4 },
@@ -947,6 +953,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fabText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
@@ -959,6 +966,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
+    maxHeight: '90%',
     backgroundColor: '#FFF',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
@@ -972,6 +980,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: '#1565C0',
@@ -1005,14 +1014,16 @@ const styles = StyleSheet.create({
     padding: 15,
     fontSize: 15,
     color: '#333',
-    minHeight: 120,
+    minHeight: 100,
     textAlignVertical: 'top',
     marginBottom: 25,
   },
   submitButton: {
+    minHeight: 56,
+    paddingVertical: 12,
     backgroundColor: '#4CAF50',
     borderRadius: 16,
-    height: 56,
+
     justifyContent: 'center',
     alignItems: 'center',
   },

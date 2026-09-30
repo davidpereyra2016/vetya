@@ -1,9 +1,9 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Image,
   ActivityIndicator,
@@ -163,7 +163,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
     return (
       <View style={styles.prestadorCard}>
         {/* Área tappable que lleva al detalle del prestador */}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           activeOpacity={0.9}
           onPress={() => navigation.navigate('VetDetail', { vet: item })}
         >
@@ -228,7 +228,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
         </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.agendarButton}
           onPress={() => navigation.navigate('AgendarCita', { selectedVet: item })}
           activeOpacity={0.9}
@@ -275,7 +275,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.headerBackButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={styles.headerBackButton} onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Directorio de Prestadores</Text>
@@ -291,7 +291,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
         contentContainerStyle={styles.tiposContainer}
       >
         {tiposPrestadores.map((tipo) => (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             key={tipo}
             style={[
               styles.tipoButton,
@@ -337,7 +337,7 @@ const PrestaDetailsScreen = ({ navigation }) => {
           <Text style={styles.emptyText}>
             No hay prestadores{selectedTipo !== 'Todos' ? ` de tipo ${selectedTipo}` : ''} disponibles
           </Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={styles.reloadButton}
             onPress={loadPrestadores}
           >
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   // ─── HEADER PREMIUM ───
   header: {
     backgroundColor: '#1E88E5',
-    paddingTop: Platform.OS === 'ios' ? 60 : 35,
+    paddingTop: 16,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 35,
@@ -377,8 +377,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerBackButton: {
+    minHeight: 44,
+    paddingVertical: 12,
     width: 44,
-    height: 44,
+
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 22,
     justifyContent: 'center',
@@ -388,6 +390,8 @@ const styles = StyleSheet.create({
     width: 44,
   },
   headerTitle: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 22,
     fontWeight: '800',
@@ -398,7 +402,8 @@ const styles = StyleSheet.create({
 
   // ─── FILTROS DE TIPO ───
   tiposScrollView: {
-    maxHeight: 60,
+    flexGrow: 0,
+
     backgroundColor: '#FFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
@@ -509,10 +514,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   tipoContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     marginBottom: 4,
   },
   tipoBadge: {
+    flexShrink: 1,
     fontSize: 11,
     color: '#FFF',
     backgroundColor: '#1E88E5',
@@ -528,6 +536,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   ratingContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -536,6 +546,7 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   ratingText: {
+    flexShrink: 1,
     marginLeft: 6,
     fontSize: 12,
     color: '#888',
@@ -544,6 +555,8 @@ const styles = StyleSheet.create({
 
   // ─── STATS GRID MINI ───
   cardStatsGrid: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 14,
@@ -564,6 +577,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardStatValue: {
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: '900',
     color: '#333',
@@ -577,9 +591,11 @@ const styles = StyleSheet.create({
 
   // ─── BOTÓN AGENDAR ───
   agendarButton: {
+    minHeight: 46,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 14,
-    height: 46,
+
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -590,6 +606,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   agendarButtonText: {
+    flexShrink: 1,
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
@@ -618,6 +635,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reloadButtonText: {
+    flexShrink: 1,
     color: '#fff',
     fontWeight: 'bold',
     marginLeft: 8,

@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
@@ -10,7 +11,6 @@ import {
   Alert,
   ActivityIndicator
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
@@ -50,7 +50,7 @@ const EmailVerificationScreen = ({ navigation, route }) => {
   const handleCodeChange = (text, index) => {
     clearError();
     const newCode = [...code];
-    
+
     // Si se pega un código completo
     if (text.length > 1) {
       const digits = text.replace(/[^0-9]/g, '').slice(0, 6);
@@ -91,7 +91,7 @@ const EmailVerificationScreen = ({ navigation, route }) => {
     }
 
     const result = await verifyEmail(email, fullCode);
-    
+
     if (!result.success) {
       Alert.alert('Error', result.error || 'Código incorrecto');
     }
@@ -100,11 +100,11 @@ const EmailVerificationScreen = ({ navigation, route }) => {
 
   const handleResend = async () => {
     if (countdown > 0) return;
-    
+
     setIsResending(true);
     const result = await resendVerification(email);
     setIsResending(false);
-    
+
     if (result.success) {
       setCountdown(60);
       const message = result.data?.message || 'Se ha procesado el reenvío del código';
@@ -118,14 +118,14 @@ const EmailVerificationScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.content}>
-          <TouchableOpacity
+        <ScrollView contentContainerStyle={styles.content}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
@@ -179,7 +179,7 @@ const EmailVerificationScreen = ({ navigation, route }) => {
             <Text style={styles.errorText}>{error}</Text>
           ) : null}
 
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={[styles.verifyButton, isLoading && styles.verifyButtonDisabled]}
             onPress={handleVerify}
             disabled={isLoading}
@@ -196,7 +196,7 @@ const EmailVerificationScreen = ({ navigation, route }) => {
             {isResending ? (
               <ActivityIndicator size="small" color="#1E88E5" />
             ) : (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 onPress={handleResend}
                 disabled={countdown > 0}
               >
@@ -213,9 +213,9 @@ const EmailVerificationScreen = ({ navigation, route }) => {
           <Text style={styles.infoText}>
             El código expira en 15 minutos
           </Text>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -228,14 +228,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
+
     padding: 20,
     justifyContent: 'center',
   },
   backButton: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
+    alignSelf: 'flex-start',
+    minWidth: 48,
+    minHeight: 48,
+    justifyContent: 'center',
+
+
+
     zIndex: 1,
   },
   iconContainer: {
@@ -288,6 +293,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   warningText: {
+    flexShrink: 1,
     flex: 1,
     color: '#8A5A00',
     fontSize: 13,
@@ -299,8 +305,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   codeInput: {
-    width: 48,
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 48,
+
+
     borderWidth: 2,
     borderColor: '#E0E0E0',
     borderRadius: 12,
@@ -323,9 +334,11 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   verifyButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 12,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -339,12 +352,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   resendContainer: {
+    flexWrap: 'wrap',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   resendText: {
+    flexShrink: 1,
     color: '#666',
     fontSize: 14,
   },

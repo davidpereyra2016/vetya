@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useCallback } from 'react';
 import {
   StyleSheet,
@@ -8,10 +9,8 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
-  ScrollView,
   Image
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -61,7 +60,7 @@ const AppointmentStatus = ({ estado }) => {
 // --- Componente para renderizar cada item de la lista de citas ---
 const AppointmentItem = ({ item, onConfirm, onComplete, onReject }) => {
   const { mascota, usuario, fecha, horaInicio, servicio, estado } = item;
-  
+
   // URL de imagen por defecto
   const petImage = mascota?.imagen || 'https://placehold.co/100x100/E3F2FD/333?text=Mascota';
 
@@ -121,22 +120,22 @@ const AppointmentItem = ({ item, onConfirm, onComplete, onReject }) => {
            </View>
         </View>
       </View>
-      
+
       {/* Botones de Acción */}
       {(estado === 'Pendiente' || estado === 'Confirmada') && (
         <View style={styles.actionButtonsContainer}>
             {estado === 'Pendiente' && (
                 <>
-                    <TouchableOpacity style={[styles.actionButton, styles.rejectButton]} onPress={() => onReject(item)}>
+                    <TouchableOpacity accessibilityRole="button" style={[styles.actionButton, styles.rejectButton]} onPress={() => onReject(item)}>
                         <Text style={styles.rejectButtonText}>Rechazar</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionButton, styles.confirmButton]} onPress={() => onConfirm(item)}>
+                    <TouchableOpacity accessibilityRole="button" style={[styles.actionButton, styles.confirmButton]} onPress={() => onConfirm(item)}>
                         <Text style={styles.confirmButtonText}>Confirmar</Text>
                     </TouchableOpacity>
                 </>
             )}
             {estado === 'Confirmada' && (
-                <TouchableOpacity style={[styles.actionButton, styles.completeButton]} onPress={() => onComplete(item)}>
+                <TouchableOpacity accessibilityRole="button" style={[styles.actionButton, styles.completeButton]} onPress={() => onComplete(item)}>
                     <Text style={styles.completeButtonText}>Marcar como Completada</Text>
                 </TouchableOpacity>
             )}
@@ -163,7 +162,7 @@ const AppointmentsScreen = () => {
     ]);
   }, [provider, fetchProviderCitas]);
 
-  useFocusEffect(useCallback(() => { 
+  useFocusEffect(useCallback(() => {
     loadAppointments();
   }, [loadAppointments]));
 
@@ -240,12 +239,12 @@ const AppointmentsScreen = () => {
           message: 'Las citas canceladas aparecerán aquí'
         }
       };
-      
+
       const emptyState = emptyMessages[activeTab] || emptyMessages.pending;
-      
+
       return (
-        <ScrollView 
-          contentContainerStyle={styles.emptyContainer} 
+        <ScrollView
+          contentContainerStyle={styles.emptyContainer}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
         >
           <View style={styles.emptyIconContainer}>
@@ -274,9 +273,9 @@ const AppointmentsScreen = () => {
       />
     );
   };
-  
+
   const Tab = ({name, label, count, activeTab, setActiveTab}) => (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
         style={[styles.tab, activeTab === name && styles.activeTab]}
         onPress={() => setActiveTab(name)}>
         <Text style={[styles.tabText, activeTab === name && styles.activeTabText]}>{`${label} (${count})`}</Text>
@@ -284,9 +283,9 @@ const AppointmentsScreen = () => {
   );
 
   return (
-    <SafeAreaView style={globalStyles.container}>
+    <View style={globalStyles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header con diseño moderno */}
       <View style={globalStyles.header}>
         <View style={globalStyles.headerContent}>
@@ -298,8 +297,8 @@ const AppointmentsScreen = () => {
       </View>
 
       {/* Tabs con scroll horizontal */}
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.tabScrollContainer}
         contentContainerStyle={styles.tabContainer}
@@ -311,7 +310,7 @@ const AppointmentsScreen = () => {
       </ScrollView>
 
       {renderContent()}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -325,7 +324,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   // Tab Styles
   tabScrollContainer: {
     backgroundColor: COLORS.white,
@@ -333,14 +332,14 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     maxHeight: 50,
   },
-  tabContainer: { 
+  tabContainer: {
     flexDirection: 'row',
     paddingVertical: 8,
     paddingHorizontal: SIZES.medium,
     gap: 8,
     alignItems: 'center',
   },
-  tab: { 
+  tab: {
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 16,
@@ -349,28 +348,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 32,
   },
-  activeTab: { 
+  activeTab: {
     backgroundColor: COLORS.primary,
     ...SHADOWS.small,
   },
-  tabText: { 
-    fontSize: 13, 
-    fontWeight: '600', 
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: COLORS.grey,
   },
-  activeTabText: { 
+  activeTabText: {
     color: COLORS.white,
   },
   // Loading & Empty States
-  loader: { 
-    flex: 1, 
-    justifyContent: 'center', 
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: SIZES.xlarge,
   },
-  emptyContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     padding: SIZES.large,
   },
@@ -390,15 +389,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: SIZES.base,
   },
-  emptyText: { 
-    fontSize: 14, 
+  emptyText: {
+    fontSize: 14,
     color: COLORS.grey,
     textAlign: 'center',
   },
   // Appointment Card
-  appointmentCard: { 
-    backgroundColor: COLORS.white, 
-    borderRadius: 12, 
+  appointmentCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
     padding: SIZES.medium,
     marginHorizontal: SIZES.medium,
     marginBottom: SIZES.medium,
@@ -406,15 +405,16 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: COLORS.primary,
   },
-  cardHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SIZES.small,
   },
-  serviceName: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
+  serviceName: {
+    flexShrink: 1,
+    fontSize: 18,
+    fontWeight: 'bold',
     color: COLORS.dark,
     flex: 1,
   },
@@ -443,6 +443,7 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.base,
   },
   dateTimeText: {
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.dark,
     marginLeft: SIZES.base,
@@ -509,9 +510,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary + '30',
   },
   // Action Buttons
-  actionButtonsContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: SIZES.medium,
     paddingTop: SIZES.medium,
     borderTopWidth: 1,
@@ -519,6 +520,7 @@ const styles = StyleSheet.create({
     gap: SIZES.small,
   },
   actionButton: {
+    minWidth: 0,
     flex: 1,
     flexDirection: 'row',
     paddingVertical: SIZES.small,
@@ -533,6 +535,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.accent,
   },
   rejectButtonText: {
+    flexShrink: 1,
     color: COLORS.accent,
     fontWeight: '700',
     fontSize: 14,
@@ -541,6 +544,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   confirmButtonText: {
+    flexShrink: 1,
     color: COLORS.white,
     fontWeight: '700',
     fontSize: 14,
@@ -549,41 +553,42 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.success,
   },
   completeButtonText: {
+    flexShrink: 1,
     color: COLORS.white,
     fontWeight: '700',
     fontSize: 14,
   },
   // Status Styles
-  confirmedStatus: { 
+  confirmedStatus: {
     backgroundColor: COLORS.success + '20',
     borderWidth: 1,
     borderColor: COLORS.success + '40',
   },
-  confirmedStatusText: { 
+  confirmedStatusText: {
     color: COLORS.success,
   },
-  pendingStatus: { 
+  pendingStatus: {
     backgroundColor: COLORS.warning + '20',
     borderWidth: 1,
     borderColor: COLORS.warning + '40',
   },
-  pendingStatusText: { 
+  pendingStatusText: {
     color: COLORS.warning,
   },
-  completedStatus: { 
+  completedStatus: {
     backgroundColor: COLORS.primary + '20',
     borderWidth: 1,
     borderColor: COLORS.primary + '40',
   },
-  completedStatusText: { 
+  completedStatusText: {
     color: COLORS.primary,
   },
-  canceledStatus: { 
+  canceledStatus: {
     backgroundColor: COLORS.accent + '20',
     borderWidth: 1,
     borderColor: COLORS.accent + '40',
   },
-  canceledStatusText: { 
+  canceledStatusText: {
     color: COLORS.accent,
   },
 });

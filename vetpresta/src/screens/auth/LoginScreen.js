@@ -1,17 +1,16 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  TextInput, 
-  TouchableOpacity, 
-  Image, 
-  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
@@ -21,13 +20,13 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
-  
+
   // Usar la tienda de Zustand en lugar del contexto
   const login = useAuthStore(state => state.login);
   const isLoading = useAuthStore(state => state.isLoading);
   const error = useAuthStore(state => state.error);
   const clearError = useAuthStore(state => state.clearError);
-  
+
   // Limpiar errores al cargar la pantalla
   useEffect(() => {
     clearError();
@@ -39,18 +38,18 @@ const LoginScreen = ({ navigation }) => {
       Alert.alert('Error', 'Por favor ingresa tu correo y contraseña');
       return;
     }
-    
+
     console.log('[VetPresta LoginScreen] Iniciando login para:', email);
     setHasAttemptedLogin(true); // Marcar que se intentó hacer login
     clearError(); // Limpiar errores anteriores
     const result = await login(email, password);
     console.log('[VetPresta LoginScreen] Resultado login:', JSON.stringify(result));
-    
+
     if (!result.success) {
-      const needsVerification = result.requiresVerification || 
+      const needsVerification = result.requiresVerification ||
         (result.error && result.error.toLowerCase().includes('verificar'));
       console.log('[VetPresta LoginScreen] needsVerification:', needsVerification);
-      
+
       if (needsVerification) {
         console.log('[VetPresta LoginScreen] Navegando a EmailVerification con email:', result.email || email);
         navigation.navigate('EmailVerification', { email: result.email || email });
@@ -61,23 +60,23 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView contentContainerStyle={styles.scrollView}>
           <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../assets/logo/logo_vetpresta_splash.png')} 
+            <Image
+              source={require('../../assets/logo/logo_vetpresta_splash.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
             <Text style={styles.logoText}>VetPresta</Text>
             <Text style={styles.tagline}>Portal de Prestadores</Text>
           </View>
-          
+
           <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
               <Ionicons name="mail-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
@@ -91,7 +90,7 @@ const LoginScreen = ({ navigation }) => {
                 onChangeText={setEmail}
               />
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Ionicons name="lock-closed-outline" size={20} color="#1E88E5" style={styles.inputIcon} />
               <TextInput
@@ -102,30 +101,30 @@ const LoginScreen = ({ navigation }) => {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon} 
+              <TouchableOpacity accessibilityRole="button" hitSlop={8}
+                style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Ionicons 
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color="#888" 
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#888"
                 />
               </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity accessibilityRole="button"
               style={styles.forgotPasswordContainer}
               onPress={() => navigation.navigate('ForgotPassword')}
             >
               <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
-            
+
             <Text style={styles.providerNote}>Acceso exclusivo para prestadores de servicios veterinarios,
             pet shops y centros veterinarios.</Text>
-            
-            <TouchableOpacity 
-              style={styles.loginButton} 
+
+            <TouchableOpacity accessibilityRole="button"
+              style={styles.loginButton}
               onPress={handleLogin}
               disabled={isLoading}
             >
@@ -133,23 +132,23 @@ const LoginScreen = ({ navigation }) => {
                 {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
               </Text>
             </TouchableOpacity>
-            
+
             {error && hasAttemptedLogin ? (
               <Text style={styles.errorText}>{error}</Text>
             ) : null}
-            
+
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>¿No tienes una cuenta?</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate('Register')}>
                 <Text style={styles.registerButtonText}>Regístrate como prestador</Text>
               </TouchableOpacity>
             </View>
-            
-            
+
+
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -211,6 +210,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   inputContainer: {
+    minHeight: 55,
+    paddingVertical: 4,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -218,14 +219,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
     paddingHorizontal: 10,
-    height: 55,
+
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 8,
     flex: 1,
-    height: '100%',
+
     color: '#333',
     fontSize: 16,
   },
@@ -241,9 +245,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   loginButton: {
+    minHeight: 55,
+    paddingVertical: 12,
     backgroundColor: '#1E88E5',
     borderRadius: 8,
-    height: 55,
+
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -267,7 +273,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  
+
 });
 
 export default LoginScreen;

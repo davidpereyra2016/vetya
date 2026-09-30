@@ -1,19 +1,20 @@
+import Modal from '../../components/common/ResponsiveModal';
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
+import {
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  View,
+  TouchableOpacity,
   FlatList,
   Image,
-  Modal,
   TextInput,
   RefreshControl,
   ActivityIndicator,
   Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../../styles/globalStyles';
@@ -36,7 +37,7 @@ const ReviewsScreen = ({ navigation }) => {
 
   // Obtener información del prestador desde el store
   const provider = useAuthStore(state => state.provider);
-  
+
   // Store de valoraciones
   const { fetchValoraciones } = useValoracionStore();
 
@@ -49,26 +50,26 @@ const ReviewsScreen = ({ navigation }) => {
   const loadReviews = async () => {
     try {
       setLoading(true);
-      
+
       if (!provider?._id) {
         console.log('⚠️ No hay provider ID disponible');
         setLoading(false);
         setRefreshing(false);
         return;
       }
-      
+
       console.log('📊 Cargando valoraciones del prestador desde ReviewsScreen...');
       const result = await fetchValoraciones(provider._id);
-      
+
       if (result.success && result.data) {
         console.log(`✅ Valoraciones cargadas: ${result.data.length}`);
-        
+
         // Mapear datos del backend al formato que espera la vista
         const reviewsData = result.data.map(valoracion => ({
           id: valoracion._id,
           usuarioId: valoracion.usuario?._id || 'unknown',
           usuarioNombre: valoracion.usuario?.username || 'Usuario',
-          mascota: valoracion.mascota 
+          mascota: valoracion.mascota
             ? `${valoracion.mascota.nombre} (${valoracion.mascota.tipo})`
             : 'Mascota',
           rating: valoracion.calificacion,
@@ -78,7 +79,7 @@ const ReviewsScreen = ({ navigation }) => {
           respuesta: '', // Las respuestas se manejarán en el futuro
           avatar: valoracion.usuario?.profilePicture || null,
         }));
-        
+
         // Usar las estadísticas calculadas por el store
         if (result.estadisticas) {
           setStats({
@@ -93,7 +94,7 @@ const ReviewsScreen = ({ navigation }) => {
             ]
           });
         }
-        
+
         setReviews(reviewsData);
       } else {
         console.log('⚠️ No se pudieron cargar valoraciones o no hay valoraciones');
@@ -104,10 +105,10 @@ const ReviewsScreen = ({ navigation }) => {
           distribucion: [0, 0, 0, 0, 0]
         });
       }
-      
+
       setLoading(false);
       setRefreshing(false);
-      
+
     } catch (error) {
       console.error('❌ Error al cargar valoraciones:', error);
       setLoading(false);
@@ -115,16 +116,16 @@ const ReviewsScreen = ({ navigation }) => {
       Alert.alert('Error', 'No pudimos cargar las valoraciones. Intenta nuevamente.');
     }
   };
-  
+
   // Función auxiliar para formatear fechas
   const formatDate = (dateString) => {
     if (!dateString) return 'Sin fecha';
-    
+
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
-    
+
     return `${day}/${month}/${year}`;
   };
 
@@ -237,7 +238,7 @@ const ReviewsScreen = ({ navigation }) => {
           <Text style={styles.replyText}>{item.respuesta}</Text>
         </View>
       ) : (
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={styles.replyButton}
           onPress={() => handleRespond(item.id)}
         >
@@ -253,7 +254,7 @@ const ReviewsScreen = ({ navigation }) => {
     <View style={styles.filterContainer}>
       <Text style={styles.filterTitle}>Filtrar por:</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={[
             styles.filterButton,
             filterRating === 0 && styles.activeFilterButton
@@ -267,7 +268,7 @@ const ReviewsScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         {[5, 4, 3, 2, 1].map(rating => (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             key={rating}
             style={[
               styles.filterButton,
@@ -287,13 +288,13 @@ const ReviewsScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity 
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
             style={styles.backButton}
             onPress={() => {
               if (navigation.canGoBack()) {
@@ -329,15 +330,15 @@ const ReviewsScreen = ({ navigation }) => {
                   <Ionicons name="star" size={14} color={COLORS.warning} />
                 </View>
                 <View style={styles.distributionBarContainer}>
-                  <View 
+                  <View
                     style={[
-                      styles.distributionBar, 
-                      { 
-                        width: `${stats.totalReviews > 0 
-                          ? (stats.distribucion[rating - 1] / stats.totalReviews) * 100 
-                          : 0}%` 
+                      styles.distributionBar,
+                      {
+                        width: `${stats.totalReviews > 0
+                          ? (stats.distribucion[rating - 1] / stats.totalReviews) * 100
+                          : 0}%`
                       }
-                    ]} 
+                    ]}
                   />
                 </View>
                 <Text style={styles.distributionCount}>
@@ -372,8 +373,8 @@ const ReviewsScreen = ({ navigation }) => {
         <View style={styles.emptyStateContainer}>
           <Ionicons name="star-outline" size={70} color="#DDD" />
           <Text style={styles.emptyStateText}>
-            {filterRating === 0 
-              ? "Aún no tienes valoraciones" 
+            {filterRating === 0
+              ? "Aún no tienes valoraciones"
               : `No tienes valoraciones con ${filterRating} estrellas`}
           </Text>
         </View>
@@ -385,8 +386,8 @@ const ReviewsScreen = ({ navigation }) => {
         animationType="fade"
         onRequestClose={handleCancelResponse}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <ScrollView style={styles.modalContent}>
             <Text style={styles.modalTitle}>Responder valoración</Text>
             <TextInput
               style={styles.modalInput}
@@ -398,17 +399,17 @@ const ReviewsScreen = ({ navigation }) => {
               textAlignVertical="top"
             />
             <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancelButton} onPress={handleCancelResponse}>
+              <TouchableOpacity accessibilityRole="button" style={styles.modalCancelButton} onPress={handleCancelResponse}>
                 <Text style={styles.modalCancelText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalSendButton} onPress={handleSubmitResponse}>
+              <TouchableOpacity accessibilityRole="button" style={styles.modalSendButton} onPress={handleSubmitResponse}>
                 <Text style={styles.modalSendText}>Enviar</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.primary,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 15,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 15,
@@ -432,12 +433,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backButton: {
+    minHeight: 40,
+    paddingVertical: 12,
     width: 40,
-    height: 40,
+
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: COLORS.white,
@@ -453,6 +457,8 @@ const styles = StyleSheet.create({
     ...SHADOWS.small,
   },
   ratingOverview: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -491,11 +497,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   distributionText: {
+    flexShrink: 1,
     fontSize: 12,
     color: COLORS.dark,
     marginRight: 2,
   },
   distributionBarContainer: {
+    minWidth: 0,
     flex: 1,
     height: 8,
     backgroundColor: '#EEEEEE',
@@ -507,6 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   distributionCount: {
+    flexShrink: 1,
     fontSize: 12,
     color: COLORS.grey,
     width: 25,
@@ -540,11 +549,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   filterButtonText: {
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.dark,
     marginLeft: 4,
   },
   activeFilterButtonText: {
+    flexShrink: 1,
     color: COLORS.white,
   },
   starsContainer: {
@@ -563,12 +574,15 @@ const styles = StyleSheet.create({
     ...SHADOWS.small,
   },
   reviewHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
   userInfo: {
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
@@ -589,6 +603,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   userDetails: {
+    minWidth: 0,
     flex: 1,
   },
   userName: {
@@ -635,6 +650,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   replyTitle: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: 'bold',
     color: COLORS.primary,
@@ -655,6 +671,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F7FF',
   },
   replyButtonText: {
+    flexShrink: 1,
     fontSize: 14,
     color: COLORS.primary,
     marginLeft: 4,
@@ -688,6 +705,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   modalContent: {
+    maxHeight: '90%',
     backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 20,
@@ -700,7 +718,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalInput: {
-    minHeight: 120,
+    minHeight: 100,
     borderWidth: 1,
     borderColor: '#E0E0E0',
     borderRadius: 12,
@@ -715,6 +733,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   modalCancelButton: {
+    minHeight: 48,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,
@@ -725,6 +744,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modalSendButton: {
+    minHeight: 48,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 10,

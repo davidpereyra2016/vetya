@@ -8,6 +8,7 @@ import { ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
 // Estado global con Zustand
 import useAuthStore from '../store/useAuthStore';
 import useValidacionStore from '../store/useValidacionStore';
+import logger from '../utils/logger';
 
 // Pantalla de notificaciones
 import NotificacionesScreen from '../screens/NotificacionesScreen';
@@ -78,10 +79,39 @@ const PlaceholderScreen = ({ route }) => (
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const NAV_COLORS = {
+  primary: '#1E88E5',
+  inactive: '#6B7280',
+  border: '#E5E7EB',
+  surface: '#FFFFFF',
+};
+
+const tabBarOptions = {
+  safeAreaInsets: { top: 0, bottom: 0, left: 0, right: 0 },
+  tabBarActiveTintColor: NAV_COLORS.primary,
+  tabBarInactiveTintColor: NAV_COLORS.inactive,
+  tabBarHideOnKeyboard: true,
+  tabBarStyle: {
+    height: 64,
+    paddingTop: 6,
+    paddingBottom: 8,
+    backgroundColor: NAV_COLORS.surface,
+    borderTopColor: NAV_COLORS.border,
+  },
+  tabBarLabelStyle: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  headerShown: false,
+  freezeOnBlur: true,
+};
+
 // Navegador de tabs principales
 function MainTabsNavigator() {
   return (
     <Tab.Navigator
+      detachInactiveScreens
+      backBehavior="history"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
@@ -98,29 +128,27 @@ function MainTabsNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#1E88E5',
-        tabBarInactiveTintColor: 'gray',
-        headerShown: false, // Ocultar el header en todas las pestañas
+        ...tabBarOptions,
       })}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
       <Tab.Screen name="Servicios" component={ServicesScreen} />
       <Tab.Screen name="Citas" component={AppointmentsScreen} />
-      
-      
-      <Tab.Screen 
-        name="Perfil" 
+
+
+      <Tab.Screen
+        name="Perfil"
         component={ProfileScreen}
         options={({ navigation }) => ({
           headerRight: () => (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               onPress={() => navigation.navigate('Notificaciones')}
               style={{ marginRight: 15 }}
             >
               <NotificacionBadge />
             </TouchableOpacity>
           ),
-        })} 
+        })}
       />
     </Tab.Navigator>
   );
@@ -129,12 +157,12 @@ function MainTabsNavigator() {
 // Navegador principal (incluye tabs principales y pantallas específicas para prestadores)
 function MainNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerStatusBarHeight: 0 }}>
       <Stack.Screen name="MainTabs" component={MainTabsNavigator} />
-      
+
       {/* Pantallas de emergencias para prestadores */}
-      <Stack.Screen 
-        name="EmergencyList" 
+      <Stack.Screen
+        name="EmergencyList"
         component={EmergencyListScreen}
         options={{
           headerShown: false,
@@ -145,8 +173,8 @@ function MainNavigator() {
           })
         }}
       />
-      <Stack.Screen 
-        name="EmergencyDetails" 
+      <Stack.Screen
+        name="EmergencyDetails"
         component={EmergencyDetailsScreen}
         options={{
           headerShown: false,
@@ -157,16 +185,16 @@ function MainNavigator() {
           })
         }}
       />
-      
+
       {/* Pantallas de citas */}
       <Stack.Screen name="Appointments" component={AppointmentsScreen} options={{ headerShown: false }}/>
       <Stack.Screen name="AppointmentDetails" component={AppointmentDetailsScreen} options={{ headerShown: false }}/>
-      
+
       {/* Pantallas de perfil */}
-      <Stack.Screen 
-        name="EditProfile" 
-        component={EditProfileScreen} 
-        options={{ 
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{
           headerShown: false,
           title: "Editar Perfil",
           headerStyle: {
@@ -175,10 +203,10 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      <Stack.Screen 
-        name="ChangePassword" 
-        component={ChangePasswordScreen} 
-        options={{ 
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{
           headerShown: false,
           title: "Cambiar Contraseña",
           headerStyle: {
@@ -187,12 +215,12 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      
+
       {/* Pantallas de servicios */}
-      <Stack.Screen 
-        name="Services" 
-        component={ServicesScreen} 
-        options={{ 
+      <Stack.Screen
+        name="Services"
+        component={ServicesScreen}
+        options={{
           headerShown: false,
           title: "Mis Servicios",
           headerStyle: {
@@ -201,10 +229,10 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      <Stack.Screen 
-        name="Availability" 
-        component={AvailabilityScreen} 
-        options={{ 
+      <Stack.Screen
+        name="Availability"
+        component={AvailabilityScreen}
+        options={{
           headerShown: false,
           title: "Disponibilidad",
           headerStyle: {
@@ -213,12 +241,12 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      
+
       {/* Pantallas de valoraciones */}
-      <Stack.Screen 
-        name="Reviews" 
-        component={ReviewsScreen} 
-        options={{ 
+      <Stack.Screen
+        name="Reviews"
+        component={ReviewsScreen}
+        options={{
           headerShown: false,
           title: "Valoraciones",
           headerStyle: {
@@ -227,12 +255,12 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      
+
       {/* Pantallas de ganancias */}
-      <Stack.Screen 
-        name="Earnings" 
-        component={EarningsScreen} 
-        options={{ 
+      <Stack.Screen
+        name="Earnings"
+        component={EarningsScreen}
+        options={{
           headerShown: false,
           title: "Ganancias",
           headerStyle: {
@@ -241,12 +269,12 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      
+
       {/* Pantalla de confirmación de emergencia */}
-      <Stack.Screen 
-        name="ConfirmarEmergencia" 
-        component={ConfirmarEmergenciaScreen} 
-        options={{ 
+      <Stack.Screen
+        name="ConfirmarEmergencia"
+        component={ConfirmarEmergenciaScreen}
+        options={{
           headerShown: false,
           title: "Confirmar Emergencia",
           headerStyle: {
@@ -255,12 +283,12 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      
+
       {/* Pantallas de validación de prestadores */}
-      <Stack.Screen 
-        name="ValidationDashboard" 
-        component={ValidationDashboardScreen} 
-        options={{ 
+      <Stack.Screen
+        name="ValidationDashboard"
+        component={ValidationDashboardScreen}
+        options={{
           headerShown: false,
           title: "Estado de Validación",
           headerStyle: {
@@ -269,10 +297,10 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      <Stack.Screen 
-        name="DocumentUpload" 
-        component={DocumentUploadScreen} 
-        options={{ 
+      <Stack.Screen
+        name="DocumentUpload"
+        component={DocumentUploadScreen}
+        options={{
           headerShown: false,
           title: "Subir Documentos",
           headerStyle: {
@@ -281,10 +309,10 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      <Stack.Screen 
-        name="AdditionalData" 
-        component={AdditionalDataScreen} 
-        options={{ 
+      <Stack.Screen
+        name="AdditionalData"
+        component={AdditionalDataScreen}
+        options={{
           headerShown: false,
           title: "Datos Adicionales",
           headerStyle: {
@@ -293,10 +321,10 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      <Stack.Screen 
-        name="ValidationBlock" 
-        component={ValidationBlockScreen} 
-        options={{ 
+      <Stack.Screen
+        name="ValidationBlock"
+        component={ValidationBlockScreen}
+        options={{
           headerShown: false,
           title: "Validación Requerida",
           headerStyle: {
@@ -305,12 +333,12 @@ function MainNavigator() {
           headerTintColor: '#fff',
         }}
       />
-      
+
       {/* Pantalla de notificaciones */}
-      <Stack.Screen 
-        name="Notificaciones" 
-        component={NotificacionesScreen} 
-        options={{ 
+      <Stack.Screen
+        name="Notificaciones"
+        component={NotificacionesScreen}
+        options={{
           headerShown: true,
           title: "Notificaciones",
           headerStyle: {
@@ -326,7 +354,7 @@ function MainNavigator() {
 // Navegador de autenticación
 function AuthNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerStatusBarHeight: 0 }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
@@ -339,7 +367,7 @@ function AuthNavigator() {
 // Navegador de onboarding
 function OnboardingNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, headerStatusBarHeight: 0 }}>
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
     </Stack.Navigator>
   );
@@ -349,21 +377,21 @@ function OnboardingNavigator() {
 function AppNavigator() {
   const { isLoggedIn, isInitializing, isFirstLaunch, provider } = useAuthStore();
   const { estadoValidacion, fetchEstadoValidacion, initializeFromProvider } = useValidacionStore();
-  
+
   // Debug logs para ver los estados
-  console.log('[AppNavigator] Estados actuales:', {
+  logger.debug('[AppNavigator] Estados actuales:', {
     isLoggedIn,
     isInitializing,
     isFirstLaunch,
     hasProvider: !!provider
   });
-  
+
   // Referencia para la navegación (para procesar acciones de notificaciones)
   const navigationRef = useRef();
 
   // Verificar autenticación al iniciar la app
   const checkAuth = useAuthStore(state => state.checkAuth);
-  
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -373,34 +401,34 @@ function AppNavigator() {
     if (isLoggedIn && provider) {
       // ✅ Primero intentar inicializar desde el provider si ya está aprobado
       initializeFromProvider(provider);
-      
+
       // ✅ Solo hacer request si no está ya aprobado o es la primera carga
       if (!estadoValidacion || estadoValidacion !== 'aprobado') {
-        console.log('🔄 Verificando estado de validación desde AppNavigator');
+        logger.debug('Verificando estado de validacion desde AppNavigator');
         fetchEstadoValidacion();
       } else {
-        console.log('⚡ Prestador ya aprobado, evitando verificación innecesaria');
+        logger.debug('Prestador ya aprobado, evitando verificacion innecesaria');
       }
     }
   }, [isLoggedIn, provider?.email]); // ✅ Usar provider.email en lugar de provider completo
-  
+
   // Procesar acciones pendientes de notificaciones
   useEffect(() => {
     const checkPendingNotificationAction = () => {
       if (global.pendingNotificationAction && navigationRef.current) {
         const { action, params } = global.pendingNotificationAction;
-        console.log('📱 Procesando acción pendiente de notificación:', action, params);
-        
+        logger.debug('Procesando accion pendiente de notificacion:', action, params);
+
         try {
           switch (action) {
             case 'navigateToConfirmarEmergencia':
-              navigationRef.current.navigate('ConfirmarEmergencia', { 
-                emergenciaId: params.emergenciaId 
+              navigationRef.current.navigate('ConfirmarEmergencia', {
+                emergenciaId: params.emergenciaId
               });
               break;
             case 'navigateToEmergencyDetails':
-              navigationRef.current.navigate('EmergencyDetails', { 
-                emergencyId: params.emergenciaId 
+              navigationRef.current.navigate('EmergencyDetails', {
+                emergencyId: params.emergenciaId
               });
               break;
             case 'navigateToAppointments':
@@ -410,20 +438,20 @@ function AppNavigator() {
               navigationRef.current.navigate('Notificaciones');
               break;
             default:
-              console.log('⚠️ Acción de notificación no reconocida:', action);
+              logger.warn('Accion de notificacion no reconocida:', action);
           }
         } catch (error) {
-          console.error('❌ Error al procesar acción de notificación:', error);
+          logger.error('Error al procesar accion de notificacion:', error);
         }
-        
+
         // Limpiar la acción pendiente
         global.pendingNotificationAction = null;
       }
     };
-    
+
     // Verificar periódicamente si hay acciones pendientes
     const interval = setInterval(checkPendingNotificationAction, 1000);
-    
+
     return () => clearInterval(interval);
   }, [isLoggedIn]);
 
@@ -437,11 +465,11 @@ function AppNavigator() {
 
   // Si el prestador está logueado pero no aprobado, mostrar pantalla de bloqueo
   const shouldShowValidationBlock = isLoggedIn && provider && estadoValidacion && estadoValidacion !== 'aprobado';
-  
+
   if (shouldShowValidationBlock) {
     return (
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false, headerStatusBarHeight: 0 }}>
           <Stack.Screen name="ValidationBlock" component={ValidationBlockScreen} />
           <Stack.Screen name="ValidationDashboard" component={ValidationDashboardScreen} />
           <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
@@ -450,7 +478,7 @@ function AppNavigator() {
       </NavigationContainer>
     );
   }
-  
+
   // Configuración del encabezado con notificaciones
   const screenOptions = {
     headerStyle: {
@@ -461,7 +489,7 @@ function AppNavigator() {
       fontWeight: 'bold',
     },
     headerRight: ({ navigation }) => (
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button"
         onPress={() => navigation.navigate('Notificaciones')}
         style={{ marginRight: 15 }}
       >
@@ -479,7 +507,7 @@ function AppNavigator() {
   } else {
     navigatorType = 'MainNavigator';
   }
-  console.log('[AppNavigator] Renderizando:', navigatorType);
+  logger.debug('[AppNavigator] Renderizando:', navigatorType);
 
   return (
     <NavigationContainer ref={navigationRef}>

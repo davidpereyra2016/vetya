@@ -1,28 +1,25 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  ScrollView,
   TouchableOpacity,
   Alert,
   RefreshControl,
   ActivityIndicator,
-  Dimensions,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import useValidacionStore from '../../store/useValidacionStore';
 import useAuthStore from '../../store/useAuthStore';
 
-const { width } = Dimensions.get('window');
 
 const ValidationDashboardScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // Store de validación
   const {
     estadoValidacion,
@@ -82,7 +79,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
     if (estadoValidacion === 'en_revision') {
       startPolling();
     }
-    
+
     // Cleanup al desmontar el componente
     return () => {
       stopPolling();
@@ -111,7 +108,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
     // Verificar si hay documentos rechazados
     const documentosConErrores = getDocumentosConErrores();
     const tieneDocumentosRechazados = documentosConErrores.length > 0;
-    
+
     const colors = {
       'pendiente_documentos': '#FF9500',
       'en_revision': tieneDocumentosRechazados ? '#FF9500' : '#007AFF', // Naranja si hay rechazados
@@ -126,7 +123,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
     // Verificar si hay documentos rechazados
     const documentosConErrores = getDocumentosConErrores();
     const tieneDocumentosRechazados = documentosConErrores.length > 0;
-    
+
     const icons = {
       'pendiente_documentos': 'document-text-outline',
       'en_revision': tieneDocumentosRechazados ? 'warning-outline' : 'time-outline', // Warning si hay rechazados
@@ -153,13 +150,13 @@ const ValidationDashboardScreen = ({ navigation }) => {
           </Text>
         </View>
         <Text style={styles.estadoMessage}>{message}</Text>
-        
+
         {fechaAprobacion && (
           <Text style={styles.fechaText}>
             Aprobado el: {new Date(fechaAprobacion).toLocaleDateString()}
           </Text>
         )}
-        
+
         {fechaRechazo && (
           <Text style={styles.fechaText}>
             Rechazado el: {new Date(fechaRechazo).toLocaleDateString()}
@@ -175,7 +172,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
     return (
       <View style={styles.progresoCard}>
         <Text style={styles.cardTitle}>Progreso de Validación</Text>
-        
+
         <View style={styles.progresoItem}>
           <Text style={styles.progresoLabel}>Documentos Subidos</Text>
           <View style={styles.progresoBarContainer}>
@@ -202,7 +199,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
       <View style={styles.documentosCard}>
         <Text style={styles.cardTitle}>Documentos Requeridos</Text>
         <Text style={styles.cardSubtitle}>Para prestador tipo: {prestadorTipo}</Text>
-        
+
         {documentosRequeridos.map((doc, index) => (
           <View key={index} style={styles.documentoItem}>
             <Ionicons name="document-outline" size={20} color="#666" />
@@ -215,7 +212,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
 
   const renderDocumentosConErrores = () => {
     const documentosConErrores = getDocumentosConErrores();
-    
+
     if (documentosConErrores.length === 0) return null;
 
     // Mapeo de nombres técnicos a nombres amigables
@@ -234,10 +231,10 @@ const ValidationDashboardScreen = ({ navigation }) => {
       <View style={styles.erroresCard}>
         <Text style={styles.cardTitle}>⚠️ Documentos Rechazados</Text>
         <Text style={styles.cardSubtitle}>
-          Los siguientes documentos fueron rechazados y deben ser corregidos. 
+          Los siguientes documentos fueron rechazados y deben ser corregidos.
           Puede volver a subirlos usando el botón "Subir Documentos".
         </Text>
-        
+
         {documentosConErrores.map((doc, index) => (
           <View key={index} style={styles.errorItem}>
             <Ionicons name="close-circle" size={20} color="#FF3B30" />
@@ -270,16 +267,16 @@ const ValidationDashboardScreen = ({ navigation }) => {
     // Verificar si hay documentos rechazados que requieren corrección
     const documentosConErrores = getDocumentosConErrores();
     const tieneDocumentosRechazados = documentosConErrores.length > 0;
-    
-    const canUploadDocuments = estadoValidacion === 'pendiente_documentos' || 
+
+    const canUploadDocuments = estadoValidacion === 'pendiente_documentos' ||
                               estadoValidacion === 'requiere_correccion' ||
                               tieneDocumentosRechazados;
-    
+
     return (
       <View style={styles.accionesCard}>
         <Text style={styles.cardTitle}>Acciones Disponibles</Text>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.accionButton, !canUploadDocuments && styles.accionButtonDisabled]}
           onPress={handleNavigateToDocuments}
           disabled={!canUploadDocuments}
@@ -290,7 +287,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={styles.accionButtonSecondary}
           onPress={handleNavigateToAdditionalData}
         >
@@ -305,22 +302,22 @@ const ValidationDashboardScreen = ({ navigation }) => {
 
   if (isLoading && !estadoValidacion) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#1E88E5" />
           <Text style={styles.loadingText}>Cargando estado de validación...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8}
           style={styles.backButton}
           onPress={() => {
             if (navigation.canGoBack()) {
@@ -333,12 +330,12 @@ const ValidationDashboardScreen = ({ navigation }) => {
           <Ionicons name="arrow-back" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Estado de Validación</Text>
-        <TouchableOpacity onPress={onRefresh}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Actualizar" hitSlop={8} onPress={onRefresh}>
           <Ionicons name="refresh" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -347,7 +344,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity onPress={clearError}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8} onPress={clearError}>
               <Ionicons name="close" size={20} color="#FF3B30" />
             </TouchableOpacity>
           </View>
@@ -360,7 +357,7 @@ const ValidationDashboardScreen = ({ navigation }) => {
         {renderDocumentosRequeridos()}
         {renderAcciones()}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -376,12 +373,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 45,
+    paddingTop: 16,
   },
   backButton: {
     padding: 5,
   },
   headerTitle: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
@@ -410,6 +411,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorText: {
+    minWidth: 0,
+    flexShrink: 1,
     color: '#FF3B30',
     flex: 1,
   },
@@ -431,6 +434,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   estadoTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 10,
@@ -509,6 +513,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   documentoText: {
+    flexShrink: 1,
     fontSize: 16,
     color: '#333',
     marginLeft: 10,
@@ -585,12 +590,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   accionButtonText: {
+    flexShrink: 1,
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 10,
   },
   accionButtonTextDisabled: {
+    flexShrink: 1,
     color: '#999',
   },
   accionButtonSecondary: {
@@ -604,6 +611,7 @@ const styles = StyleSheet.create({
     borderColor: '#1E88E5',
   },
   accionButtonSecondaryText: {
+    flexShrink: 1,
     color: '#1E88E5',
     fontSize: 16,
     fontWeight: 'bold',

@@ -1,3 +1,4 @@
+import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  ScrollView,
   Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,9 +23,9 @@ const ConfirmarEmergenciaScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { emergenciaId, notificacionId } = route.params || {};
-  
+
   const { markAsRead } = useNotificacionStore();
-  
+
   const [emergencia, setEmergencia] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -34,7 +34,7 @@ const ConfirmarEmergenciaScreen = () => {
   const clienteNombre = emergencia?.usuario?.username || emergencia?.usuario?.nombre || emergencia?.usuario?.email || 'No disponible';
   const mascotaNombre = emergencia?.mascotaInfo?.nombre || emergencia?.mascota?.nombre || emergencia?.otroAnimal?.descripcionAnimal || 'No disponible';
   const fechaSolicitud = emergencia?.fechaSolicitud || emergencia?.createdAt || null;
-  
+
   // Cargar datos de la emergencia
   useEffect(() => {
     if (emergenciaId) {
@@ -48,7 +48,7 @@ const ConfirmarEmergenciaScreen = () => {
       setLoading(false);
     }
   }, [emergenciaId]);
-  
+
   // Cargar datos de la emergencia desde la API
   const loadEmergencia = async () => {
     try {
@@ -62,7 +62,7 @@ const ConfirmarEmergenciaScreen = () => {
       setLoading(false);
     }
   };
-  
+
   // Confirmar emergencia
   const confirmarEmergencia = async () => {
     try {
@@ -71,9 +71,9 @@ const ConfirmarEmergenciaScreen = () => {
       const response = await axios.patch(`/emergencias/${emergenciaId}/confirmacion-veterinario`, {
         confirmado: true
       });
-      
+
       setProcesando(false);
-      
+
       // Mostrar mensaje de éxito
       Alert.alert(
         "Emergencia confirmada",
@@ -90,7 +90,7 @@ const ConfirmarEmergenciaScreen = () => {
       );
     }
   };
-  
+
   // Rechazar emergencia
   const rechazarEmergencia = async () => {
     try {
@@ -99,9 +99,9 @@ const ConfirmarEmergenciaScreen = () => {
       const response = await axios.patch(`/emergencias/${emergenciaId}/confirmacion-veterinario`, {
         confirmado: false
       });
-      
+
       setProcesando(false);
-      
+
       // Mostrar mensaje de éxito
       Alert.alert(
         "Emergencia rechazada",
@@ -124,7 +124,7 @@ const ConfirmarEmergenciaScreen = () => {
       );
     }
   };
-  
+
   // Preguntar antes de rechazar
   const confirmarRechazo = () => {
     Alert.alert(
@@ -136,13 +136,13 @@ const ConfirmarEmergenciaScreen = () => {
       ]
     );
   };
-  
+
   // Formatear la fecha
   const formatearFecha = (fecha) => {
     if (!fecha) return '';
     return format(new Date(fecha), "d 'de' MMMM 'a las' HH:mm", { locale: es });
   };
-  
+
   if (loading) {
     return (
       <View style={styles.centeredContainer}>
@@ -151,25 +151,25 @@ const ConfirmarEmergenciaScreen = () => {
       </View>
     );
   }
-  
+
   if (error) {
     return (
       <View style={styles.centeredContainer}>
         <Ionicons name="alert-circle-outline" size={70} color="#ef4444" />
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadEmergencia}>
+        <TouchableOpacity accessibilityRole="button" style={styles.retryButton} onPress={loadEmergencia}>
           <Text style={styles.retryButtonText}>Reintentar</Text>
         </TouchableOpacity>
       </View>
     );
   }
-  
+
   if (!emergencia) {
     return (
       <View style={styles.centeredContainer}>
         <Ionicons name="medical-outline" size={70} color="#ccc" />
         <Text style={styles.emptyText}>No se encontró información de la emergencia</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => {
+        <TouchableOpacity accessibilityRole="button" style={styles.backButton} onPress={() => {
           if (navigation.canGoBack()) {
             navigation.goBack();
           } else {
@@ -181,7 +181,7 @@ const ConfirmarEmergenciaScreen = () => {
       </View>
     );
   }
-  
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
       {/* Cabecera */}
@@ -193,7 +193,7 @@ const ConfirmarEmergenciaScreen = () => {
           </Text>
         </View>
       </View>
-      
+
       {/* Información del cliente y mascota */}
       <View style={styles.seccion}>
         <Text style={styles.seccionTitulo}>Información del cliente</Text>
@@ -205,7 +205,7 @@ const ConfirmarEmergenciaScreen = () => {
               {clienteNombre}
             </Text>
           </View>
-          
+
           <View style={styles.infoItem}>
             <Ionicons name="paw-outline" size={20} color="#718096" />
             <Text style={styles.infoLabel}>Mascota:</Text>
@@ -213,7 +213,7 @@ const ConfirmarEmergenciaScreen = () => {
               {mascotaNombre}
             </Text>
           </View>
-          
+
           <View style={styles.infoItem}>
             <Ionicons name="time-outline" size={20} color="#718096" />
             <Text style={styles.infoLabel}>Solicitada:</Text>
@@ -223,7 +223,7 @@ const ConfirmarEmergenciaScreen = () => {
           </View>
         </View>
       </View>
-      
+
       {/* Detalles de la emergencia */}
       <View style={styles.seccion}>
         <Text style={styles.seccionTitulo}>Detalles de la emergencia</Text>
@@ -232,18 +232,18 @@ const ConfirmarEmergenciaScreen = () => {
             <Ionicons name="medkit" size={24} color="#e53e3e" />
             <Text style={styles.tipoEmergencia}>{emergencia.tipoEmergencia}</Text>
           </View>
-          
+
           <Text style={styles.descripcion}>
             {emergencia.descripcion || 'Sin descripción adicional'}
           </Text>
-          
+
           {emergencia.imagenes && emergencia.imagenes.length > 0 && (
             <View style={styles.imagenesContainer}>
               {emergencia.imagenes.map((img, index) => (
-                <Image 
-                  key={index} 
-                  source={{ uri: img }} 
-                  style={styles.imagen} 
+                <Image
+                  key={index}
+                  source={{ uri: img }}
+                  style={styles.imagen}
                   resizeMode="cover"
                 />
               ))}
@@ -251,7 +251,7 @@ const ConfirmarEmergenciaScreen = () => {
           )}
         </View>
       </View>
-      
+
       {/* Ubicación */}
       <View style={styles.seccion}>
         <Text style={styles.seccionTitulo}>Ubicación</Text>
@@ -267,10 +267,10 @@ const ConfirmarEmergenciaScreen = () => {
           </View>
         </View>
       </View>
-      
+
       {/* Botones de acción */}
       <View style={styles.botonesContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.boton, styles.botonRechazar]}
           onPress={confirmarRechazo}
           disabled={procesando}
@@ -278,8 +278,8 @@ const ConfirmarEmergenciaScreen = () => {
           <Ionicons name="close-circle-outline" size={20} color="#fff" />
           <Text style={styles.botonTexto}>Rechazar</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity accessibilityRole="button"
           style={[styles.boton, styles.botonConfirmar]}
           onPress={confirmarEmergencia}
           disabled={procesando}
@@ -288,7 +288,7 @@ const ConfirmarEmergenciaScreen = () => {
           <Text style={styles.botonTexto}>Confirmar</Text>
         </TouchableOpacity>
       </View>
-      
+
       {procesando && (
         <View style={styles.procesandoOverlay}>
           <ActivityIndicator size="large" color="#fff" />
@@ -359,6 +359,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
+    flexShrink: 1,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2d3748',
@@ -403,6 +404,7 @@ const styles = StyleSheet.create({
     marginVertical: 5,
   },
   infoLabel: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '500',
     color: '#4a5568',
@@ -410,6 +412,7 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   infoValor: {
+    flexShrink: 1,
     fontSize: 14,
     color: '#2d3748',
     flex: 1,
@@ -425,6 +428,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tipoEmergencia: {
+    flexShrink: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: '#e53e3e',
@@ -467,18 +471,21 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   botonesContainer: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     margin: 15,
   },
   boton: {
+    flexBasis: 130,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    flex: 0.48,
+    flex: 1,
   },
   botonRechazar: {
     backgroundColor: '#e53e3e',
@@ -487,6 +494,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#38a169',
   },
   botonTexto: {
+    flexShrink: 1,
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
