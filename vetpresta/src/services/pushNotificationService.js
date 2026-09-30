@@ -13,7 +13,8 @@ export const configurePushNotifications = () => {
   // Configurar cómo se muestran las notificaciones cuando la app está en primer plano
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true, // Mostrar alerta incluso si la app está abierta
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
     }),
@@ -54,6 +55,7 @@ export const requestNotificationPermissions = async () => {
  * @returns {Promise<string|null>} Promesa que resuelve al token o null si no se pudo obtener
  */
 export const registerForPushNotifications = async () => {
+  if (Constants.executionEnvironment === 'storeClient' || Constants.appOwnership === 'expo') return null;
   try {
     // Primero solicitar permisos
     const permissionGranted = await requestNotificationPermissions();

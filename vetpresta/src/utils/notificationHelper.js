@@ -12,7 +12,8 @@ import { Platform } from 'react-native';
 export const configurarNotificaciones = () => {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
     }),
@@ -20,7 +21,7 @@ export const configurarNotificaciones = () => {
 };
 
 // Verificar si estamos en Expo Go
-export const isExpoGo = Constants.appOwnership === 'expo';
+export const isExpoGo = Constants.executionEnvironment === 'storeClient' || Constants.appOwnership === 'expo';
 
 // Verificar si las notificaciones push están disponibles en este entorno
 export const areRemoteNotificationsAvailable = () => {
@@ -32,10 +33,7 @@ export const registrarParaNotificaciones = async () => {
   try {
     // Si estamos en Expo Go, mostrar advertencia
     if (isExpoGo) {
-      console.warn(
-        'Las notificaciones push remotas no están disponibles en Expo Go desde SDK 53. ' +
-        'Use un development build para acceder a esta funcionalidad.'
-      );
+      return { success: false, message: 'Las notificaciones push requieren un development build', token: null };
     }
 
     // Verificar si el dispositivo es real

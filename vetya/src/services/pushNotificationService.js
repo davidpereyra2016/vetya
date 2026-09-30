@@ -35,7 +35,8 @@ const applyEmergencyNotificationUpdate = (data = {}) => {
 export const configurePushNotifications = () => {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
     }),
@@ -91,6 +92,7 @@ export const requestNotificationPermissions = async () => {
  * @returns {Promise<string|null>} token o null si no se pudo obtener
  */
 export const registerForPushNotifications = async () => {
+  if (Constants.executionEnvironment === 'storeClient' || Constants.appOwnership === 'expo') return null;
   try {
     const permissionGranted = await requestNotificationPermissions();
     if (!permissionGranted) {

@@ -4,15 +4,9 @@
     "slug": "vetya",
     "scheme": "vetya",
     "version": "1.0.2",
-    "jsEngine": "jsc",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/icons/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1E88E5"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.vetya.app",
@@ -46,6 +40,14 @@
         "expo-maps",
         {
           "mode": "universal"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icons/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#1E88E5"
         }
       ]
     ],
