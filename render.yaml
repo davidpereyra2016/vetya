@@ -49,6 +49,10 @@ services:
         sync: false
       - key: MP_OAUTH_STATE_SECRET
         sync: false
+      - key: MP_TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: MP_WEBHOOK_SECRET
+        sync: false
       - key: MP_USE_PKCE
         value: "true"
       - key: MERCADOPAGO_CLIENT_SECRET

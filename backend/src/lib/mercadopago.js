@@ -1,9 +1,9 @@
 import { MercadoPagoConfig, Preference, Payment, OAuth } from 'mercadopago';
 import crypto from 'crypto';
+import MercadoPagoOAuthState from '../models/MercadoPagoOAuthState.js';
 
 const DEFAULT_TIMEOUT = 5000;
 const OAUTH_STATE_TTL_MS = 15 * 60 * 1000;
-const oauthStateStore = new Map();
 
 function getMarketplaceAccessToken() {
   return process.env.MP_ACCESS_TOKEN || process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -74,41 +74,35 @@ function createPkcePair() {
   return { codeVerifier, codeChallenge };
 }
 
-function cleanExpiredOAuthStates() {
-  const now = Date.now();
-  for (const [state, value] of oauthStateStore.entries()) {
-    if (value.expiresAt <= now) oauthStateStore.delete(state);
-  }
-}
-
-function createMercadoPagoOAuthState(prestadorId, codeVerifier) {
+async function createMercadoPagoOAuthState(prestadorId, codeVerifier, context) {
   if (!prestadorId) {
     throw new Error('Falta el prestador para iniciar la conexion con Mercado Pago');
   }
 
-  cleanExpiredOAuthStates();
   const nonce = base64Url(crypto.randomBytes(16));
   const signature = signOAuthState(prestadorId.toString(), nonce);
   const state = `${prestadorId}.${nonce}.${signature}`;
 
-  oauthStateStore.set(state, {
+  await MercadoPagoOAuthState.create({
+    stateHash: crypto.createHash('sha256').update(state).digest('hex'),
     prestadorId: prestadorId.toString(),
     codeVerifier,
-    expiresAt: Date.now() + OAUTH_STATE_TTL_MS
+    ...context,
+    expiresAt: new Date(Date.now() + OAUTH_STATE_TTL_MS)
   });
 
   return state;
 }
 
-export function resolveMercadoPagoOAuthState(state) {
+export async function resolveMercadoPagoOAuthState(state) {
   if (!state || typeof state !== 'string') {
-    throw new Error('Falta el prestador asociado a la conexion');
+    throw Object.assign(new Error('Falta el prestador asociado a la conexion'), { status: 400 });
   }
 
-  const [prestadorId, nonce, signature] = state.split('.');
+  const [prestadorId, nonce, signature, extra] = state.split('.');
 
-  if (!prestadorId || !nonce || !signature) {
-    throw new Error('State OAuth firmado requerido');
+  if (!prestadorId || !nonce || !signature || extra) {
+    throw Object.assign(new Error('State OAuth firmado requerido'), { status: 400 });
   }
 
   const expectedSignature = signOAuthState(prestadorId, nonce);
@@ -116,31 +110,44 @@ export function resolveMercadoPagoOAuthState(state) {
   const received = Buffer.from(signature);
 
   if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
-    throw new Error('La conexion con Mercado Pago no pudo validarse. Intenta nuevamente.');
+    throw Object.assign(new Error('La conexion con Mercado Pago no pudo validarse. Intenta nuevamente.'), { status: 400 });
   }
 
-  const storedState = oauthStateStore.get(state);
-  if (!storedState || storedState.expiresAt <= Date.now()) {
-    oauthStateStore.delete(state);
-    throw new Error('La conexion con Mercado Pago expiro. Inicia la vinculacion nuevamente.');
+  const storedState = await MercadoPagoOAuthState.findOneAndDelete({
+    stateHash: crypto.createHash('sha256').update(state).digest('hex'),
+    expiresAt: { $gt: new Date() },
+  }).select('+codeVerifier');
+  if (!storedState) {
+    throw Object.assign(new Error('La conexion con Mercado Pago expiro. Inicia la vinculacion nuevamente.'), { status: 400 });
   }
 
-  oauthStateStore.delete(state);
   return {
-    prestadorId: storedState.prestadorId,
+    prestadorId: storedState.prestadorId.toString(),
+    usuarioId: storedState.usuarioId,
+    connectionVersion: storedState.connectionVersion,
+    redirectUri: storedState.redirectUri,
     codeVerifier: storedState.codeVerifier
   };
 }
 
 export function getMercadoPagoRedirectUri() {
   const configuredRedirectUri = process.env.MP_REDIRECT_URI?.trim();
-  const backendUrl = process.env.BACKEND_URL || process.env.APP_URL;
+  const backendUrl = [process.env.BACKEND_URL, process.env.APP_URL].find(value => {
+    try { const url = new URL(value); return url.protocol === 'https:' && url.pathname === '/' &&
+      !url.username && !url.password && !url.search && !url.hash && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname); }
+    catch { return false; }
+  });
 
   if (!configuredRedirectUri && !backendUrl) {
     throw new Error('Falta configurar MP_REDIRECT_URI, BACKEND_URL o APP_URL para OAuth de Mercado Pago');
   }
 
   if (configuredRedirectUri) {
+    const url = new URL(configuredRedirectUri);
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
+        ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
+      throw new Error('MP_REDIRECT_URI debe ser una URL HTTPS estatica sin credenciales ni parametros');
+    }
     if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(configuredRedirectUri)) {
       throw new Error('Mercado Pago OAuth requiere una URL publica. MP_REDIRECT_URI no puede apuntar a localhost.');
     }
@@ -155,7 +162,7 @@ export function getMercadoPagoRedirectUri() {
   return `${backendUrl.replace(/\/$/, '')}/api/pagos/mercadopago/connect`;
 }
 
-export function getMercadoPagoAuthorizationUrl({ prestadorId } = {}) {
+export async function getMercadoPagoAuthorizationUrl({ prestadorId, usuarioId, connectionVersion } = {}) {
   const clientId = getMercadoPagoClientId();
 
   if (!clientId) {
@@ -165,7 +172,7 @@ export function getMercadoPagoAuthorizationUrl({ prestadorId } = {}) {
   const redirectUri = getMercadoPagoRedirectUri();
   const usePkce = process.env.MP_USE_PKCE !== 'false';
   const pkce = usePkce ? createPkcePair() : null;
-  const state = createMercadoPagoOAuthState(prestadorId, pkce?.codeVerifier);
+  const state = await createMercadoPagoOAuthState(prestadorId, pkce?.codeVerifier, { redirectUri, usuarioId, connectionVersion });
   const authorizationUrl = new URL(process.env.MP_AUTHORIZATION_URL || 'https://auth.mercadopago.com/authorization');
 
   authorizationUrl.searchParams.set('client_id', clientId);
@@ -182,7 +189,7 @@ export function getMercadoPagoAuthorizationUrl({ prestadorId } = {}) {
   return authorizationUrl.toString();
 }
 
-export async function exchangeMercadoPagoCode(code, codeVerifier) {
+export async function exchangeMercadoPagoCode(code, codeVerifier, redirectUri = getMercadoPagoRedirectUri()) {
   const clientId = getMercadoPagoClientId();
   const clientSecret = getMercadoPagoClientSecret();
 
@@ -194,7 +201,7 @@ export async function exchangeMercadoPagoCode(code, codeVerifier) {
     client_id: clientId,
     client_secret: clientSecret,
     code,
-    redirect_uri: getMercadoPagoRedirectUri()
+    redirect_uri: redirectUri
   };
 
   if (codeVerifier) body.code_verifier = codeVerifier;

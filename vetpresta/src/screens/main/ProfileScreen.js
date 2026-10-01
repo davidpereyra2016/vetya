@@ -9,7 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
-  Linking
+  Linking,
+  AppState
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,6 +66,27 @@ const ProfileScreen = ({ navigation }) => {
     setMercadoPagoConnected(Boolean(provider?.mercadoPago?.conectado));
   }, [provider?.mercadoPago?.conectado]);
 
+  useEffect(() => {
+    if (!provider?._id) return;
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') syncMercadoPagoStatus();
+    });
+    const unsubscribe = navigation.addListener('focus', syncMercadoPagoStatus);
+    return () => { subscription.remove(); unsubscribe(); };
+  }, [provider?._id, navigation]);
+
+  const syncMercadoPagoStatus = async () => {
+    const providerId = provider?._id;
+    const result = await pagoService.obtenerEstadoMercadoPago();
+    const current = useAuthStore.getState().provider;
+    if (!result.success || current?._id !== providerId) return;
+    const connected = Boolean(result.data?.conectado);
+    setMercadoPagoConnected(connected);
+    useAuthStore.getState().updateProvider({ mercadoPago: {
+      ...(current.mercadoPago || {}), ...(result.data?.mercadoPago || {}), conectado: connected,
+    } });
+  };
+
   // Actualizar estadísticas cuando cambien las citas o valoraciones
   useEffect(() => {
     if (provider?._id) {
@@ -114,18 +136,7 @@ const ProfileScreen = ({ navigation }) => {
         fetchEstadoValidacion()
       ]);
 
-      const mercadoPagoResult = await pagoService.obtenerEstadoMercadoPago();
-      if (mercadoPagoResult.success) {
-        const connected = Boolean(mercadoPagoResult.data?.conectado);
-        setMercadoPagoConnected(connected);
-        useAuthStore.getState().updateProvider({
-          mercadoPago: {
-            ...(provider?.mercadoPago || {}),
-            ...(mercadoPagoResult.data?.mercadoPago || {}),
-            conectado: connected
-          }
-        });
-      }
+      await syncMercadoPagoStatus();
 
       // Calcular estadísticas
       const emergenciasAtendidas = provider.cantidadEmergenciasAtendidas || 0;
@@ -197,6 +208,16 @@ const ProfileScreen = ({ navigation }) => {
       setIsConnectingMercadoPago(false);
     }
   };
+
+  const handleDisconnectMercadoPago = () => Alert.alert('Desvincular Mercado Pago',
+    'Dejaras de recibir nuevos pagos online. Los cobros existentes se conservaran.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Desvincular', style: 'destructive', onPress: async () => {
+        const result = await pagoService.desvincularMercadoPago();
+        if (!result.success) return Alert.alert('Mercado Pago', result.error);
+        await syncMercadoPagoStatus();
+      } },
+    ]);
 
   // Función para actualizar disponibilidad para emergencias
   const handleToggleAvailability = async () => {
@@ -454,6 +475,14 @@ const ProfileScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        {mercadoPagoConnected && (
+          <View style={{ marginHorizontal: 20, marginTop: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: COLORS.dark, flexShrink: 1 }}>Mercado Pago vinculado</Text>
+            <TouchableOpacity onPress={handleDisconnectMercadoPago} accessibilityLabel="Desvincular Mercado Pago" style={{ padding: 12 }}>
+              <Ionicons name="unlink-outline" size={24} color={COLORS.grey} />
+            </TouchableOpacity>
+          </View>
+        )}
         {!mercadoPagoConnected && (
           <View style={{
             marginHorizontal: 20,

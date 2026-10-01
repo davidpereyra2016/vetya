@@ -1294,6 +1294,14 @@ export const validacionService = {
 // 🔷 Servicio de Pagos con Mercado Pago (Prestador)
 // ============================================
 export const pagoService = {
+  desvincularMercadoPago: async () => {
+    try {
+      const response = await axios.post('/pagos/mercadopago/disconnect');
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'Error al desvincular Mercado Pago' };
+    }
+  },
   /**
    * Consultar si el prestador tiene Mercado Pago conectado.
    */

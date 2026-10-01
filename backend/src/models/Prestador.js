@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { encryptCredential, decryptCredential } from '../utils/mercadoPagoCredentials.js';
 const { Schema } = mongoose;
 
 const prestadorSchema = new Schema({
@@ -144,11 +145,15 @@ const prestadorSchema = new Schema({
     },
     accessToken: {
       type: String,
-      select: false
+      select: false,
+      set: encryptCredential,
+      get: decryptCredential
     },
     refreshToken: {
       type: String,
-      select: false
+      select: false,
+      set: encryptCredential,
+      get: decryptCredential
     },
     publicKey: {
       type: String,
@@ -161,7 +166,10 @@ const prestadorSchema = new Schema({
     expiresIn: Number,
     expiresAt: Date,
     connectedAt: Date,
-    lastRefreshAt: Date
+    lastRefreshAt: Date,
+    connectionVersion: { type: Number, default: 0 },
+    refreshLockUntil: { type: Date, select: false },
+    refreshLockId: { type: String, select: false }
   },
   wallet: {
     cashDebt: {
@@ -237,13 +245,23 @@ const prestadorSchema = new Schema({
     default: Date.now
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { transform: removeMercadoPagoSecrets },
+  toObject: { transform: removeMercadoPagoSecrets }
 });
+
+function removeMercadoPagoSecrets(_document, result) {
+  if (result.mercadoPago) {
+    for (const field of ['accessToken', 'refreshToken', 'publicKey', 'refreshLockId', 'refreshLockUntil']) delete result.mercadoPago[field];
+  }
+  return result;
+}
 
 // Índice geoespacial para búsquedas por ubicación
 prestadorSchema.index({ direccionGeo: '2dsphere' }, { sparse: true });
 prestadorSchema.index({ ubicacionActualGeo: '2dsphere' }, { sparse: true });
 prestadorSchema.index({ usuario: 1 }, { unique: true });
+prestadorSchema.index({ 'mercadoPago.userId': 1 }, { unique: true, partialFilterExpression: { 'mercadoPago.userId': { $type: 'string' } } });
 prestadorSchema.index({ tipo: 1, activo: 1, verificado: 1 });
 prestadorSchema.index({ disponibleEmergencias: 1, activo: 1 });
 prestadorSchema.index({ estadoValidacion: 1, activo: 1 });

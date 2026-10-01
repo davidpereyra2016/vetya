@@ -1,4 +1,6 @@
 import { createServiceCheckout, notificationUrl, verifyWebhook, sellerPayment, searchSellerPayments, reconcilePayment } from '../services/mercadoPagoService.js';
+import { credentialFields } from '../services/mercadoPagoSellerService.js';
+import { mpDiagnostic, mpErrorDetails } from '../utils/mercadoPagoCredentials.js';
 import express from "express";
 import Pago from "../models/Pago.js";
 import Cita from "../models/Cita.js";
@@ -729,14 +731,18 @@ router.get("/mercadopago/prestador/:prestadorId/disponible", async (req, res) =>
 
 router.get("/mercadopago/connect-url", protectRoute, async (req, res) => {
   try {
-    const prestador = await Prestador.findOne({ usuario: req.user._id }).select("_id nombre");
+    const prestador = await Prestador.findOneAndUpdate({ usuario: req.user._id }, {
+      $inc: { 'mercadoPago.connectionVersion': 1 },
+    }, { new: true }).select("_id mercadoPago.connectionVersion");
 
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado" });
     }
 
     const redirectUri = getMercadoPagoRedirectUri();
-    const authorizationUrl = getMercadoPagoAuthorizationUrl({ prestadorId: prestador._id });
+    const authorizationUrl = await getMercadoPagoAuthorizationUrl({ prestadorId: prestador._id,
+      usuarioId: req.user._id, connectionVersion: prestador.mercadoPago.connectionVersion });
+    mpDiagnostic('oauth_started', { prestadorId: String(prestador._id) });
 
     res.status(200).json({
       authorizationUrl,
@@ -756,11 +762,29 @@ router.get("/mercadopago/success", (_req, res) => {
   res.status(200).send(renderMercadoPagoConnectedPage());
 });
 
+router.post('/mercadopago/disconnect', protectRoute, async (req, res) => {
+  const prestador = await Prestador.findOneAndUpdate({ usuario: req.user._id }, {
+    $set: { 'mercadoPago.conectado': false }, $inc: { 'mercadoPago.connectionVersion': 1 },
+  }, { new: true }).select('_id');
+  if (!prestador) return res.status(404).json({ message: 'Prestador no encontrado' });
+  // Retain server-only credentials to reconcile existing charges after local unlinking.
+  mpDiagnostic('oauth_disconnected', { prestadorId: String(prestador._id) });
+  return res.json({ conectado: false });
+});
+
 router.get("/mercadopago/connect", async (req, res) => {
   try {
     const { code, state } = req.query;
 
-    if (!code) {
+    if (req.query.error) {
+      await resolveMercadoPagoOAuthState(state);
+      const code = String(req.query.error);
+      mpDiagnostic('oauth_denied', { code: /^[a-z_]+$/i.test(code) ? code : 'authorization_denied' });
+      return res.status(400).json({ message: 'Mercado Pago rechazo la autorizacion',
+        code: /^[a-z_]+$/i.test(code) ? code : 'authorization_denied' });
+    }
+
+    if (!code || typeof code !== 'string') {
       return res.status(400).json({ message: "Falta el codigo de autorizacion de Mercado Pago" });
     }
 
@@ -768,26 +792,26 @@ router.get("/mercadopago/connect", async (req, res) => {
       return res.status(400).json({ message: "Falta el prestador asociado a la conexion" });
     }
 
-    const { prestadorId, codeVerifier } = resolveMercadoPagoOAuthState(state);
-    const credentials = await exchangeMercadoPagoCode(code, codeVerifier);
-    const expiresAt = credentials.expires_in
-      ? new Date(Date.now() + Number(credentials.expires_in) * 1000)
-      : undefined;
+    const { prestadorId, usuarioId, connectionVersion, codeVerifier, redirectUri } = await resolveMercadoPagoOAuthState(state);
+    mpDiagnostic('oauth_callback', { prestadorId });
+    const filter = { _id: prestadorId, usuario: usuarioId, 'mercadoPago.connectionVersion': connectionVersion };
+    if (!await Prestador.exists(filter)) return res.status(409).json({ message: 'La vinculacion cambio; inicia OAuth nuevamente' });
+    const credentials = await exchangeMercadoPagoCode(code, codeVerifier, redirectUri);
+    const fields = credentialFields(credentials);
+    const anotherSeller = await Prestador.exists({ _id: { $ne: prestadorId }, 'mercadoPago.userId': String(credentials.user_id) });
+    if (anotherSeller) return res.status(409).json({ message: 'Esta cuenta Mercado Pago ya pertenece a otro prestador' });
+    const previous = await Prestador.findById(prestadorId).select('mercadoPago.userId');
+    if (previous.mercadoPago?.userId && previous.mercadoPago.userId !== String(credentials.user_id) &&
+        await Pago.exists({ prestador: prestadorId, metodoPago: 'MercadoPago' })) {
+      return res.status(409).json({ message: 'No se puede cambiar el vendedor con cobros existentes; vuelve a vincular la cuenta original' });
+    }
 
-    const prestador = await Prestador.findByIdAndUpdate(
-      prestadorId,
+    const prestador = await Prestador.findOneAndUpdate(
+      filter,
       {
         $set: {
           "mercadoPago.conectado": true,
-          "mercadoPago.accessToken": credentials.access_token,
-          "mercadoPago.refreshToken": credentials.refresh_token,
-          "mercadoPago.publicKey": credentials.public_key,
-          "mercadoPago.userId": credentials.user_id?.toString(),
-          "mercadoPago.tokenType": credentials.token_type,
-          "mercadoPago.scope": credentials.scope,
-          "mercadoPago.liveMode": credentials.live_mode,
-          "mercadoPago.expiresIn": credentials.expires_in,
-          "mercadoPago.expiresAt": expiresAt,
+          ...fields,
           "mercadoPago.connectedAt": new Date(),
         },
       },
@@ -797,6 +821,7 @@ router.get("/mercadopago/connect", async (req, res) => {
     if (!prestador) {
       return res.status(404).json({ message: "Prestador no encontrado para guardar Mercado Pago" });
     }
+    mpDiagnostic('oauth_connected', { prestadorId, sellerId: String(credentials.user_id) });
 
     if (process.env.MP_SUCCESS_REDIRECT_URI && /^https?:\/\//i.test(process.env.MP_SUCCESS_REDIRECT_URI)) {
       return res.redirect(process.env.MP_SUCCESS_REDIRECT_URI);
@@ -808,10 +833,12 @@ router.get("/mercadopago/connect", async (req, res) => {
 
     res.status(200).send(renderMercadoPagoConnectedPage());
   } catch (error) {
-    console.error("Error al conectar Mercado Pago:", error);
-    res.status(500).json({
+    const details = mpErrorDetails(error);
+    mpDiagnostic('oauth_failed', details);
+    res.status(error.code === 11000 ? 409 : error.status === 400 ? 400 : 502).json({
       message: "Error al conectar Mercado Pago",
-      error: error.message,
+      code: details.code,
+      providerStatus: details.httpStatus,
     });
   }
 });
@@ -934,7 +961,7 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
     }
 
     console.log('=== CREAR PREFERENCIA MERCADO PAGO ===');
-    console.log('Usuario:', req.user._id, req.user.email);
+    console.log('Usuario:', req.user._id);
     console.log('Prestador:', prestadorId, prestador.nombre);
     console.log('Monto:', monto);
     console.log('Referencia:', referencia);
@@ -980,10 +1007,9 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
       }
     };
 
-    console.log('📦 Datos de preferencia a enviar a MP:', JSON.stringify(preferenceData, null, 2));
 
     // Crear preferencia en nombre del prestador conectado.
-    // Mercado Pago envia el 70% al vetpresta y retiene el 30% como marketplace_fee para Vetya.
+    // Seller share excludes Mercado Pago's processing fees; API evidence supplies the actual net.
     const { pago: nuevoPago, preference, split } = await createServiceCheckout({
       prestador, preferenceData,
       pagoData: { usuario: req.user._id, concepto: referencia.tipo, referencia,
@@ -1009,7 +1035,7 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
     res.status(201).json(responseBody);
 
   } catch (error) {
-    console.error('❌ Error al crear preferencia:', error);
+    mpDiagnostic('checkout_failed', mpErrorDetails(error));
     if (idempotencyRecord) {
       const { statusCode, body } = await failIdempotency(idempotencyRecord, error, "Error al crear la preferencia de pago");
       return res.status(statusCode).json(body);
@@ -1029,6 +1055,7 @@ router.post("/mercadopago/create-preference", protectRoute, async (req, res) => 
 router.post("/mercadopago/webhook", async (req, res) => {
   try {
     const id = verifyWebhook(req);
+    mpDiagnostic('webhook_received', { paymentId: id });
     if (req.body.type !== 'payment') return res.sendStatus(200);
     // user_id only selects a credential; the API result must still match the immutable charge.
     const seller = await Prestador.findOne({ 'mercadoPago.userId': String(req.body.user_id || '') });
