@@ -2,6 +2,8 @@ import { createServiceCheckout, notificationUrl as buildNotificationUrl } from '
 import express from 'express';
 import mongoose from 'mongoose';
 import Emergencia from "../models/Emergencia.js";
+import LlegadaEmergencia from '../models/LlegadaEmergencia.js';
+import { ensureArrival, verifyArrival } from '../services/emergencyArrivalService.js';
 import Mascota from "../models/Mascota.js";
 import Prestador from "../models/Prestador.js";
 import Servicio from "../models/Servicio.js";
@@ -238,7 +240,8 @@ async function completarPagoEfectivoEmergencia(emergencia) {
       },
       prestador: prestador._id,
       monto,
-      metodoPago: 'Efectivo'
+      metodoPago: 'Efectivo',
+      checkoutKey: `Emergencia:${emergencia._id}`
     });
   }
 
@@ -249,7 +252,17 @@ async function completarPagoEfectivoEmergencia(emergencia) {
     pago.idTransaccion = `EFECTIVO-EMERG-${emergencia._id.toString()}`;
   }
 
-  await pago.save();
+  try {
+    await pago.save();
+  } catch (error) {
+    if (error.code !== 11000) throw error;
+    pago = await Pago.findOne({ checkoutKey: `Emergencia:${emergencia._id}`, metodoPago: 'Efectivo' });
+    if (!pago) throw error;
+    pago.estado = 'Completado';
+    pago.fechaPago = new Date();
+    pago.idTransaccion ||= `EFECTIVO-EMERG-${emergencia._id}`;
+    await pago.save();
+  }
   await registerCashDebtForPayment(pago);
   return pago;
 }
@@ -773,7 +786,10 @@ router.post("/", protectRoute, async (req, res) => {
     }, { $set: { emergencyCreateUntil: claimUntil } });
     if (!claimed) return res.status(429).json({ message: 'Ya hay una solicitud de emergencia en curso' });
     try {
-      await nuevaEmergencia.save();
+      await mongoose.connection.transaction(async session => {
+        await ensureArrival(nuevaEmergencia, session);
+        await nuevaEmergencia.save({ session });
+      });
     } catch (error) {
       await User.updateOne({ _id: req.user._id, emergencyCreateUntil: claimUntil }, { $unset: { emergencyCreateUntil: 1 } });
       throw error;
@@ -1106,7 +1122,6 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
     console.log(`\n📥 ============ PATCH /emergencias/${req.params.id}/estado ============`);
     console.log(`   Usuario: ${req.user._id} (${req.user.username || req.user.email})`);
     console.log(`   Estado nuevo: ${estado}`);
-    console.log(`   Body completo:`, req.body);
 
     if (!estado) {
       console.log('❌ Estado no proporcionado');
@@ -1146,6 +1161,18 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
     console.log('   Es veterinario asignado:', esVeterinarioAsignado);
 
     // Verificar autorización según el estado que se quiere cambiar
+    if (['Cancelada', 'Atendida'].includes(emergencia.estado)) {
+      return res.status(409).json({ message: 'La emergencia ya está cerrada' });
+    }
+    if (estado === 'En atención') {
+      return res.status(409).json({ message: 'El veterinario debe validar el código de llegada del cliente' });
+    }
+    if (estado === 'Atendida' && (emergencia.estado !== 'En atención' || !emergencia.llegadaConfirmada)) {
+      return res.status(409).json({ message: 'Primero se debe confirmar la llegada para completar la atención' });
+    }
+    if (emergencia.estado === 'En atención' && !['Atendida', 'Cancelada'].includes(estado)) {
+      return res.status(409).json({ message: 'La atención ya comenzó; no se puede retroceder el estado' });
+    }
     console.log('🔒 Verificando autorización para estado:', estado);
     if (estado === 'En camino' || estado === 'Atendida') {
       // Solo el veterinario puede marcar como "En camino" o "Atendida"
@@ -1161,13 +1188,6 @@ router.patch("/:id/estado", protectRoute, async (req, res) => {
       if (!esClientePropietario && !esVeterinarioAsignado) {
         return res.status(403).json({
           message: "No autorizado para cancelar esta emergencia"
-        });
-      }
-    } else if (estado === 'En atención') {
-      // Solo el cliente puede confirmar que el veterinario llegó (cambiar a "En atención")
-      if (!esClientePropietario) {
-        return res.status(403).json({
-          message: "No autorizado: solo el cliente puede confirmar la llegada del veterinario"
         });
       }
     } else {
@@ -1987,8 +2007,60 @@ router.post("/:id/rechazar", protectRoute, async (req, res) => {
   }
 });
 
-// Confirmar servicio de emergencia
-// Confirmar llegada del veterinario (ruta para clientes)
+// El código nunca se incluye en listados, notificaciones ni eventos Socket.IO.
+router.get('/:id/codigo-llegada', protectRoute, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ message: 'ID de emergencia inválido' });
+    const emergencia = await Emergencia.findById(req.params.id);
+    if (!emergencia) return res.status(404).json({ message: 'Emergencia no encontrada' });
+    if (String(emergencia.usuario) !== String(req.user._id)) return res.status(403).json({ message: 'Solo el cliente puede ver su código' });
+    res.set('Cache-Control', 'no-store');
+    let llegada = await LlegadaEmergencia.findOne({ emergencia: emergencia._id }).select('+codigo');
+    // Compatibilidad con emergencias activas anteriores al despliegue.
+    if (!llegada && ['Solicitada', 'Asignada', 'Confirmada', 'En camino'].includes(emergencia.estado)) llegada = await ensureArrival(emergencia);
+    return res.json({ codigo: llegada?.confirmadaEn || ['En atención', 'Atendida', 'Cancelada'].includes(emergencia.estado) ? null : llegada?.codigo || null,
+      confirmadaEn: llegada?.confirmadaEn || emergencia.fechaLlegadaConfirmada || null });
+  } catch (error) {
+    // Dos lecturas simultáneas de una emergencia anterior pueden disputar el upsert.
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'El código se está preparando. Actualiza la emergencia' });
+    }
+    return res.status(500).json({ message: 'No se pudo obtener el código de llegada' });
+  }
+});
+
+router.get('/:id/registro-llegada', protectRoute, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ message: 'ID de emergencia inválido' });
+    const emergencia = await Emergencia.findById(req.params.id);
+    if (!emergencia) return res.status(404).json({ message: 'Emergencia no encontrada' });
+    const prestador = await Prestador.findOne({ usuario: req.user._id });
+    const llegada = await LlegadaEmergencia.findOne({ emergencia: emergencia._id });
+    const owner = String(emergencia.usuario) === String(req.user._id);
+    const assigned = prestador?.tipo === 'Veterinario' && (String(emergencia.veterinario) === String(prestador._id) || String(llegada?.prestador) === String(prestador._id));
+    if (!owner && !assigned) return res.status(403).json({ message: 'No tienes permiso para ver este registro' });
+    res.set('Cache-Control', 'no-store');
+    return res.json({ registro: llegada, estadoEmergencia: emergencia.estado });
+  } catch (error) {
+    return res.status(500).json({ message: 'No se pudo obtener el registro de llegada' });
+  }
+});
+
+router.patch('/:id/validar-llegada', protectRoute, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ message: 'ID de emergencia inválido' });
+    const prestador = await Prestador.findOne({ usuario: req.user._id });
+    if (!prestador || prestador.tipo !== 'Veterinario') return res.status(403).json({ message: 'Solo los veterinarios pueden validar la llegada' });
+    const result = await verifyArrival(req.params.id, prestador, req.user._id, req.body?.codigo);
+    // Emitir incluso en reintentos permite recuperar una entrega de evento fallida.
+    emitEmergencyUpdated(result.emergencia, 'arrival_confirmed');
+    return res.json({ emergencia: result.emergencia, alreadyConfirmed: result.alreadyConfirmed });
+  } catch (error) {
+    return res.status(error.status || 500).json({ message: error.status ? error.message : 'No se pudo validar la llegada. Intenta nuevamente' });
+  }
+});
+
+// Preparar o recuperar el pago después de validar la llegada (ruta histórica del cliente).
 router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
   let idempotencyRecord = null;
 
@@ -2012,11 +2084,23 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
       return res.status(403).json({ message: "No tienes permiso para confirmar esta emergencia" });
     }
 
+    // Esta ruta conserva el checkout del cliente, pero ya no confirma la llegada.
+    if (emergencia.estado !== 'En atención' || !emergencia.llegadaConfirmada) {
+      return res.status(409).json({ message: 'El veterinario debe validar primero el código de llegada' });
+    }
+
     const idempotency = await beginIdempotency(req, "emergencias:confirmar-llegada");
     idempotencyRecord = idempotency.record;
 
     if (!idempotency.isNew) {
       return replayIdempotencyResult(res, idempotency.record);
+    }
+
+    const pagoExistente = await Pago.findOne({ 'referencia.tipo': 'Emergencia', 'referencia.id': emergencia._id });
+    if (pagoExistente && emergencia.metodoPago === 'Efectivo') {
+      const body = { emergencia, preferenciaMP: null };
+      await completeIdempotency(idempotencyRecord, { statusCode: 200, body, pago: pagoExistente._id });
+      return res.status(200).json(body);
     }
 
     if (emergencia.estado === 'En atención' && emergencia.metodoPago === 'MercadoPago') {
@@ -2028,44 +2112,6 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
       }
       if (existing) throw Object.assign(new Error('Checkout pendiente de conciliación; no se creará otro cobro'), { status: 503 });
     }
-
-    const fechaLlegadaConfirmada = new Date();
-    const emergenciaConfirmada = emergencia.estado === 'En atención' && emergencia.metodoPago === 'MercadoPago'
-      ? emergencia : await Emergencia.findOneAndUpdate(
-      {
-        _id: emergencia._id,
-        usuario: req.user._id,
-        estado: "En camino"
-      },
-      {
-        $set: {
-          llegadaConfirmada: true,
-          llegadaConfirmadaPorCliente: true,
-          fechaLlegadaConfirmada,
-          estado: "En atención",
-          expirada: false
-        },
-        $unset: {
-          expiraEn: "",
-          expiraRespuestaVetEn: ""
-        },
-        $push: {
-          historial: {
-            estado: "En atención",
-            fecha: fechaLlegadaConfirmada,
-            usuario: req.user._id,
-            notas: "Llegada del veterinario confirmada por el cliente"
-          }
-        }
-      },
-      { new: true, runValidators: true }
-    );
-
-    if (!emergenciaConfirmada) {
-      return res.status(409).json({ message: "La emergencia debe estar en estado 'En camino' para confirmar llegada" });
-    }
-
-    emergencia = emergenciaConfirmada;
 
     // 💰 CREAR REGISTRO DE PAGO SEGÚN MÉTODO
     let preferenciaMP = null;
@@ -2098,11 +2144,18 @@ router.patch("/:id/confirmar-llegada", protectRoute, async (req, res) => {
           metodoPago: 'Efectivo',
           estado: 'Pendiente', // Se completa automáticamente cuando el veterinario marca la emergencia como Atendida
           idempotencyKey: idempotency.key,
+          checkoutKey: `Emergencia:${emergencia._id}`,
           fechaPago: null // Se actualizará cuando se complete el pago
         });
 
-        await nuevoPago.save();
-        pagoCreado = nuevoPago;
+        try {
+          await nuevoPago.save();
+          pagoCreado = nuevoPago;
+        } catch (error) {
+          if (error.code !== 11000) throw error;
+          pagoCreado = await Pago.findOne({ checkoutKey: `Emergencia:${emergencia._id}`, metodoPago: 'Efectivo' });
+          if (!pagoCreado) throw error;
+        }
 
         console.log('✅ [CONFIRMAR LLEGADA] Pago en efectivo registrado:', {
           pagoId: nuevoPago._id,

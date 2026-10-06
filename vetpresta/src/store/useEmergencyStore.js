@@ -271,6 +271,31 @@ const useEmergencyStore = create((set, get) => ({
     }
   },
 
+  validateArrival: async (emergencyId, codigo) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await emergenciaService.validateArrival(emergencyId, codigo);
+      if (!result.success) {
+        set({ isLoading: false, error: result.error });
+        return result;
+      }
+      const emergencia = result.data.emergencia;
+      set(state => ({
+        emergencies: state.emergencies.map(em => (em._id || em.id) === emergencyId ? { ...em, ...emergencia } : em),
+        emergencias: state.emergencias.map(em => getEmergencyId(em) === emergencyId ? { ...em, ...emergencia } : em),
+        activeEmergencies: state.activeEmergencies.map(em => getEmergencyId(em) === emergencyId ? { ...em, ...emergencia } : em),
+        currentEmergency: getEmergencyId(state.currentEmergency) === emergencyId ? { ...state.currentEmergency, ...emergencia } : state.currentEmergency,
+        emergenciaActual: getEmergencyId(state.emergenciaActual) === emergencyId ? { ...state.emergenciaActual, ...emergencia } : state.emergenciaActual,
+        isLoading: false,
+      }));
+      return { success: true, data: emergencia };
+    } catch (error) {
+      const message = 'No se pudo validar el código. Intenta nuevamente';
+      set({ isLoading: false, error: message });
+      return { success: false, error: message };
+    }
+  },
+
   updateEmergencyStatus: async (emergencyId, estado, payload = undefined) => {
     set({ isLoading: true, error: null });
     try {

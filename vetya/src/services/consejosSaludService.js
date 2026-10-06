@@ -41,7 +41,7 @@ export const normalizeConsejo = (consejo = {}) => {
     categorySlug: consejo.categoriaSlug || consejo.categorySlug || '',
     petTypes: paraTipos,
     petType: PET_TYPE_BY_BACKEND[primaryType] || 'all',
-    author: consejo.autor || consejo.author || 'Equipo Vetya',
+    author: consejo.autor || consejo.author || 'Equipo Zuvia',
     doctor: consejo.medicoCitado || consejo.doctor || '',
     source: consejo.fuente || consejo.source || '',
     readTime: `${consejo.tiempoLectura || consejo.readTime || 5} min`,

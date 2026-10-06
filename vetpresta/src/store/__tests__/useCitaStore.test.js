@@ -377,7 +377,7 @@ describe('useCitaStore - Prestador gestiona citas', () => {
     test('debe detectar citas próximas en los próximos 30 minutos', () => {
       const ahora = new Date();
       const en25Minutos = new Date(ahora.getTime() + 25 * 60000);
-      const fecha = en25Minutos.toISOString().split('T')[0];
+      const fecha = `${en25Minutos.getFullYear()}-${String(en25Minutos.getMonth() + 1).padStart(2, '0')}-${String(en25Minutos.getDate()).padStart(2, '0')}`;
       const hora = en25Minutos.toTimeString().substring(0, 5);
 
       const cita = {

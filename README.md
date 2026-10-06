@@ -300,7 +300,7 @@ vetya_1.0/
 
 ## 🌐 APIs Principales
 
-### **Base URL**: `http://localhost:5000/api`
+### **Base URL local**: `http://localhost:3000/api` (desde el teléfono: `http://192.168.1.5:3000/api` en la red actual)
 
 | Ruta | Descripción | Apps que consumen |
 |------|-------------|-------------------|
@@ -322,31 +322,31 @@ vetya_1.0/
 ## 🚀 Cómo Ejecutar el Sistema Completo
 
 ### **1. Backend**
-```bash
-cd backend
-npm install
+```powershell
+cd E:\vetya_1.0\backend
+npm.cmd install # solo si faltan dependencias
 # Configurar .env con MongoDB URI, JWT_SECRET, Cloudinary, etc.
-npm run dev
-# Servidor en http://localhost:5000
-# Panel admin en http://localhost:5000/admin
+npm.cmd run dev
+# API: http://localhost:3000/api/health
+# Panel: http://localhost:3000/admin
 ```
 
 ### **2. App de Prestadores (vetpresta)**
-```bash
-cd vetpresta
-npm install
-npm start
-# Escanear QR con Expo Go
-# O ejecutar en emulador: npm run android / npm run ios
+```powershell
+cd E:\vetya_1.0\vetpresta
+npm.cmd install # solo si faltan dependencias
+$env:EXPO_OFFLINE = '1'
+npm.cmd start -- --lan --port 8082
+# Esperar el QR de Expo; algunas funciones nativas requieren una compilación de desarrollo.
 ```
 
 ### **3. App de Clientes (vetya)**
-```bash
-cd vetya
-npm install
-npm start
-# Escanear QR con Expo Go
-# O ejecutar en emulador: npm run android / npm run ios
+```powershell
+cd E:\vetya_1.0\vetya
+npm.cmd install # solo si faltan dependencias
+$env:EXPO_OFFLINE = '1'
+npm.cmd start -- --lan --port 8081
+# Esperar el QR de Expo y escanearlo con el teléfono en la misma red Wi-Fi.
 ```
 
 ---
@@ -355,7 +355,7 @@ npm start
 
 ### **Backend (.env)**
 ```env
-PORT=5000
+PORT=3000
 MONGODB_URI=mongodb://localhost:27017/vetya
 JWT_SECRET=tu_secreto_jwt_super_seguro
 CLOUDINARY_CLOUD_NAME=tu_cloud_name
@@ -366,10 +366,12 @@ ADMIN_PASSWORD=admin123
 ```
 
 ### **Apps Móviles**
-```javascript
-// Configurar baseURL en config/axios.js
-const BASE_URL = 'http://TU_IP_LOCAL:5000/api';
-// NO usar localhost en apps móviles, usar IP de tu máquina
+```powershell
+# La IP actual de Wi-Fi 2 es 192.168.1.5. Si cambia, establecer esto
+# en cada terminal de Expo antes de ejecutar npm.cmd start:
+$env:EXPO_PUBLIC_API_URL = 'http://IP_DEL_EQUIPO:3000/api'
+# Comprobar la IP actual con Get-NetIPAddress -AddressFamily IPv4.
+# El teléfono debe poder abrir http://IP_DEL_EQUIPO:3000/api/health.
 ```
 
 ---
@@ -377,17 +379,16 @@ const BASE_URL = 'http://TU_IP_LOCAL:5000/api';
 ## 🔧 Scripts Útiles
 
 ### **Backend**
-```bash
-npm run dev              # Desarrollo con nodemon
+```powershell
+npm.cmd run dev          # Desarrollo con nodemon
 node createAdmin.js      # Crear usuario admin inicial
 ```
 
 ### **Apps Móviles**
-```bash
-npm start                # Iniciar Expo
-npm run android          # Ejecutar en Android
-npm run ios              # Ejecutar en iOS
-expo start -c            # Limpiar caché y ejecutar
+```powershell
+npm.cmd start -- --lan --port 8081         # Vetya; usar 8082 para Vetpresta
+npm.cmd start -- --lan --port 8081 --clear # Limpiar caché de Vetya
+# Ctrl+C en cada terminal detiene el servicio y libera su puerto.
 ```
 
 ---

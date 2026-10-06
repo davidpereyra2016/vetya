@@ -9,7 +9,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
-// Colores de la aplicación (patrón Vetya)
+// Colores de la aplicación (patrón Zuvia)
 const COLORS = {
   primary: '#1E88E5',
   primaryDark: '#1565C0',
@@ -73,19 +73,19 @@ const TermsConditionsScreen = ({ navigation }) => {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.documentHeader}>
-          <Text style={styles.title}>Términos de Uso de VetYa!</Text>
+          <Text style={styles.title}>Términos de Uso de Zuvia</Text>
           <Text style={styles.dateText}>Última actualización: {lastUpdated}</Text>
         </View>
 
         <View style={styles.textContainer}>
           <Text style={styles.heading}>1. Aceptación de los Términos</Text>
           <Text style={styles.paragraph}>
-            Al descargar, instalar y utilizar la aplicación VetYa! ("la Aplicación"), usted acepta estar sujeto a estos Términos y Condiciones. Si no está de acuerdo con alguna parte de estos términos, no debe utilizar nuestra plataforma.
+            Al descargar, instalar y utilizar la aplicación Zuvia ("la Aplicación"), usted acepta estar sujeto a estos Términos y Condiciones. Si no está de acuerdo con alguna parte de estos términos, no debe utilizar nuestra plataforma.
           </Text>
 
           <Text style={styles.heading}>2. Naturaleza del Servicio</Text>
           <Text style={styles.paragraph}>
-            VetYa! es una plataforma tecnológica que facilita la conexión entre usuarios que requieren servicios veterinarios y profesionales veterinarios independientes que ofrecen dichos servicios a domicilio o en clínica. VetYa! no provee servicios veterinarios de manera directa y no se hace responsable por las acciones, diagnósticos o tratamientos aplicados por los profesionales registrados en la plataforma.
+            Zuvia es una plataforma tecnológica que facilita la conexión entre usuarios que requieren servicios veterinarios y profesionales veterinarios independientes que ofrecen dichos servicios a domicilio o en clínica. Zuvia no provee servicios veterinarios de manera directa y no se hace responsable por las acciones, diagnósticos o tratamientos aplicados por los profesionales registrados en la plataforma.
           </Text>
 
           <Text style={styles.heading}>3. Registro y Cuentas de Usuario</Text>
@@ -95,22 +95,22 @@ const TermsConditionsScreen = ({ navigation }) => {
 
           <Text style={styles.heading}>4. Obligaciones de los Profesionales (Prestadores)</Text>
           <Text style={styles.paragraph}>
-            Los veterinarios registrados declaran poseer las licencias, certificaciones y permisos vigentes requeridos por la ley para ejercer su profesión. VetYa! se reserva el derecho de suspender o cancelar cuentas de profesionales que no cumplan con estos requisitos o que reciban quejas fundadas por parte de los usuarios.
+            Los veterinarios registrados declaran poseer las licencias, certificaciones y permisos vigentes requeridos por la ley para ejercer su profesión. Zuvia se reserva el derecho de suspender o cancelar cuentas de profesionales que no cumplan con estos requisitos o que reciban quejas fundadas por parte de los usuarios.
           </Text>
 
           <Text style={styles.heading}>5. Tarifas y Pagos</Text>
           <Text style={styles.paragraph}>
-            Los precios de los servicios son establecidos por los profesionales o acordados a través de la plataforma. VetYa! puede cobrar comisiones o tarifas de servicio por el uso de la plataforma, las cuales serán comunicadas de manera transparente antes de confirmar cualquier transacción.
+            Los precios de los servicios son establecidos por los profesionales o acordados a través de la plataforma. Zuvia puede cobrar comisiones o tarifas de servicio por el uso de la plataforma, las cuales serán comunicadas de manera transparente antes de confirmar cualquier transacción.
           </Text>
 
           <Text style={styles.heading}>6. Limitación de Responsabilidad</Text>
           <Text style={styles.paragraph}>
-            VetYa! no será responsable por daños indirectos, incidentales, especiales, ejemplares o consecuentes, incluyendo la pérdida de datos, lesiones personales o daños a la propiedad, relacionados con el uso de los servicios coordinados a través de nuestra aplicación.
+            Zuvia no será responsable por daños indirectos, incidentales, especiales, ejemplares o consecuentes, incluyendo la pérdida de datos, lesiones personales o daños a la propiedad, relacionados con el uso de los servicios coordinados a través de nuestra aplicación.
           </Text>
 
           <Text style={styles.heading}>7. Modificaciones</Text>
           <Text style={styles.paragraph}>
-            Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios entrarán en vigor inmediatamente después de su publicación en la Aplicación. Su uso continuado de VetYa! constituye su aceptación de los términos modificados.
+            Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios entrarán en vigor inmediatamente después de su publicación en la Aplicación. Su uso continuado de Zuvia constituye su aceptación de los términos modificados.
           </Text>
 
           <Text style={styles.heading}>8. Contacto</Text>

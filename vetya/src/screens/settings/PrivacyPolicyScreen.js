@@ -9,7 +9,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
-// Colores de la aplicación (patrón Vetya)
+// Colores de la aplicación (patrón Zuvia)
 const COLORS = {
   primary: '#1E88E5',
   primaryDark: '#1565C0',
@@ -73,13 +73,13 @@ const PrivacyPolicyScreen = ({ navigation }) => {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.documentHeader}>
-          <Text style={styles.title}>Política de Privacidad de VetYa!</Text>
+          <Text style={styles.title}>Política de Privacidad de Zuvia</Text>
           <Text style={styles.dateText}>Última actualización: {lastUpdated}</Text>
         </View>
 
         <View style={styles.textContainer}>
           <Text style={styles.introText}>
-            En VetYa! valoramos y respetamos su privacidad. Esta Política de Privacidad explica cómo recopilamos, utilizamos, divulgamos y protegemos su información cuando utiliza nuestra aplicación móvil.
+            En Zuvia valoramos y respetamos su privacidad. Esta Política de Privacidad explica cómo recopilamos, utilizamos, divulgamos y protegemos su información cuando utiliza nuestra aplicación móvil.
           </Text>
 
           <Text style={styles.heading}>1. Información que Recopilamos</Text>

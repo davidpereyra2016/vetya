@@ -575,21 +575,19 @@ Privacidad:
 
 ## 🚀 Comandos de Ejecución
 
-```bash
-# Iniciar en desarrollo
-npm start
+Desde PowerShell, en `E:\vetya_1.0\vetya`, con el backend abierto en el puerto 3000:
 
-# Android
-npm run android
+```powershell
+npm.cmd install # solo si faltan las dependencias
+$env:EXPO_OFFLINE = '1'
+npm.cmd start -- --lan --port 8081
+```
 
-# iOS
-npm run ios
+Esperar a que Expo muestre el enlace de Metro y el QR. El teléfono debe estar en la misma red Wi-Fi que el equipo. Escanear el QR con Expo Go; `Ctrl+C` detiene Metro y libera el puerto. `npm.cmd start -- --lan --port 8081 --clear` limpia la caché si hace falta. `EXPO_OFFLINE=1` evita un fallo de la consulta remota de versiones de Expo (`Body is unusable`) observado en este equipo. En este equipo `npm` resuelve al archivo vacío `E:\npm`, por eso se usa `npm.cmd`.
 
-# Web (limitado)
-npm run web
+La API de desarrollo usa `http://192.168.1.5:3000/api` en `src/config/axios.js`. Esta es la IP actual de la interfaz `Wi-Fi 2`; si cambia la red, comprobar `Get-NetIPAddress -AddressFamily IPv4` y establecer `EXPO_PUBLIC_API_URL` con la nueva IP **antes** de iniciar Expo. El teléfono debe poder abrir `http://IP_DEL_EQUIPO:3000/api/health`. No usar `localhost` como URL de API en el teléfono.
 
-# Limpiar caché
-expo start -c
+Para ejecutar ambas apps a la vez, Vetpresta usa el puerto 8082 en otra terminal. `npm.cmd run android` construye e inicia una app nativa en Android; `npm.cmd run ios` requiere macOS. El QR por sí solo no demuestra que los módulos nativos de todas las pantallas funcionen en Expo Go.
 ```
 
 ---

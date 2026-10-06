@@ -596,6 +596,15 @@ export const emergenciaService = {
   },
 
   // Cambiar estado de una emergencia (En camino, Atendida)
+  validateArrival: async (emergencyId, codigo) => {
+    try {
+      const response = await axios.patch(`/emergencias/${emergencyId}/validar-llegada`, { codigo });
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'No se pudo validar el código de llegada' };
+    }
+  },
+
   setEmergencyStatus: async (emergencyId, estado) => {
     console.log(`🟠 [API] setEmergencyStatus - ID: ${emergencyId}, Estado: ${estado}`);
     try {

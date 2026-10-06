@@ -11,7 +11,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
-// Colores de la aplicación (patrón Vetya)
+// Colores de la aplicación (patrón Zuvia)
 const COLORS = {
   primary: '#1E88E5',
   primaryDark: '#1565C0',
@@ -74,8 +74,8 @@ const HelpSupportScreen = ({ navigation }) => {
   const contactEmail = 'vetyaoficial@gmail.com';
 
   const handleEmailSupport = async () => {
-    const subject = 'Consulta de Soporte - VetYa!';
-    const body = 'Hola equipo de VetYa!,\n\nTengo la siguiente consulta:\n\n';
+    const subject = 'Consulta de Soporte - Zuvia';
+    const body = 'Hola equipo de Zuvia,\n\nTengo la siguiente consulta:\n\n';
     const mailtoUrl = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     try {
@@ -129,7 +129,7 @@ const HelpSupportScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Contáctanos</Text>
           <Text style={styles.sectionSubtitle}>
-            ¿Tienes algún problema con VetYa! o necesitas asistencia adicional? Estamos aquí para ayudarte.
+            ¿Tienes algún problema con Zuvia o necesitas asistencia adicional? Estamos aquí para ayudarte.
           </Text>
 
           <TouchableOpacity accessibilityRole="button" hitSlop={8} style={styles.contactCard} onPress={handleEmailSupport}>

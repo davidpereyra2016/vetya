@@ -119,6 +119,9 @@ const shouldCache = (req, res) => {
 
 export const cacheReads = ({ ttl = DEFAULT_TTL_SECONDS } = {}) => async (req, res, next) => {
   if (req.method !== "GET") return next();
+  // La llegada requiere autorización y estado actuales en cada lectura.
+  // No guardar el código ni la telemetría en Redis antes del middleware JWT.
+  if (/\/emergencias\/[^/]+\/(codigo-llegada|registro-llegada)\/?$/.test(req.path)) return next();
 
   const redis = await getRedisClient();
   if (!redis) return next();

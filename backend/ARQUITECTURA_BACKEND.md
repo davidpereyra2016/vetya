@@ -339,20 +339,19 @@ GET  /admin/emergencias        - Monitor de emergencias
 
 ## 🚀 Comandos de Ejecución
 
-```bash
-# Desarrollo con auto-reload
-npm run dev
+Desde PowerShell, en `E:\vetya_1.0\backend`:
 
-# Crear admin inicial
+```powershell
+npm.cmd install # solo si faltan las dependencias
+npm.cmd run dev
+```
+
+El `.env` local ya define `PORT=3000`. La API responde en `http://localhost:3000/api/health` y el panel en `http://localhost:3000/admin`. El servidor debe seguir abierto mientras se usan las apps. Para detenerlo, pulsar `Ctrl+C` en esa terminal. En este equipo `npm` resuelve primero al archivo vacío `E:\npm`; usar `npm.cmd` evita ese problema. Los demás valores de `.env` se conservan en el archivo local y no deben copiarse a la documentación.
+
+Para crear el administrador inicial, si hace falta:
+
+```powershell
 node createAdmin.js
-
-# Variables de entorno requeridas (.env)
-PORT=5000
-MONGODB_URI=mongodb://...
-JWT_SECRET=...
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
 ```
 
 ---

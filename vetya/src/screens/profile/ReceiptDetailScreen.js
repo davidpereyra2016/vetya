@@ -85,7 +85,7 @@ const ReceiptDetailScreen = ({ route, navigation }) => {
   const handleShare = async () => {
     try {
       const mensaje =
-        `Recibo Vetya\n` +
+        `Recibo Zuvia\n` +
         `━━━━━━━━━━━━━━━━\n` +
         `Concepto: ${concepto}\n` +
         `Prestador: ${prestador?.nombre}\n` +

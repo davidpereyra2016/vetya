@@ -13,6 +13,7 @@ const useEmergencyStore = create((set, get) => ({
   availableVets: [],
   activeEmergencies: [],
   selectedEmergency: null,
+  arrivalCodes: {},
   isLoading: false,
   error: null,
   
@@ -22,11 +23,24 @@ const useEmergencyStore = create((set, get) => ({
       availableVets: [],
       activeEmergencies: [],
       selectedEmergency: null,
+      arrivalCodes: {},
       isLoading: false,
       error: null
     });
   },
   
+  loadArrivalCode: async (emergencyId) => {
+    try {
+      const result = await emergenciaService.getArrivalCode(emergencyId);
+      if (result.success) {
+        set(state => ({ arrivalCodes: { ...state.arrivalCodes, [emergencyId]: result.data } }));
+      }
+      return result;
+    } catch (error) {
+      return { success: false, error: 'No se pudo cargar el código de llegada' };
+    }
+  },
+
   // Cargar veterinarios disponibles para emergencias
   loadAvailableVets: async () => {
     set({ isLoading: true, error: null });

@@ -512,21 +512,32 @@ Tipos de notificaciones:
 
 ## 🚀 Comandos de Ejecución
 
-```bash
-# Iniciar en desarrollo
-npm start
+Desde PowerShell, en `E:\vetya_1.0\vetpresta`, con el backend abierto en el puerto 3000:
 
-# Android
-npm run android
+```powershell
+npm.cmd install # solo si faltan las dependencias
+$env:EXPO_OFFLINE = '1'
+npm.cmd start -- --lan --port 8082
+```
 
-# iOS
-npm run ios
+Esperar a que Expo muestre el enlace de Metro y el QR. El teléfono debe estar en la misma red Wi-Fi que el equipo. Escanear el QR con Expo Go o con una compilación de desarrollo compatible; `Ctrl+C` detiene Metro y libera el puerto. `npm.cmd start -- --lan --port 8082 --clear` limpia la caché si hace falta. `EXPO_OFFLINE=1` omite la consulta remota de versiones de Expo que falló en Vetya durante esta prueba. En este equipo `npm` resuelve al archivo vacío `E:\npm`, por eso se usa `npm.cmd`.
 
-# Web (limitado)
-npm run web
+La API de desarrollo usa `http://192.168.1.5:3000/api` en `src/config/axios.js`. Esta es la IP actual de la interfaz `Wi-Fi 2`; si cambia la red, comprobar `Get-NetIPAddress -AddressFamily IPv4` y establecer `EXPO_PUBLIC_API_URL` con la nueva IP **antes** de iniciar Expo. El teléfono debe poder abrir `http://IP_DEL_EQUIPO:3000/api/health`. No usar `localhost` como URL de API en el teléfono.
 
-# Limpiar caché
-expo start -c
+Vetpresta utiliza módulos nativos como Firebase Messaging; algunas funciones requieren una compilación de desarrollo y no funcionan en Expo Go. Vetya usa el puerto 8081 si se inicia al mismo tiempo. `npm.cmd run ios` requiere macOS.
+
+### iPhone físico desde Windows
+
+El QR `exp+vetpresta://...` abre Vetpresta **solo si ya está instalada una development build compatible**. Conectar el iPhone por USB no instala esa build desde Windows. Para crearla con EAS se necesita una cuenta activa del Apple Developer Program y registrar el iPhone en el equipo de Apple:
+
+```powershell
+cd E:\vetya_1.0\vetpresta
+eas.cmd build --platform ios --profile development
+```
+
+Completar el acceso a Apple en esa terminal, sin compartir contraseñas ni códigos. Cuando EAS termine, abrir el enlace de instalación de la build en el iPhone y seguir los pasos de confianza y Modo desarrollador de iOS. Luego mantener Metro abierto en el puerto 8082 y escanear su QR con la cámara del iPhone, conectado a la misma red Wi-Fi que `192.168.1.5`. Expo Go actual del iPhone puede tener un SDK distinto al SDK 54 del proyecto y no reemplaza esta build.
+
+Referencia: [instalar una development build de iOS en un dispositivo físico](https://docs.expo.dev/tutorial/eas/ios-development-build-for-devices/).
 ```
 
 ---

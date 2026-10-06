@@ -9,6 +9,7 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
+  TextInput,
   Platform
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -33,6 +34,8 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
   const [emergencyDetails, setEmergencyDetails] = useState(null);
   const [currentStatus, setCurrentStatus] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [arrivalCode, setArrivalCode] = useState('');
+  const arrivalSubmittingRef = useRef(false);
   const [isLocationPermissionGranted, setIsLocationPermissionGranted] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const locationUpdateIntervalRef = useRef(null);
@@ -49,6 +52,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
     fetchEmergencyById,
     setEmergencyOnWay,
     completeEmergency,
+    validateArrival,
     updateEmergencyLocation
   } = useEmergencyStore();
 
@@ -242,11 +246,12 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
 
   // Marcar emergencia como "En camino"
   const handleOnWay = async () => {
-    if (!emergencyDetails?.id) return;
+    const id = emergencyDetails?._id || emergencyDetails?.id;
+    if (!id) return;
 
     try {
       setIsUpdatingStatus(true);
-      const result = await setEmergencyOnWay(emergencyDetails.id);
+      const result = await setEmergencyOnWay(id);
 
       if (result.success) {
         setCurrentStatus('En camino');
@@ -280,6 +285,27 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
     }
   };
 
+  const handleValidateArrival = async () => {
+    const id = emergencyDetails?._id || emergencyDetails?.id;
+    if (!id || arrivalSubmittingRef.current || !/^\d{4}$/.test(arrivalCode)) return;
+    arrivalSubmittingRef.current = true;
+    setIsUpdatingStatus(true);
+    try {
+      const result = await validateArrival(id, arrivalCode);
+      if (result.success) {
+        setEmergencyDetails(prev => ({ ...prev, ...result.data }));
+        setCurrentStatus(result.data.estado);
+        setArrivalCode('');
+        Alert.alert('Llegada confirmada', 'Ya puedes comenzar la atención. El cliente puede completar el pago desde Zuvia.');
+      } else {
+        Alert.alert('No se pudo confirmar la llegada', result.error);
+      }
+    } finally {
+      arrivalSubmittingRef.current = false;
+      setIsUpdatingStatus(false);
+    }
+  };
+
   // Marcar emergencia como "Atendida"
   const handleCompleted = async () => {
     // console.log('🔵 handleCompleted iniciado');
@@ -299,7 +325,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
     // Verificar que la emergencia esté en estado "En atención"
     if (currentStatus !== 'En atención') {
       // console.log('❌ Estado no válido:', currentStatus);
-      Alert.alert("Error", "El cliente debe confirmar tu llegada antes de marcar como atendida");
+      Alert.alert("Error", "Debes validar el código de llegada antes de marcar como atendida");
       return;
     }
 
@@ -734,10 +760,27 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             )}
 
-            {currentStatus === 'En camino' && (
-              <View style={localStyles.waitingForClientConfirmation}>
-                <Ionicons name="time-outline" size={20} color="#FF9800" />
-                <Text style={localStyles.waitingText}>Esperando que el cliente confirme tu llegada...</Text>
+            {['Asignada', 'Confirmada', 'En camino'].includes(currentStatus) && (
+              <View style={localStyles.arrivalCodeContainer}>
+                <Text style={localStyles.arrivalTitle}>Confirmar llegada al domicilio</Text>
+                <Text style={localStyles.waitingText}>Al llegar, pide al cliente el código de cuatro dígitos que aparece en Zuvia.</Text>
+                <TextInput
+                  accessibilityLabel="Código de llegada de cuatro dígitos"
+                  style={localStyles.arrivalInput}
+                  value={arrivalCode}
+                  onChangeText={value => setArrivalCode(value.replace(/\D/g, '').slice(0, 4))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  placeholder="0000"
+                  editable={!isUpdatingStatus}
+                />
+                <TouchableOpacity accessibilityRole="button"
+                  style={[localStyles.actionButton, localStyles.completeButton, (isUpdatingStatus || arrivalCode.length !== 4) && localStyles.disabledButton]}
+                  disabled={isUpdatingStatus || arrivalCode.length !== 4}
+                  onPress={handleValidateArrival}
+                >
+                  {isUpdatingStatus ? <ActivityIndicator color="#FFF" /> : <Text style={localStyles.actionButtonText}>Validar código e iniciar atención</Text>}
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -759,6 +802,9 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
 };
 
 const localStyles = StyleSheet.create({
+  arrivalCodeContainer: { padding: 16, borderRadius: 12, backgroundColor: '#FFF4DF', gap: 12 },
+  arrivalTitle: { fontSize: 17, fontWeight: '700', color: '#5D430E' },
+  arrivalInput: { backgroundColor: '#FFF', borderWidth: 1, borderColor: '#D9A441', borderRadius: 10, padding: 12, fontSize: 28, letterSpacing: 10, textAlign: 'center', color: '#243D5D' },
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',

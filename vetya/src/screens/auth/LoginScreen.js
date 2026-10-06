@@ -65,9 +65,12 @@ const LoginScreen = ({ navigation }) => {
       >
         <ScrollView contentContainerStyle={styles.scrollView}>
           <View style={styles.logoContainer}>
-            <Ionicons name="paw" size={80} color="#1E88E5" />
-            <Text style={styles.logoText}>VetYa</Text>
-            <Text style={styles.tagline}>Veterinaria a Domicilio</Text>
+            <Image
+              source={require('../../../assets/icons/zuvia_logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+              accessibilityLabel="Zuvia. Servicios veterinarios a domicilio"
+            />
           </View>
 
           <View style={styles.formContainer}>
@@ -164,16 +167,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  logoText: {
-    fontSize: 38,
-    fontWeight: 'bold',
-    color: '#1E88E5',
-    marginTop: 10,
-  },
-  tagline: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 5,
+  logoImage: {
+    width: '100%',
+    maxWidth: 320,
+    aspectRatio: 1000 / 700,
   },
   formContainer: {
     backgroundColor: '#FFFFFF',

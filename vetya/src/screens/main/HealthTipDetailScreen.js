@@ -162,7 +162,7 @@ const HealthTipDetailScreen = ({ route, navigation }) => {
     if (!tip) return;
     try {
       await Share.share({
-        message: `${tip.title}\n\n${tip.description}\n\nLeido en la app VetYa`,
+        message: `${tip.title}\n\n${tip.description}\n\nLeido en la app Zuvia`,
         title: 'Consejo de salud para mascotas',
       });
     } catch (error) {

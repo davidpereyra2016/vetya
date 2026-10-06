@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import LlegadaEmergencia from './LlegadaEmergencia.js';
 
 /**
  * Esquema para emergencias veterinarias
@@ -199,7 +200,8 @@ const emergenciaSchema = new mongoose.Schema({
     default: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  optimisticConcurrency: true
 });
 
 // Índice para búsqueda de emergencias por estado y fecha
@@ -264,6 +266,15 @@ emergenciaSchema.pre('save', function(next) {
 // Este índice eliminaba automáticamente las emergencias cuando expiraban
 // Causaba que el historial de emergencias se borrara de la base de datos
 // emergenciaSchema.index({ expiraEn: 1 }, { expireAfterSeconds: 0 });
+
+emergenciaSchema.post('save', async function(doc) {
+  const update = {
+    prestador: doc.veterinario || null,
+    estadoEmergencia: doc.estado,
+  };
+  if (doc.estado === 'Cancelada') update.canceladaEn = doc.fechaCancelacion || new Date();
+  await LlegadaEmergencia.updateOne({ emergencia: doc._id }, { $set: update }, { session: doc.$session() });
+});
 
 const Emergencia = mongoose.model("Emergencia", emergenciaSchema);
 export default Emergencia;

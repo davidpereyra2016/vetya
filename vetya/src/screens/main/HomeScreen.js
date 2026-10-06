@@ -17,6 +17,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import ServiceCard from '../../components/ServiceCard';
+import ArrivalCodeCard from '../../components/ArrivalCodeCard';
 import BannerPublicitario from '../../components/BannerPublicitario';
 import useEmergencyStore from '../../store/useEmergencyStore';
 import useCitaStore from '../../store/useCitaStore';
@@ -726,8 +727,8 @@ const HomeScreen = ({ navigation }) => {
           console.log('💳 Redirigiendo a Mercado Pago:', result.initPoint);
 
           Alert.alert(
-            "Llegada confirmada",
-            "El veterinario ha llegado. Ahora serás redirigido a Mercado Pago para completar el pago del servicio.",
+            "Pago de la emergencia",
+            "El veterinario ya validó su llegada. Puedes completar el pago del servicio con Mercado Pago.",
             [
               {
                 text: "Ir a pagar",
@@ -759,8 +760,8 @@ const HomeScreen = ({ navigation }) => {
           );
         } else {
           Alert.alert(
-            "Llegada confirmada",
-            "Has confirmado la llegada del veterinario. Ya puede comenzar la atención."
+            "Pago de la emergencia",
+            "La llegada ya está validada. El pago se gestiona según el método elegido para esta emergencia."
           );
         }
       } else {
@@ -770,7 +771,7 @@ const HomeScreen = ({ navigation }) => {
       console.error('Error al confirmar llegada del veterinario:', error);
       Alert.alert(
         "Error",
-        "No se pudo confirmar la llegada del veterinario. Intenta nuevamente."
+        "No se pudo consultar el pago de la emergencia. Intenta nuevamente."
       );
     } finally {
       arrivalSubmissionRef.current[emergencyId] = false;
@@ -1066,8 +1067,10 @@ const HomeScreen = ({ navigation }) => {
               </View>
             </View>
 
-            {/* Botón para confirmar llegada del veterinario - solo visible cuando está en camino */}
-            {activeEmergencyVet.status === 'En camino' && (
+            <ArrivalCodeCard emergencyId={activeEmergencyVet.emergencyId} status={activeEmergencyVet.status} />
+
+            {/* El veterinario valida la llegada; el cliente conserva el acceso al cobro. */}
+            {activeEmergencyVet.status === 'En atención' && (
               <TouchableOpacity accessibilityRole="button"
                 style={[styles.emergencyButton, styles.confirmButton, isLoading && styles.emergencyButtonDisabled]}
                 onPress={() => handleConfirmVetArrival(activeEmergencyVet.emergencyId)}
@@ -1078,7 +1081,7 @@ const HomeScreen = ({ navigation }) => {
                 ) : (
                   <Ionicons name="checkmark-circle" size={20} color="#FFF" />
                 )}
-                <Text style={styles.emergencyButtonText}>Confirmar que el veterinario llegó</Text>
+                <Text style={styles.emergencyButtonText}>Ver pago de la emergencia</Text>
               </TouchableOpacity>
             )}
 

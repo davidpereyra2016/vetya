@@ -10,9 +10,9 @@ El panel de administración de Vetya permite gestionar y supervisar todas las op
 
 El panel de administración está integrado en el backend principal. Asegúrate de que el servidor esté ejecutándose:
 
-```bash
+```powershell
 cd E:\vetya_1.0\backend
-npm start
+npm.cmd run dev
 ```
 
 ### 2. Acceso al Panel
@@ -216,9 +216,9 @@ PUT  /api/validacion/admin/decision-final/:id
 - Revisar permisos de acceso a archivos
 
 ### Logs y Debugging
-```bash
+```powershell
 # Ver logs del servidor
-npm run dev
+npm.cmd run dev
 
 # Logs específicos en el navegador
 # Abrir DevTools > Console para ver errores JavaScript

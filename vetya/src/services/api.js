@@ -570,6 +570,15 @@ export const emergenciaService = {
   },
 
   // Confirmar la llegada del veterinario (por parte del cliente)
+  getArrivalCode: async (emergencyId) => {
+    try {
+      const response = await axios.get(`/emergencias/${emergencyId}/codigo-llegada`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.message || 'No se pudo cargar el código de llegada' };
+    }
+  },
+
   confirmVetArrival: async (emergencyId, idempotencyKey) => {
     try {
       console.log('🚀 [CLIENTE] Confirmando llegada del veterinario:', emergencyId);

@@ -23,10 +23,36 @@ jest.mock('../../services/api', () => ({
     acceptEmergency: jest.fn(),
     updateStatus: jest.fn(),
     rejectEmergency: jest.fn(),
+    validateArrival: jest.fn(),
   },
 }));
 
 describe('useEmergencyStore - Prestador recibe emergencia', () => {
+  test('validar llegada actualiza ambas listas y el detalle desde la respuesta del backend', async () => {
+    const before = { _id: 'arrival-qa', estado: 'En camino' };
+    const after = { ...before, estado: 'En atención', llegadaConfirmada: true };
+    act(() => useEmergencyStore.setState({ emergencies: [before], emergencias: [before], activeEmergencies: [before], currentEmergency: before, emergenciaActual: before }));
+    emergenciaAPI.emergenciaService.validateArrival.mockResolvedValueOnce({ success: true, data: { emergencia: after } });
+    let result;
+    await act(async () => { result = await useEmergencyStore.getState().validateArrival('arrival-qa', '0042'); });
+    expect(result.success).toBe(true);
+    expect(emergenciaAPI.emergenciaService.validateArrival).toHaveBeenCalledWith('arrival-qa', '0042');
+    expect(useEmergencyStore.getState().emergencias[0].estado).toBe('En atención');
+    expect(useEmergencyStore.getState().currentEmergency.llegadaConfirmada).toBe(true);
+  });
+
+  test('un código rechazado conserva el estado actual y muestra el error', async () => {
+    const emergency = { _id: 'arrival-qa', estado: 'Asignada' };
+    act(() => useEmergencyStore.setState({ emergencies: [emergency], emergencias: [emergency], currentEmergency: emergency }));
+    emergenciaAPI.emergenciaService.validateArrival.mockResolvedValueOnce({ success: false, error: 'Código incorrecto' });
+    let result;
+    await act(async () => { result = await useEmergencyStore.getState().validateArrival('arrival-qa', '9999'); });
+    expect(result.success).toBe(false);
+    expect(useEmergencyStore.getState().currentEmergency.estado).toBe('Asignada');
+    expect(useEmergencyStore.getState().error).toBe('Código incorrecto');
+    expect(useEmergencyStore.getState().isLoading).toBe(false);
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     
