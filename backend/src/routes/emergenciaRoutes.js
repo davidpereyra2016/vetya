@@ -2052,6 +2052,14 @@ router.patch('/:id/validar-llegada', protectRoute, async (req, res) => {
     const prestador = await Prestador.findOne({ usuario: req.user._id });
     if (!prestador || prestador.tipo !== 'Veterinario') return res.status(403).json({ message: 'Solo los veterinarios pueden validar la llegada' });
     const result = await verifyArrival(req.params.id, prestador, req.user._id, req.body?.codigo);
+    // Los stores mezclan el evento con el detalle existente: conservar referencias
+    // pobladas evita reemplazar nombres/fotos de la mascota y del veterinario por IDs.
+    result.emergencia.$session(null);
+    await result.emergencia.populate([
+      { path: 'mascota', select: 'nombre tipo raza imagen edad genero color peso' },
+      { path: 'veterinario', select: 'nombre especialidades imagen rating' },
+      { path: 'usuario', select: 'username telefono email profilePicture' },
+    ]);
     // Emitir incluso en reintentos permite recuperar una entrega de evento fallida.
     emitEmergencyUpdated(result.emergencia, 'arrival_confirmed');
     return res.json({ emergencia: result.emergencia, alreadyConfirmed: result.alreadyConfirmed });

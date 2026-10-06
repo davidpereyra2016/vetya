@@ -109,6 +109,8 @@ test('código de llegada: HTTP/JWT, transacciones, conservación y realtime', as
       const changed = next('emergencia:actualizada');
       assert.equal((await api(vet, `/${e._id}/validar-llegada`, 'PATCH', { codigo })).status, 200);
       const event = await changed; assert.equal(event.estado, 'En atención'); assert.equal(event.emergencia.codigo, undefined);
+      assert.equal(event.emergencia.veterinario.nombre, 'Vet QA');
+      assert.equal(event.emergencia.usuario._id, String(client._id));
       assert.equal((await api(client, `/${e._id}/confirmar-llegada`, 'PATCH', {}, randomUUID())).status, 200);
       assert.equal((await api(vet, `/${e._id}/estado`, 'PATCH', { estado: 'Atendida' })).status, 200);
       assert.equal((await api(vet, `/${e._id}/validar-llegada`, 'PATCH', { codigo })).status, 409);
