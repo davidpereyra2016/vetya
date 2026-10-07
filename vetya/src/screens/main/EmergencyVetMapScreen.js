@@ -14,7 +14,6 @@ import {
   Animated,
   Image,
   useWindowDimensions,
-  Platform,
   ActivityIndicator,
   Alert
 } from 'react-native';
@@ -23,10 +22,20 @@ import { Ionicons } from '@expo/vector-icons';
 import useEmergencyStore from '../../store/useEmergencyStore';
 import useAuthStore from '../../store/useAuthStore';
 import { emergenciaService } from '../../services/api';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import * as Location from 'expo-location';
+import MapView, { Marker } from 'react-native-maps';
 
+const toMapCoordinate = (source) => {
+  const rawLatitude = source?.latitud ?? source?.lat ?? source?.latitude;
+  const rawLongitude = source?.longitud ?? source?.lng ?? source?.longitude;
+  if (rawLatitude == null || rawLongitude == null || rawLatitude === '' || rawLongitude === '') return null;
 
+  const latitude = Number(rawLatitude);
+  const longitude = Number(rawLongitude);
+  return Number.isFinite(latitude) && Number.isFinite(longitude) &&
+    Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180
+    ? { latitude, longitude }
+    : null;
+};
 
 const EmergencyVetMapScreen = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
@@ -50,10 +59,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
   const [eta, setEta] = useState('00:00:00');
   const [distanceText, setDistanceText] = useState('0 km');
   const [simulationActive, setSimulationActive] = useState(false);
-  const [clientLocation, setClientLocation] = useState(null);
-  const [locationLoading, setLocationLoading] = useState(true);
-
-  const { availableVets, loadAvailableVets } = useEmergencyStore();
+  const { loadAvailableVets } = useEmergencyStore();
 
   const vetListRef = useRef();
   const mapIndex = useRef(0);
@@ -63,8 +69,12 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
   // Referencias para la animación
   const animationRef = useRef(null);
   const startTimeRef = useRef(null);
-  const clientLocationRef = useRef(null);
-  const emergencyCoordsRef = useRef(null);
+  const clientLocationRef = useRef(
+    toMapCoordinate(emergencyData?.ubicacion?.coordenadas) ||
+    toMapCoordinate(useAuthStore.getState().user?.ubicacionActual?.coordinates)
+  );
+  const emergencyCoordsRef = useRef(toMapCoordinate(emergencyData?.ubicacion?.coordenadas));
+  const mapReadyRef = useRef(false);
   const hasInitializedRef = useRef(false);
   const initialEmergencyIdRef = useRef(emergencyId);
   const initialEmergencyDataRef = useRef(emergencyData);
@@ -76,74 +86,8 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     }, 0);
   }, []);
 
-  // Obtener ubicación del cliente al montar el componente - SOLO UNA VEZ
-  useEffect(() => {
-    const getClientLocation = async () => {
-      try {
-        const currentUser = useAuthStore.getState().user;
-
-        if (currentUser?.ubicacionActual?.coordinates?.lat && currentUser?.ubicacionActual?.coordinates?.lng) {
-          const loc = {
-            latitude: currentUser.ubicacionActual.coordinates.lat,
-            longitude: currentUser.ubicacionActual.coordinates.lng
-          };
-          setClientLocation(loc);
-          clientLocationRef.current = loc;
-          setLocationLoading(false);
-          return;
-        }
-
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setLocationLoading(false);
-          return;
-        }
-
-        const location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High
-        });
-
-        const loc = {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude
-        };
-        setClientLocation(loc);
-        clientLocationRef.current = loc;
-      } catch (error) {
-        logger.error('Error al obtener ubicación del cliente:', error);
-      } finally {
-        setLocationLoading(false);
-      }
-    };
-
-    getClientLocation();
-  }, []);
-
-  const getEmergencyCoordinates = useCallback((coords) => {
-    const source = coords;
-    if (!source || (source.lat == null && source.latitud == null && source.latitude == null)) return null;
-    return {
-      latitude: parseFloat(source.latitud ?? source.lat ?? source.latitude),
-      longitude: parseFloat(source.longitud ?? source.lng ?? source.longitude)
-    };
-  }, []);
-
-  const getVetCoordinates = useCallback((vet) => {
-
-    const sourceCoords = vet?.ubicacionActual?.coordenadas || vet?.direccion?.coordenadas;
-    if (!sourceCoords || (sourceCoords.lat == null && sourceCoords.lng == null && sourceCoords.latitude == null && sourceCoords.longitude == null)) {
-      return null;
-    }
-
-    const latitude = parseFloat(sourceCoords.lat ?? sourceCoords.latitude);
-    const longitude = parseFloat(sourceCoords.lng ?? sourceCoords.longitude);
-
-    if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
-      return null;
-    }
-
-    return { latitude, longitude };
-  }, []);
+  const getVetCoordinates = useCallback((vet) =>
+    toMapCoordinate(vet?.ubicacionActual?.coordenadas || vet?.direccion?.coordenadas), []);
 
   // --- LÓGICA DE SIMULACIÓN (Copiada del archivo original) ---
   const calculateDistance = (coord1, coord2) => {
@@ -249,7 +193,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     lastFetchRef.current = now;
     setIsSearching(true);
 
-    let finalCoords = getEmergencyCoordinates(coords || emergencyCoordsRef.current);
+    let finalCoords = toMapCoordinate(coords || emergencyCoordsRef.current);
     if (!finalCoords && clientLocationRef.current) {
         finalCoords = clientLocationRef.current;
     }
@@ -257,6 +201,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     if (!finalCoords) {
         isLoadingVetsRef.current = false;
         setIsSearching(false);
+        showContent();
         return;
     }
 
@@ -308,20 +253,15 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         const currentSelectedId = selectedVetRef.current?.id;
         const nextSelectedVet = processedVets.find(vet => vet.id === currentSelectedId) || processedVets[0];
 
-        if (!currentSelectedId || currentSelectedId !== nextSelectedVet.id) {
+        if (!currentSelectedId || currentSelectedId !== nextSelectedVet.id ||
+            selectedVetRef.current.coordinate.latitude !== nextSelectedVet.coordinate.latitude ||
+            selectedVetRef.current.coordinate.longitude !== nextSelectedVet.coordinate.longitude) {
           setSelectedVet(nextSelectedVet);
         }
         setSimulationActive(true);
         setEta(nextSelectedVet.estimatedTime);
         setDistanceText(nextSelectedVet.distance);
 
-        if (mapRef.current) {
-          const coordsToFit = [finalCoords, ...processedVets.map(vet => vet.coordinate)];
-          mapRef.current.fitToCoordinates(coordsToFit, {
-            edgePadding: { top: 120, right: 60, bottom: 320, left: 60 },
-            animated: true,
-          });
-        }
       } else {
         setSelectedVet(null);
         setSimulationActive(false);
@@ -336,7 +276,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
       setIsSearching(false);
       showContent();
     }
-  }, [getEmergencyCoordinates, getVetCoordinates, loadAvailableVets, showContent]);
+  }, [getVetCoordinates, loadAvailableVets, showContent]);
 
 
   const fetchEmergencyData = useCallback(async () => {
@@ -349,10 +289,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         if (response.success && response.data) {
           setEmergencyDetails(response.data);
           const coords = response.data.ubicacion?.coordenadas;
-          const processedCoords = coords ? {
-              latitude: parseFloat(coords.latitud || coords.lat),
-              longitude: parseFloat(coords.longitud || coords.lng)
-          } : null;
+          const processedCoords = toMapCoordinate(coords);
           emergencyCoordsRef.current = processedCoords;
           await loadVets(processedCoords);
         } else {
@@ -366,51 +303,48 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     }
     else if (currentEmergencyData && currentEmergencyData.ubicacion?.coordenadas) {
       const coords = currentEmergencyData.ubicacion.coordenadas;
-      emergencyCoordsRef.current = {
-        latitude: parseFloat(coords.latitud || coords.latitude),
-        longitude: parseFloat(coords.longitud || coords.longitude)
-      };
+      emergencyCoordsRef.current = toMapCoordinate(coords);
       setEmergencyDetails({
         ...currentEmergencyData,
         estado: 'Temporal'
       });
-      await loadVets({
-          latitude: parseFloat(coords.latitud || coords.latitude),
-          longitude: parseFloat(coords.longitud || coords.longitude)
-      });
+      await loadVets(emergencyCoordsRef.current);
     }
     else if (clientLocationRef.current) {
       await loadVets(clientLocationRef.current);
+    } else {
+      showContent();
     }
-  }, [loadVets, navigation]);
+  }, [loadVets, navigation, showContent]);
 
   useEffect(() => {
-    if (locationLoading || hasInitializedRef.current) return;
+    if (hasInitializedRef.current) return;
 
     hasInitializedRef.current = true;
 
     let isMounted = true;
 
-    const refreshVetList = async () => {
+    const initializeVetList = async () => {
       if (!isMounted) return;
 
-      if (!initialEmergencyIdRef.current && initialEmergencyDataRef.current && initialEmergencyDataRef.current.ubicacion?.coordenadas) {
+      if (initialEmergencyIdRef.current || initialEmergencyDataRef.current?.ubicacion?.coordenadas) {
         await fetchEmergencyData();
         return;
       }
 
-      const emergencyCoords = emergencyCoordsRef.current;
-      await loadVets(emergencyCoords || clientLocationRef.current);
+      await loadVets(clientLocationRef.current);
     };
 
-    refreshVetList();
-    const intervalId = setInterval(refreshVetList, 20000);
+    initializeVetList();
+    const intervalId = setInterval(() => {
+      if (isMounted) loadVets(emergencyCoordsRef.current || clientLocationRef.current);
+    }, 20000);
 
     return () => {
       isMounted = false;
       clearInterval(intervalId);
     };
-  }, [locationLoading, fetchEmergencyData, loadVets]);
+  }, [fetchEmergencyData, loadVets]);
 
   const prevSelectedVetIdRef = useRef(null);
   const selectedVetRef = useRef(null);
@@ -418,24 +352,25 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     selectedVetRef.current = selectedVet;
   }, [selectedVet]);
   useEffect(() => {
-    if (selectedVet && selectedVet.coordinate && clientLocationRef.current &&
-        selectedVet.id !== prevSelectedVetIdRef.current) {
-      prevSelectedVetIdRef.current = selectedVet.id;
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        startTimeRef.current = null;
+    if (selectedVet?.coordinate) {
+      if (selectedVet.id !== prevSelectedVetIdRef.current) {
+        prevSelectedVetIdRef.current = selectedVet.id;
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+          startTimeRef.current = null;
+        }
       }
       const destCoords = emergencyCoordsRef.current || clientLocationRef.current;
       if (destCoords && selectedVet.coordinate) {
-        if (mapRef.current) {
+        if (mapReadyRef.current && mapRef.current) {
           mapRef.current.fitToCoordinates([destCoords, selectedVet.coordinate], {
-            edgePadding: { top: 100, right: 50, bottom: 350, left: 50 },
+            edgePadding: { top: 35, right: 35, bottom: 35, left: 35 },
             animated: true,
           });
         }
       }
     }
-  }, [selectedVet?.id]);
+  }, [selectedVet?.id, selectedVet?.coordinate?.latitude, selectedVet?.coordinate?.longitude]);
 
   const handleConfirmVet = async () => {
     if (!selectedVet) {
@@ -474,57 +409,17 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     }
   };
 
-  const destCoords = getEmergencyCoordinates() || clientLocation;
+  const destCoords = toMapCoordinate(emergencyDetails?.ubicacion?.coordenadas || emergencyData?.ubicacion?.coordenadas) || clientLocationRef.current;
 
-  const mapRegion = destCoords ? {
+  const mapRegion = destCoords && {
     ...destCoords,
     latitudeDelta: 0.02,
     longitudeDelta: 0.02,
-  } : {
-    latitude: -34.6037,
-    longitude: -58.3816,
-    latitudeDelta: 0.5,
-    longitudeDelta: 0.5,
   };
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-
-      {/* --- MAPA DE FONDO --- */}
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        style={StyleSheet.absoluteFillObject}
-        initialRegion={mapRegion}
-        customMapStyle={[
-            { "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "off" }] }
-        ]}
-      >
-        {destCoords && (
-          <Marker coordinate={destCoords}>
-              <View style={styles.markerContainer}>
-                  <View style={styles.userMarkerPulse} />
-                  <View style={styles.userMarkerDot} />
-              </View>
-          </Marker>
-        )}
-
-        {vets.map((vet) => (
-          vet.coordinate ? (
-            <Marker
-              key={vet.id}
-              coordinate={vet.coordinate}
-              anchor={{ x: 0.5, y: 1 }}
-              onPress={() => setSelectedVet(vet)}
-            >
-              <View style={styles.vetMarkerContainer}>
-                <Ionicons name="medical" size={18} color="#fff" />
-              </View>
-            </Marker>
-          ) : null
-        ))}
-      </MapView>
 
       <View style={styles.header}>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Volver" hitSlop={8} style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -549,12 +444,57 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
           </View>
       )}
 
-      <ScrollView style={styles.mainContent} contentContainerStyle={styles.panelContent}>
-        {(isLoadingVisible || locationLoading) && (
+      <View style={styles.mapContainer}>
+        <MapView
+          ref={mapRef}
+          style={StyleSheet.absoluteFillObject}
+          initialRegion={mapRegion || undefined}
+          onMapReady={() => {
+            mapReadyRef.current = true;
+            const userCoordinate = emergencyCoordsRef.current || clientLocationRef.current;
+            if (userCoordinate && selectedVet?.coordinate) {
+              mapRef.current?.fitToCoordinates([userCoordinate, selectedVet.coordinate], {
+                edgePadding: { top: 35, right: 35, bottom: 35, left: 35 },
+                animated: false,
+              });
+            }
+          }}
+          customMapStyle={[
+              { "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "off" }] }
+          ]}
+        >
+          {destCoords && (
+            <Marker coordinate={destCoords}>
+                <View style={styles.markerContainer}>
+                    <View style={styles.userMarkerPulse} />
+                    <View style={styles.userMarkerDot} />
+                </View>
+            </Marker>
+          )}
+
+          {vets.map((vet) => (
+            vet.coordinate ? (
+              <Marker
+                key={vet.id}
+                coordinate={vet.coordinate}
+                anchor={{ x: 0.5, y: 1 }}
+                onPress={() => setSelectedVet(vet)}
+              >
+                <View style={styles.vetMarkerContainer}>
+                  <Ionicons name="medical" size={18} color="#fff" />
+                </View>
+              </Marker>
+            ) : null
+          ))}
+        </MapView>
+      </View>
+
+      <ScrollView style={[styles.mainContent, !isContentVisible && styles.loadingContent]} contentContainerStyle={styles.panelContent}>
+        {isLoadingVisible && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#1E88E5" />
             <Text style={styles.loadingText}>
-              {locationLoading ? 'Obteniendo tu ubicación...' : 'Buscando veterinarios...'}
+              Buscando veterinarios...
             </Text>
           </View>
         )}
@@ -664,6 +604,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
+  mapContainer: { flex: 1, minHeight: 120 },
   panelContent: { flexGrow: 1, justifyContent: 'flex-end' },
 
   // Estilos de Mapa y Marcadores
@@ -803,7 +744,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff'
   },
-  mainContent: { flex: 1, },
+  mainContent: { flexGrow: 0, maxHeight: '55%' },
+  loadingContent: { minHeight: 80 },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255,255,255,0.8)',
