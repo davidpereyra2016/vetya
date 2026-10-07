@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import Modal from '../../components/common/ResponsiveModal';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
@@ -52,17 +53,14 @@ const ReviewsScreen = ({ navigation }) => {
       setLoading(true);
 
       if (!provider?._id) {
-        console.log('⚠️ No hay provider ID disponible');
         setLoading(false);
         setRefreshing(false);
         return;
       }
 
-      console.log('📊 Cargando valoraciones del prestador desde ReviewsScreen...');
       const result = await fetchValoraciones(provider._id);
 
       if (result.success && result.data) {
-        console.log(`✅ Valoraciones cargadas: ${result.data.length}`);
 
         // Mapear datos del backend al formato que espera la vista
         const reviewsData = result.data.map(valoracion => ({
@@ -97,7 +95,6 @@ const ReviewsScreen = ({ navigation }) => {
 
         setReviews(reviewsData);
       } else {
-        console.log('⚠️ No se pudieron cargar valoraciones o no hay valoraciones');
         setReviews([]);
         setStats({
           valoracionPromedio: '0.0',
@@ -110,7 +107,7 @@ const ReviewsScreen = ({ navigation }) => {
       setRefreshing(false);
 
     } catch (error) {
-      console.error('❌ Error al cargar valoraciones:', error);
+      logger.error('❌ Error al cargar valoraciones:', error);
       setLoading(false);
       setRefreshing(false);
       Alert.alert('Error', 'No pudimos cargar las valoraciones. Intenta nuevamente.');

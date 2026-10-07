@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
@@ -57,7 +58,7 @@ const ConfirmarEmergenciaScreen = () => {
       setEmergencia(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Error al cargar emergencia:', error);
+      logger.error('Error al cargar emergencia:', error);
       setError('Error al cargar los datos de la emergencia');
       setLoading(false);
     }
@@ -81,7 +82,7 @@ const ConfirmarEmergenciaScreen = () => {
         [{ text: "OK", onPress: () => navigation.navigate('EmergencyDetails', { emergencyId: emergenciaId, emergency: response.data?.emergencia || response.data }) }]
       );
     } catch (error) {
-      console.error('Error al confirmar emergencia:', error);
+      logger.error('Error al confirmar emergencia:', error);
       setProcesando(false);
       Alert.alert(
         "Error",
@@ -115,7 +116,7 @@ const ConfirmarEmergenciaScreen = () => {
         }}]
       );
     } catch (error) {
-      console.error('Error al rechazar emergencia:', error);
+      logger.error('Error al rechazar emergencia:', error);
       setProcesando(false);
       Alert.alert(
         "Error",

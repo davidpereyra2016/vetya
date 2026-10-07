@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
@@ -94,7 +95,6 @@ const HomeScreen = ({ navigation }) => {
           valoracionPromedio: result.estadisticas.promedio || 0
         }));
       } else {
-        // console.log('⚠️ No se pudieron cargar valoraciones, usando valor por defecto');
       }
     }
   };
@@ -113,7 +113,6 @@ const HomeScreen = ({ navigation }) => {
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      // console.log(`📅 Fecha LOCAL hoy: ${today}`);
 
       // Filtrar solo las citas confirmadas de HOY (fecha local)
       const citasConfirmadasHoy = providerCitas.confirmadas?.filter(app => {
@@ -124,12 +123,10 @@ const HomeScreen = ({ navigation }) => {
         const citaLocalDate = `${citaDate.getFullYear()}-${String(citaDate.getMonth() + 1).padStart(2, '0')}-${String(citaDate.getDate()).padStart(2, '0')}`;
 
         const esHoy = citaLocalDate === today;
-        // console.log(`  Cita: ${app.fecha} -> Local: ${citaLocalDate} -> Es hoy: ${esHoy}`);
 
         return esHoy;
       }).length || 0;
 
-      // console.log(`✅ Total citas confirmadas HOY: ${citasConfirmadasHoy}`);
 
       setStats(prev => ({
         ...prev,
@@ -158,7 +155,7 @@ const HomeScreen = ({ navigation }) => {
           fetchProviderCitas(provider._id, 'Confirmada')
         ]);
       } catch (error) {
-        console.error("Error cargando citas pendientes:", error);
+        logger.error("Error cargando citas pendientes:", error);
       } finally {
         setLoadingAppointments(false);
       }
@@ -181,7 +178,7 @@ const HomeScreen = ({ navigation }) => {
               await loadValoraciones();
             }
           } catch (error) {
-            console.error("Error loading data:", error);
+            logger.error("Error loading data:", error);
           }
         }
       };
@@ -197,7 +194,6 @@ const HomeScreen = ({ navigation }) => {
     // Extraer la hora de manera segura
     const hora = item.fechaHora ? item.fechaHora.split(' ')[1] : item.horaInicio;
 
-    // console.log('Renderizando cita completa:', item);
 
     // Acceder a los datos anidados de forma segura (como en AppointmentDetailsScreen)
     const servicioNombre = typeof item.servicio === 'object' && item.servicio !== null
@@ -271,7 +267,6 @@ const HomeScreen = ({ navigation }) => {
   // Configuración inicial del prestador
   useEffect(() => {
     if (provider) {
-      // console.log('📋 Configurando prestador:', provider.tipo, 'Disponible:', provider.disponibleEmergencias);
       setIsVeterinarian(provider.tipo === 'Veterinario');
       setAvailableForEmergencies(provider.disponibleEmergencias || false);
 
@@ -292,25 +287,18 @@ const HomeScreen = ({ navigation }) => {
 
   // Efecto para iniciar o detener el seguimiento de ubicación según disponibilidad
   useEffect(() => {
-    // console.log('🔄 useEffect tracking - Estado actual:', {
-    //   isVeterinarian,
-    //   availableForEmergencies,
-    //   locationPermission
-    // });
 
     // Detener tracking existente primero para evitar duplicados
     stopLocationTracking();
 
     // Verificar TODAS las condiciones antes de iniciar
     if (isVeterinarian && availableForEmergencies && locationPermission) {
-      // console.log('✅ Todas las condiciones cumplidas, programando inicio de tracking...');
       // Pequeño delay para asegurar que el estado se actualizó
       const timer = setTimeout(() => {
         // Verificar nuevamente antes de iniciar (por si cambió durante el delay)
         if (availableForEmergencies) {
           startLocationTracking();
         } else {
-          console.log('⚠️ Disponibilidad cambió durante delay, NO iniciando tracking');
         }
       }, 100);
 
@@ -319,7 +307,6 @@ const HomeScreen = ({ navigation }) => {
         stopLocationTracking();
       };
     } else {
-      console.log('❌ No se cumplen condiciones para tracking');
     }
 
     return () => {
@@ -345,7 +332,7 @@ const HomeScreen = ({ navigation }) => {
 
       return status === 'granted';
     } catch (error) {
-      console.error('Error al verificar permisos de ubicación:', error);
+      logger.error('Error al verificar permisos de ubicación:', error);
       setLocationPermission(false);
       setLocationError('Error al verificar permisos de ubicación');
       return false;
@@ -357,28 +344,23 @@ const HomeScreen = ({ navigation }) => {
     try {
       // Verificar condiciones antes de iniciar
       if (!availableForEmergencies) {
-        // console.log('⏸️ No iniciando tracking: no disponible para emergencias');
         return;
       }
 
       if (!isVeterinarian) {
-        // console.log('⏸️ No iniciando tracking: no es veterinario');
         return;
       }
 
       if (!locationPermission) {
-        // console.log('⚠️ No iniciando tracking: sin permisos de ubicación');
         return;
       }
 
       // Verificar si ya hay un temporizador activo y detenerlo
       if (locationUpdateTimerRef.current) {
-        // console.log('🔄 Limpiando temporizador anterior...');
         clearInterval(locationUpdateTimerRef.current);
         locationUpdateTimerRef.current = null;
       }
 
-      // console.log('🚀 Iniciando seguimiento de ubicación...');
 
       // Actualizar ubicación inmediatamente
       await updateCurrentLocation();
@@ -390,12 +372,10 @@ const HomeScreen = ({ navigation }) => {
         if (availableForEmergencies && isVeterinarian && locationPermission) {
           await updateCurrentLocation();
         } else {
-          // console.log('⏸️ Saltando actualización: condiciones no cumplidas');
           stopLocationTracking();
         }
       }, 300000); // 5 minutos
 
-      // console.log('✅ Seguimiento de ubicación iniciado correctamente');
     } catch (error) {
       // console.error('❌ Error al iniciar seguimiento de ubicación:', error);
       setLocationError('Error al iniciar seguimiento de ubicación');
@@ -405,12 +385,10 @@ const HomeScreen = ({ navigation }) => {
   // Detener seguimiento de ubicación
   const stopLocationTracking = () => {
     if (locationUpdateTimerRef.current) {
-      // console.log('🛑 Deteniendo seguimiento de ubicación...');
       clearInterval(locationUpdateTimerRef.current);
       locationUpdateTimerRef.current = null;
       setIsUpdatingLocation(false);
       setLocationError(null); // Limpiar errores al detener
-      // console.log('✅ Seguimiento de ubicación detenido correctamente');
     }
   };
 
@@ -418,7 +396,6 @@ const HomeScreen = ({ navigation }) => {
   const updateCurrentLocation = async () => {
     // Verificación temprana: no intentar actualizar si no está disponible
     if (!availableForEmergencies) {
-      // console.log('⏸️ No actualizando ubicación: prestador no disponible para emergencias');
       stopLocationTracking(); // Detener tracking por seguridad
       return;
     }
@@ -429,7 +406,6 @@ const HomeScreen = ({ navigation }) => {
     }
 
     if (!isVeterinarian) {
-      // console.log('⏸️ No actualizando ubicación: no es veterinario');
       return;
     }
 
@@ -444,11 +420,9 @@ const HomeScreen = ({ navigation }) => {
       });
 
       const { latitude, longitude } = location.coords;
-      // console.log(`📍 Ubicación actual: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
 
       // Verificar nuevamente antes de enviar (por si cambió durante la obtención de GPS)
       if (!availableForEmergencies) {
-        // console.log('⏸️ Cancelando actualización: disponibilidad cambió durante obtención de GPS');
         return;
       }
 
@@ -460,7 +434,6 @@ const HomeScreen = ({ navigation }) => {
       );
 
       if (result.success) {
-        // console.log('✅ Ubicación actualizada correctamente');
         setLocationError(null);
       } else {
         // Solo mostrar error si NO es por disponibilidad
@@ -468,13 +441,11 @@ const HomeScreen = ({ navigation }) => {
           // console.error('❌ Error al actualizar ubicación:', result.error);
           setLocationError('Error al actualizar ubicación en el servidor');
         } else {
-          // console.log('ℹ️ Actualización rechazada por disponibilidad (esto es normal)');
         }
       }
     } catch (error) {
       // Solo registrar errores reales, no los de disponibilidad
       if (error.response?.status === 400 && error.response?.data?.message?.includes('disponible')) {
-        // console.log('ℹ️ Actualización de ubicación omitida: no disponible para emergencias');
       } else {
         // console.error('❌ Error al obtener/actualizar ubicación:', error.message || error);
         setLocationError('Error al obtener la ubicación actual');
@@ -505,13 +476,11 @@ const HomeScreen = ({ navigation }) => {
       );
 
       if (result.success) {
-        // console.log('✅ Disponibilidad actualizada en BD:', newStatus);
 
         // Recargar datos del prestador desde la BD para asegurar sincronización
         try {
           const providerData = await prestadorService.getById(provider._id);
           if (providerData.success && providerData.data) {
-            // console.log('✅ Provider recargado desde BD. disponibleEmergencias:', providerData.data.disponibleEmergencias);
             // Actualizar el provider en el state global con datos frescos de la BD
             useAuthStore.getState().updateProvider(providerData.data);
             // Actualizar el state local con el valor real de la BD
@@ -522,7 +491,7 @@ const HomeScreen = ({ navigation }) => {
             setAvailableForEmergencies(newStatus);
           }
         } catch (error) {
-          console.error('Error al recargar provider:', error);
+          logger.error('Error al recargar provider:', error);
           // Fallback: actualizar solo la propiedad
           useAuthStore.getState().updateProvider({ disponibleEmergencias: newStatus });
           setAvailableForEmergencies(newStatus);
@@ -534,7 +503,7 @@ const HomeScreen = ({ navigation }) => {
         return false;
       }
     } catch (error) {
-      console.error('Error al actualizar disponibilidad:', error);
+      logger.error('Error al actualizar disponibilidad:', error);
       Alert.alert('Error', 'Ocurrió un error al actualizar la disponibilidad');
       return false;
     } finally {
@@ -610,7 +579,6 @@ const HomeScreen = ({ navigation }) => {
   const loadAssignedEmergencies = async () => {
     // Validar que sea veterinario y que tengamos un ID de prestador
     if (!isVeterinarian || !provider?._id) {
-      console.log('No cargando emergencias: no es veterinario o falta ID de prestador');
       return;
     }
 
@@ -620,7 +588,6 @@ const HomeScreen = ({ navigation }) => {
       const result = await fetchEmergencies();
 
       if (result.success) {
-        console.log(`📥 Emergencias recibidas del backend: ${result.data.length}`);
 
         // FILTRAR solo emergencias activas (excluir historial)
         // HomeScreen solo debe mostrar emergencias que se pueden aceptar/rechazar o están en proceso
@@ -628,8 +595,6 @@ const HomeScreen = ({ navigation }) => {
           ['Solicitada', 'Asignada', 'Confirmada', 'En camino', 'En atención'].includes(emergency.estado)
         );
 
-        console.log(`✅ Emergencias ACTIVAS filtradas para HomeScreen: ${emergenciasActivas.length}`);
-        console.log(`   Estados: ${emergenciasActivas.map(e => e.estado).join(', ')}`);
 
         // Convertir los datos de la API al formato esperado por el componente
         const formattedEmergencies = emergenciasActivas.map(emergency => {
@@ -673,11 +638,11 @@ const HomeScreen = ({ navigation }) => {
 
         setActiveEmergencies(formattedEmergencies);
       } else {
-        console.error('Error al cargar emergencias asignadas:', result.error);
+        logger.error('Error al cargar emergencias asignadas:', result.error);
         setActiveEmergencies([]); // Limpiar el estado en caso de error
       }
     } catch (error) {
-      console.error('Error al obtener emergencias asignadas:', error);
+      logger.error('Error al obtener emergencias asignadas:', error);
       setActiveEmergencies([]); // Limpiar el estado en caso de error
     } finally {
       setLoadingEmergencies(false);
@@ -758,7 +723,7 @@ const HomeScreen = ({ navigation }) => {
                             emergency: result.data
                           });
                         } catch (loadError) {
-                          console.error('Error al recargar emergencias después de aceptar:', loadError);
+                          logger.error('Error al recargar emergencias después de aceptar:', loadError);
                           // Incluso si falla la recarga, intentar navegar con los datos disponibles
                           navigation.navigate('EmergencyDetails', {
                             emergencyId: emergency.id,
@@ -775,7 +740,7 @@ const HomeScreen = ({ navigation }) => {
                 await loadAssignedEmergencies();
               }
             } catch (error) {
-              console.error('Error al aceptar emergencia:', error);
+              logger.error('Error al aceptar emergencia:', error);
               Alert.alert('Error', 'Ocurrió un error al procesar tu solicitud');
               // Considerar recargar también en caso de error general para mantener la UI consistente
               await loadAssignedEmergencies();
@@ -819,7 +784,7 @@ const HomeScreen = ({ navigation }) => {
                 await loadAssignedEmergencies(); // Recargar para mantener la UI consistente
               }
             } catch (error) {
-              console.error('Error al rechazar emergencia:', error);
+              logger.error('Error al rechazar emergencia:', error);
               Alert.alert('Error', 'Ocurrió un error al procesar tu solicitud');
               await loadAssignedEmergencies(); // Recargar para mantener la UI consistente
             }
@@ -870,7 +835,7 @@ const HomeScreen = ({ navigation }) => {
                 Alert.alert('Error', result.error || 'No se pudo confirmar la cita');
               }
             } catch (error) {
-              console.error('Error al confirmar cita:', error);
+              logger.error('Error al confirmar cita:', error);
               Alert.alert('Error', 'Ocurrió un error al procesar tu solicitud');
             } finally {
               setLoadingAppointments(false);
@@ -906,7 +871,7 @@ const HomeScreen = ({ navigation }) => {
                 Alert.alert('Error', result.error || 'No se pudo rechazar la cita');
               }
             } catch (error) {
-              console.error('Error al rechazar cita:', error);
+              logger.error('Error al rechazar cita:', error);
               Alert.alert('Error', 'Ocurrió un error al procesar tu solicitud');
             }
           },
@@ -947,7 +912,7 @@ const HomeScreen = ({ navigation }) => {
           }
         }
       } catch (error) {
-        console.error('Error al actualizar datos:', error);
+        logger.error('Error al actualizar datos:', error);
       } finally {
         setRefreshing(false);
       }

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import axios from '../config/axios';
 
 /**
@@ -12,15 +13,13 @@ const valoracionService = {
    */
   getValoracionesPrestador: async (prestadorId) => {
     try {
-      console.log(`📊 Obteniendo valoraciones del prestador: ${prestadorId}`);
       const response = await axios.get(`/valoraciones/prestador/${prestadorId}`);
-      console.log(`✅ Valoraciones obtenidas: ${response.data.length}`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('❌ Error al obtener valoraciones:', error.response?.data || error.message);
+      logger.error('❌ Error al obtener valoraciones:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener valoraciones'
@@ -35,15 +34,13 @@ const valoracionService = {
    */
   crearValoracion: async (valoracionData) => {
     try {
-      console.log('📝 Creando nueva valoración:', valoracionData);
       const response = await axios.post('/valoraciones', valoracionData);
-      console.log('✅ Valoración creada exitosamente');
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('❌ Error al crear valoración:', error.response?.data || error.message);
+      logger.error('❌ Error al crear valoración:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al crear valoración'
@@ -58,14 +55,13 @@ const valoracionService = {
    */
   puedeValorar: async (prestadorId) => {
     try {
-      console.log(`🔍 Verificando si puede valorar al prestador: ${prestadorId}`);
       const response = await axios.get(`/valoraciones/puede-valorar/${prestadorId}`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('❌ Error al verificar si puede valorar:', error.response?.data || error.message);
+      logger.error('❌ Error al verificar si puede valorar:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al verificar si puede valorar'
@@ -79,15 +75,13 @@ const valoracionService = {
    */
   getMisValoraciones: async () => {
     try {
-      console.log('📊 Obteniendo mis valoraciones');
       const response = await axios.get('/valoraciones/mis-valoraciones');
-      console.log(`✅ Mis valoraciones obtenidas: ${response.data.length}`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('❌ Error al obtener mis valoraciones:', error.response?.data || error.message);
+      logger.error('❌ Error al obtener mis valoraciones:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener mis valoraciones'

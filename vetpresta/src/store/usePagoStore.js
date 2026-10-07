@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { create } from 'zustand';
 import { pagoService } from '../services/api';
 
@@ -28,21 +29,19 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('🔵 Store (Prestador): Consultando estado del pago...', paymentId);
 
       const result = await pagoService.consultarEstadoPago(paymentId);
       
       if (result.success) {
-        console.log('✅ Store (Prestador): Estado consultado:', result.data);
         set({ isLoading: false });
         return { success: true, data: result.data };
       } else {
-        console.error('❌ Store (Prestador): Error al consultar estado:', result.error);
+        logger.error('❌ Store (Prestador): Error al consultar estado:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store (Prestador): Excepción al consultar estado:', error);
+      logger.error('❌ Store (Prestador): Excepción al consultar estado:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -56,13 +55,10 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('🔵 Store (Prestador): Obteniendo mis pagos...');
 
       const result = await pagoService.obtenerMisPagos();
       
       if (result.success) {
-        console.log('✅ Store (Prestador): Pagos obtenidos:', result.data.pagos?.length || 0);
-        console.log('📊 Estadísticas:', result.data.estadisticas);
         
         set({ 
           pagos: result.data.pagos || [],
@@ -78,12 +74,12 @@ const usePagoStore = create((set, get) => ({
         });
         return { success: true, data: result.data };
       } else {
-        console.error('❌ Store (Prestador): Error al obtener pagos:', result.error);
+        logger.error('❌ Store (Prestador): Error al obtener pagos:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store (Prestador): Excepción al obtener pagos:', error);
+      logger.error('❌ Store (Prestador): Excepción al obtener pagos:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -97,12 +93,10 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('🔵 Store (Prestador): Obteniendo pagos por referencia...', { tipo, id });
 
       const result = await pagoService.obtenerPagosPorReferencia(tipo, id);
       
       if (result.success) {
-        console.log('✅ Store (Prestador): Pagos encontrados:', result.data);
         
         // Si hay pagos, establecer el primero como pago actual
         if (result.data && result.data.length > 0) {
@@ -119,12 +113,12 @@ const usePagoStore = create((set, get) => ({
         
         return { success: true, data: result.data };
       } else {
-        console.error('❌ Store (Prestador): Error al obtener pagos por referencia:', result.error);
+        logger.error('❌ Store (Prestador): Error al obtener pagos por referencia:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store (Prestador): Excepción al obtener pagos por referencia:', error);
+      logger.error('❌ Store (Prestador): Excepción al obtener pagos por referencia:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -134,7 +128,6 @@ const usePagoStore = create((set, get) => ({
    * Limpiar el pago actual del estado
    */
   limpiarPagoActual: () => {
-    console.log('🧹 Store (Prestador): Limpiando pago actual');
     set({ pagoActual: null });
   },
 
@@ -149,7 +142,6 @@ const usePagoStore = create((set, get) => ({
    * Resetear todo el estado del store
    */
   resetStore: () => {
-    console.log('🧹 Store (Prestador): Reseteando store de pagos');
     set({
       pagos: [],
       pagoActual: null,

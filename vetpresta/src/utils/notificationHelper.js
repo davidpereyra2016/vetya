@@ -1,3 +1,4 @@
+import logger from './logger';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
@@ -38,7 +39,6 @@ export const registrarParaNotificaciones = async () => {
 
     // Verificar si el dispositivo es real
     if (!Device.isDevice) {
-      console.log('Las notificaciones push requieren un dispositivo físico');
       return { success: false, message: 'Dispositivo no compatible', token: null };
     }
 
@@ -54,7 +54,6 @@ export const registrarParaNotificaciones = async () => {
 
     // Si aún no tenemos permisos, no podemos continuar
     if (finalStatus !== 'granted') {
-      console.log('No se obtuvieron permisos para las notificaciones push');
       return { success: false, message: 'Permisos denegados', token: null };
     }
 
@@ -73,7 +72,7 @@ export const registrarParaNotificaciones = async () => {
         isExpoGo: isExpoGo
       };
     } catch (tokenError) {
-      console.error('Error específico al obtener token:', tokenError);
+      logger.error('Error específico al obtener token:', tokenError);
       
       // Manejar específicamente el error de Expo Go
       if (isExpoGo) {
@@ -92,7 +91,7 @@ export const registrarParaNotificaciones = async () => {
       };
     }
   } catch (error) {
-    console.error('Error general en notificaciones:', error);
+    logger.error('Error general en notificaciones:', error);
     return { success: false, message: error.message, token: null };
   }
 };

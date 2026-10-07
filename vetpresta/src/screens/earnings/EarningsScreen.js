@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
@@ -96,7 +97,6 @@ const EarningsScreen = ({ navigation }) => {
     try {
       setLoading(true);
 
-      console.log("🔄 Cargando pagos del prestador...");
 
       // Obtener pagos reales del backend
       const result = await obtenerMisPagos();
@@ -104,8 +104,6 @@ const EarningsScreen = ({ navigation }) => {
       if (result.success) {
         const { pagos, estadisticas } = result.data;
 
-        console.log("✅ Pagos cargados:", pagos.length);
-        console.log("📊 Estadísticas:", estadisticas);
 
         // Transformar pagos del backend al formato de la UI
         const earningsData = pagos.map((pago) => {
@@ -194,12 +192,12 @@ const EarningsScreen = ({ navigation }) => {
 
         setTransactions(earningsData);
       } else {
-        console.error("❌ Error al cargar pagos:", result.error);
+        logger.error("❌ Error al cargar pagos:", result.error);
         Alert.alert("Error", result.error || "No pudimos cargar tus ganancias");
         setTransactions([]);
       }
     } catch (error) {
-      console.error("❌ Error al cargar ganancias:", error);
+      logger.error("❌ Error al cargar ganancias:", error);
       Alert.alert(
         "Error",
         "No pudimos cargar tus ganancias. Intenta nuevamente."

@@ -81,7 +81,6 @@ const EditProfileScreen = ({ navigation }) => {
           }
         }
       } catch (loadError) {
-        console.log('Error al cargar perfil para edicion:', loadError);
       } finally {
         setIsLoading(false);
       }
@@ -193,7 +192,6 @@ const EditProfileScreen = ({ navigation }) => {
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (saveError) {
-      console.log('Error al guardar perfil:', saveError);
       Alert.alert('Error', 'Ocurrio un error inesperado. Intentalo de nuevo.');
     } finally {
       setIsLoading(false);

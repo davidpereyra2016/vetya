@@ -39,7 +39,6 @@ if (!axios.__vetyaPaginationInterceptorId) {
     return response;
   });
 }
-console.log('[App.js] baseURL configurada:', API_URL);
 
 export default function App() {
   // Estado para controlar la visibilidad de la pantalla de splash
@@ -52,12 +51,6 @@ export default function App() {
   // Store de notificaciones
   const { updateUnreadCount } = useNotificacionStore();
 
-  // La restauración del token se maneja en checkAuth() de useAuthStore
-  // que lee directamente de AsyncStorage si Zustand persist aún no rehidrató
-  useEffect(() => {
-    console.log('[App.js] Inicialización completada - checkAuth manejará la restauración del token');
-  }, []);
-
   // Configurar notificaciones push
   useEffect(() => {
     // Configurar el handler de notificaciones (cómo se muestran)
@@ -68,14 +61,7 @@ export default function App() {
       const { token, isAuthenticated } = useAuthStore.getState();
 
       if (token && isAuthenticated) {
-        console.log('🔔 Inicializando notificaciones push...');
-        const pushToken = await registerForPushNotifications();
-
-        if (pushToken) {
-          console.log('✅ Token de push registrado:', pushToken);
-        } else {
-          console.log('⚠️ No se pudo obtener token de push (normal en Expo Go)');
-        }
+        await registerForPushNotifications();
       }
     };
 
@@ -83,7 +69,6 @@ export default function App() {
 
     // Listener para notificaciones recibidas (app en primer plano)
     notificationListener.current = addNotificationReceivedListener(notification => {
-      console.log('📬 Notificación recibida:', notification);
       handleNotificationReceived(notification);
       // Actualizar conteo de no leídas
       updateUnreadCount();
@@ -91,7 +76,6 @@ export default function App() {
 
     // Listener para respuestas a notificaciones (usuario toca la notificación)
     responseListener.current = addNotificationResponseReceivedListener(response => {
-      console.log('👆 Usuario tocó notificación:', response);
       handleNotificationResponse(response);
     });
 

@@ -144,7 +144,6 @@ const useAuthStore = create(
           setupAxiosToken(token);
 
           const handleTokenExpired = () => {
-            console.log('🔒 Token expirado - ejecutando logout automático');
             set({
               token: null,
               user: null,
@@ -174,7 +173,6 @@ const useAuthStore = create(
                 return { success: true };
               }
             } catch (err) {
-              console.log('Error al cargar perfil de prestador tras verificación:', err);
             }
           }
 
@@ -230,7 +228,6 @@ const useAuthStore = create(
 
           // Configurar callback de logout para cuando el token expire
           const handleTokenExpired = () => {
-            console.log('🔒 Token expirado - ejecutando logout automático desde login callback');
             set({
               token: null,
               user: null,
@@ -266,13 +263,10 @@ const useAuthStore = create(
 
               // Registrar para notificaciones push después del login exitoso
               try {
-                console.log('🔔 Registrando para notificaciones push después del login...');
                 const pushToken = await registerForPushNotifications();
                 if (pushToken) {
-                  console.log('✅ Token de push registrado exitosamente');
                 }
               } catch (pushError) {
-                console.log('⚠️ Error al registrar notificaciones push:', pushError);
               }
 
               return { success: true };
@@ -305,11 +299,8 @@ const useAuthStore = create(
       logout: async () => {
         // Eliminar token de dispositivo del servidor antes de cerrar sesión
         try {
-          console.log('🔔 Eliminando token de dispositivo del servidor...');
           await notificacionService.removeDeviceToken();
-          console.log('✅ Token de dispositivo eliminado');
         } catch (error) {
-          console.log('⚠️ Error al eliminar token de dispositivo:', error);
           // Continuar con el logout aunque falle
         }
 
@@ -335,11 +326,9 @@ const useAuthStore = create(
       // Verificar token al iniciar la app
       checkAuth: async () => {
         set({ isInitializing: true });
-        console.log('Iniciando verificación de autenticación...');
 
         // Configurar el callback de logout para cuando el token expire
         const handleTokenExpired = () => {
-          console.log('🔒 Token expirado - ejecutando logout automático desde callback');
           set({
             token: null,
             user: null,
@@ -359,14 +348,12 @@ const useAuthStore = create(
 
           // Si Zustand persist aún no rehidrató, leer directamente de AsyncStorage
           if (!token) {
-            console.log('Token no encontrado en estado, verificando AsyncStorage...');
             try {
               const authData = await AsyncStorage.getItem('auth-storage');
               if (authData) {
                 const parsed = JSON.parse(authData);
                 token = parsed?.state?.token || null;
                 if (token) {
-                  console.log('Token recuperado desde AsyncStorage');
                   // Restaurar también los demás datos del estado
                   const restoredState = parsed?.state || {};
                   set({
@@ -379,20 +366,16 @@ const useAuthStore = create(
                 }
               }
             } catch (storageError) {
-              console.log('Error al leer AsyncStorage:', storageError);
             }
           }
 
           if (!token) {
-            console.log('No se encontró token almacenado, redirigiendo a login');
             set({ isInitializing: false, token: null, user: null, provider: null, isLoggedIn: false });
             return false;
           }
 
-          console.log('Token encontrado, configurando en axios');
           // Configurar token en axios con callback de logout
           const logoutCallback = () => {
-            console.log('Ejecutando logout automático por token expirado');
             set({
               token: null,
               user: null,
@@ -407,17 +390,14 @@ const useAuthStore = create(
           try {
             // Obtener información del usuario usando la instancia configurada
             // que lee el token automáticamente desde AsyncStorage
-            console.log('Solicitando perfil de usuario...');
             const userResponse = await axiosConfigured.get('/users/profile');
 
             if (!userResponse || !userResponse.data) {
               // Error al obtener usuario, resetear todo
-              console.log('No se pudieron obtener los datos del usuario');
               set({ isInitializing: false, token: null, user: null, provider: null, isLoggedIn: false });
               return false;
             }
 
-            console.log('Perfil de usuario obtenido correctamente');
 
             // Actualizar datos del usuario
             const userData = userResponse.data;
@@ -427,7 +407,6 @@ const useAuthStore = create(
             const userId = userData._id || userData.id;
 
             if (!userId) {
-              console.log('Error: No se encontró ID de usuario');
               set({ isInitializing: false });
               return false;
             }
@@ -438,13 +417,11 @@ const useAuthStore = create(
 
               if (!providerResult.success || !providerResult.data) {
                 // Prestador no encontrado o eliminado, forzar logout
-                console.log('Prestador no encontrado o eliminado');
                 set({ isInitializing: false, token: null, user: null, provider: null, isLoggedIn: false });
                 return false;
               }
 
               // Todo correcto, establecer datos del prestador
-              console.log('Prestador cargado correctamente:', providerResult.data._id);
               set({
                 provider: providerResult.data,
                 isInitializing: false,
@@ -454,17 +431,14 @@ const useAuthStore = create(
 
               return true;
             } catch (providerError) {
-              console.log('Error al cargar perfil de prestador:', providerError);
               set({ isInitializing: false, token: null, user: null, provider: null, isLoggedIn: false });
               return false;
             }
           } catch (error) {
-            console.log('Error al obtener perfil de usuario:', error);
             set({ isInitializing: false, token: null, user: null, provider: null, isLoggedIn: false });
             return false;
           }
         } catch (error) {
-          console.log('Error general en checkAuth:', error);
           set({ isInitializing: false, token: null, user: null, provider: null, isLoggedIn: false });
           return false;
         }

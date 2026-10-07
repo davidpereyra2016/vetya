@@ -27,14 +27,12 @@ export const servicioService = {
   // Obtener servicios predefinidos del catálogo por tipo de prestador
   getCatalogServices: async (tipoPrestador) => {
     try {
-      console.log(`Obteniendo catálogo de servicios para tipo:`, tipoPrestador);
       const response = await axios.get(`/catalogo/servicios/${tipoPrestador}`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener catálogo de servicios:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener catálogo de servicios'
@@ -45,14 +43,12 @@ export const servicioService = {
   // Obtener todos los servicios de un prestador específico (activos e inactivos)
   getProviderServices: async (prestadorId) => {
     try {
-      console.log(`Obteniendo todos los servicios del prestador ID:`, prestadorId);
       const response = await axios.get(`/prestadores/${prestadorId}/servicios`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener servicios del prestador:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener servicios del prestador'
@@ -63,14 +59,12 @@ export const servicioService = {
   // Obtener servicios activos de un prestador específico
   getActiveProviderServices: async (prestadorId) => {
     try {
-      console.log(`Obteniendo servicios activos del prestador ID:`, prestadorId);
       const response = await axios.get(`/prestadores/${prestadorId}/servicios/activo`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener servicios activos del prestador:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener servicios activos del prestador'
@@ -81,14 +75,12 @@ export const servicioService = {
   // Obtener servicios inactivos de un prestador específico
   getInactiveProviderServices: async (prestadorId) => {
     try {
-      console.log(`Obteniendo servicios inactivos del prestador ID:`, prestadorId);
       const response = await axios.get(`/prestadores/${prestadorId}/servicios/desactivado`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener servicios inactivos del prestador:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener servicios inactivos del prestador'
@@ -99,14 +91,12 @@ export const servicioService = {
   // Obtener servicios disponibles por tipo de prestador
   getByProviderType: async (tipoPrestador) => {
     try {
-      console.log(`Obteniendo servicios disponibles para tipo:`, tipoPrestador);
       const response = await axios.get(`/catalogo/servicios/${tipoPrestador}`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener servicios disponibles:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener servicios disponibles'
@@ -117,7 +107,6 @@ export const servicioService = {
   // Añadir un servicio del catálogo al prestador
   addServiceFromCatalog: async (prestadorId, servicioId, datos) => {
     try {
-      console.log(`Añadiendo servicio ${servicioId} al prestador ${prestadorId}`);
       const response = await axios.post(`/prestadores/${prestadorId}/servicios`, {
         servicioId,
         ...datos
@@ -127,7 +116,6 @@ export const servicioService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al añadir servicio:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al añadir servicio'
@@ -138,14 +126,12 @@ export const servicioService = {
   // Método que utiliza el store para añadir servicios (alias para compatibilidad)
   addToProvider: async (prestadorId, serviceData) => {
     try {
-      console.log(`Añadiendo servicio al prestador ${prestadorId}:`, serviceData);
       const response = await axios.post(`/prestadores/${prestadorId}/servicios`, serviceData);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al añadir servicio:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al añadir servicio'
@@ -204,14 +190,12 @@ export const servicioService = {
   // Actualizar servicio del prestador (alias para compatibilidad con el store)
   updateProviderService: async (prestadorId, servicioId, serviceData) => {
     try {
-      console.log(`Actualizando servicio ${servicioId} del prestador ${prestadorId}:`, serviceData);
       const response = await axios.put(`/prestadores/${prestadorId}/servicios/${servicioId}`, serviceData);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al actualizar servicio:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al actualizar servicio'

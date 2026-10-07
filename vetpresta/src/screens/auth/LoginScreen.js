@@ -39,19 +39,15 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
 
-    console.log('[VetPresta LoginScreen] Iniciando login para:', email);
     setHasAttemptedLogin(true); // Marcar que se intentó hacer login
     clearError(); // Limpiar errores anteriores
     const result = await login(email, password);
-    console.log('[VetPresta LoginScreen] Resultado login:', JSON.stringify(result));
 
     if (!result.success) {
       const needsVerification = result.requiresVerification ||
         (result.error && result.error.toLowerCase().includes('verificar'));
-      console.log('[VetPresta LoginScreen] needsVerification:', needsVerification);
 
       if (needsVerification) {
-        console.log('[VetPresta LoginScreen] Navegando a EmailVerification con email:', result.email || email);
         navigation.navigate('EmailVerification', { email: result.email || email });
       } else {
         Alert.alert('Error de inicio de sesión', result.error || 'No se pudo iniciar sesión');

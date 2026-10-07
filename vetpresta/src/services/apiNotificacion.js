@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import axiosInstance from './axiosInstance';
 
 /**
@@ -18,7 +19,7 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al obtener notificaciones:', error);
+      logger.error('Error al obtener notificaciones:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener notificaciones'
@@ -35,7 +36,7 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al obtener conteo de notificaciones:', error);
+      logger.error('Error al obtener conteo de notificaciones:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener conteo de notificaciones',
@@ -53,7 +54,7 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al marcar notificación como leída:', error);
+      logger.error('Error al marcar notificación como leída:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al marcar notificación como leída'
@@ -70,7 +71,7 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al marcar todas las notificaciones como leídas:', error);
+      logger.error('Error al marcar todas las notificaciones como leídas:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al marcar notificaciones'
@@ -87,7 +88,7 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al eliminar notificación:', error);
+      logger.error('Error al eliminar notificación:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al eliminar notificación'
@@ -104,7 +105,7 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al enviar notificación de emergencia:', error);
+      logger.error('Error al enviar notificación de emergencia:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al enviar notificación de emergencia'
@@ -121,7 +122,6 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.log('⚠️ No se pudo registrar token de dispositivo:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al registrar token de dispositivo'
@@ -147,7 +147,7 @@ export const notificacionService = {
           ignoredUnauthorized: true
         };
       }
-      console.error('Error al eliminar token de dispositivo:', error);
+      logger.error('Error al eliminar token de dispositivo:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al eliminar token de dispositivo'

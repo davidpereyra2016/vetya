@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -27,7 +28,6 @@ export const configurePushNotifications = () => {
  */
 export const requestNotificationPermissions = async () => {
   if (!Device.isDevice) {
-    console.log('Las notificaciones push requieren un dispositivo físico');
     return false;
   }
 
@@ -43,7 +43,6 @@ export const requestNotificationPermissions = async () => {
 
   // Si aún no tenemos permisos, no podemos continuar
   if (finalStatus !== 'granted') {
-    console.log('No se obtuvieron permisos para las notificaciones push');
     return false;
   }
 
@@ -68,7 +67,7 @@ export const registerForPushNotifications = async () => {
     
     // Si estamos en Expo Go, mostrar advertencia y usar un projectId temporal para desarrollo
     if (isExpoGo) {
-      console.warn('NOTA: Las notificaciones push remotas no funcionan en Expo Go desde SDK 53. Considera usar un development build.');
+      logger.warn('NOTA: Las notificaciones push remotas no funcionan en Expo Go desde SDK 53. Considera usar un development build.');
     }
     
     // Obtener token de Expo Notifications
@@ -84,19 +83,17 @@ export const registerForPushNotifications = async () => {
     if (token.data) {
       // Si obtenemos token, intentar registrarlo en el servidor
       await notificacionService.registerDeviceToken(token.data);
-      console.log('Expo Push Token registrado:', token.data);
       return token.data;
     }
 
     } catch (error) {
-      console.error('Error al registrar para notificaciones push:', error);
+      logger.error('Error al registrar para notificaciones push:', error);
       if (isExpoGo) {
-        console.log('Este error es esperado en Expo Go. Para notificaciones completas, usa un development build.');
       }
       return null;
     }
   } catch (outerError) {
-    console.error('Error al registrar para notificaciones push:', outerError);
+    logger.error('Error al registrar para notificaciones push:', outerError);
     return null;
   }
 };
@@ -148,7 +145,6 @@ export const handleNotificationReceived = (notification) => {
     useNotificacionStore.getState().updateUnreadCount();
   }
   
-  console.log('Notificación recibida en primer plano:', data);
 };
 
 /**
@@ -158,7 +154,6 @@ export const handleNotificationReceived = (notification) => {
 export const handleNotificationResponse = (response) => {
   const data = response.notification.request.content.data;
   
-  console.log('📱 Procesando respuesta a notificación:', data);
   
   // Lógica para navegar a diferentes pantallas según el tipo de notificación
   // La navegación debe hacerse desde un componente con acceso al contexto de navegación
@@ -223,7 +218,6 @@ export const handleNotificationResponse = (response) => {
       break;
   }
   
-  console.log('✅ Acción pendiente configurada:', global.pendingNotificationAction);
 };
 
 /**

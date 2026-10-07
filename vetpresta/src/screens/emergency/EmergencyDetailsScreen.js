@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -127,12 +128,11 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       const result = await obtenerPagosPorReferencia('Emergencia', emergencyReferenceId);
       if (result.success && result.data && result.data.length > 0) {
         setPagoInfo(result.data[0]);
-        // console.log('💰 Info de pago cargada:', result.data[0]);
       } else {
         setPagoInfo(null);
       }
     } catch (error) {
-      console.error('Error al cargar pago:', error);
+      logger.error('Error al cargar pago:', error);
       setPagoInfo(null);
     } finally {
       setLoadingPago(false);
@@ -164,7 +164,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
         );
       }
     } catch (error) {
-      console.error('Error al solicitar permisos de ubicación:', error);
+      logger.error('Error al solicitar permisos de ubicación:', error);
     }
   };
 
@@ -189,7 +189,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
 
       return newLocation;
     } catch (error) {
-      console.error('Error al obtener la ubicación actual:', error);
+      logger.error('Error al obtener la ubicación actual:', error);
       return null;
     }
   };
@@ -238,7 +238,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'No pudimos cargar los detalles de la emergencia');
       setLoading(false);
     } catch (error) {
-      console.error('Error al cargar los detalles de la emergencia:', error);
+      logger.error('Error al cargar los detalles de la emergencia:', error);
       Alert.alert('Error', 'No pudimos cargar los detalles de la emergencia');
       setLoading(false);
     }
@@ -278,7 +278,7 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
         Alert.alert("Error", result.error || "No se pudo actualizar el estado de la emergencia");
       }
     } catch (error) {
-      console.error('Error al marcar emergencia como "En camino":', error);
+      logger.error('Error al marcar emergencia como "En camino":', error);
       Alert.alert("Error", "Ocurrió un error al actualizar el estado de la emergencia");
     } finally {
       setIsUpdatingStatus(false);
@@ -308,36 +308,26 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
 
   // Marcar emergencia como "Atendida"
   const handleCompleted = async () => {
-    // console.log('🔵 handleCompleted iniciado');
-    // console.log('   emergencyDetails:', emergencyDetails);
-    // console.log('   emergencyDetails.id:', emergencyDetails?.id);
-    // console.log('   emergencyDetails._id:', emergencyDetails?._id);
-    // console.log('   currentStatus:', currentStatus);
 
     // Usar _id si id no está disponible (MongoDB devuelve _id)
     const emergencyId = emergencyDetails?.id || emergencyDetails?._id;
 
     if (!emergencyId) {
-      // console.log('❌ No hay ID de emergencia (ni id ni _id)');
       return;
     }
 
     // Verificar que la emergencia esté en estado "En atención"
     if (currentStatus !== 'En atención') {
-      // console.log('❌ Estado no válido:', currentStatus);
       Alert.alert("Error", "Debes validar el código de llegada antes de marcar como atendida");
       return;
     }
 
     try {
-      // console.log('🟢 Intentando completar emergencia:', emergencyId);
       setIsUpdatingStatus(true);
       const result = await completeEmergency(emergencyId);
 
-      // console.log('📥 Resultado de completeEmergency:', result);
 
       if (result.success) {
-        // console.log('✅ Emergencia completada exitosamente');
         setCurrentStatus('Atendida');
         setEmergencyDetails(prev => ({ ...prev, estado: 'Atendida' }));
         await loadPaymentInfo();
@@ -357,14 +347,12 @@ const EmergencyDetailsScreen = ({ navigation, route }) => {
           ]
         );
       } else {
-        // console.log('❌ Error en completeEmergency:', result.error);
         Alert.alert("Error", result.error || "No se pudo actualizar el estado de la emergencia");
       }
     } catch (error) {
-      console.error('💥 Excepción en handleCompleted:', error);
+      logger.error('💥 Excepción en handleCompleted:', error);
       Alert.alert("Error", "Ocurrió un error al actualizar el estado de la emergencia");
     } finally {
-      // console.log('🔵 handleCompleted finalizado');
       setIsUpdatingStatus(false);
     }
   };

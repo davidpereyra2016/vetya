@@ -170,11 +170,9 @@ const ServicesScreen = ({ navigation }) => {
       const prestadorId = provider._id || provider.id;
 
       if (!prestadorId) {
-        console.log('Error: No se encontró ID de prestador válido');
         return;
       }
 
-      console.log('Cargando detalles del prestador usando ID:', prestadorId);
 
       // Cargar detalles del prestador directamente
       const result = await usePrestadorStore.getState().loadPrestadorById(prestadorId);
@@ -183,12 +181,9 @@ const ServicesScreen = ({ navigation }) => {
         // Inicializar los estados de emergencia
         setEmergencyPriceInput(result.emergenciaGratisAdmin ? '0' : (result.precioEmergencia ? result.precioEmergencia.toString() : '0'));
         setEmergencyAvailable(result.disponibleEmergencias || false);
-        console.log('Datos de emergencia cargados - Precio:', result.precioEmergencia, 'Disponible:', result.disponibleEmergencias);
       } else {
-        console.log('No se pudieron cargar los detalles del prestador');
       }
     } catch (error) {
-      console.log('Error al cargar detalles del prestador:', error);
     }
   };
 
@@ -196,18 +191,15 @@ const ServicesScreen = ({ navigation }) => {
   const loadServices = async () => {
     try {
       if (!provider) {
-        console.log('No hay información del prestador disponible');
         return;
       }
 
       if (!provider.id && !provider._id) {
-        console.log('No se encontró ID del prestador:', provider);
         return;
       }
 
       // Usar el ID correcto (puede venir como id o _id dependiendo de la fuente)
       const providerId = provider.id || provider._id;
-      console.log('Cargando todos los servicios (activos e inactivos) para el prestador ID:', providerId);
 
       // Usar el store para cargar los servicios del prestador
       setIsRefreshing(true);
@@ -215,10 +207,8 @@ const ServicesScreen = ({ navigation }) => {
         getProviderServices(providerId),
         getResumenDisponibilidadServicios(providerId),
       ]);
-      console.log(`Total de servicios cargados: ${myServices.length} (Activos: ${activeServices.length}, Inactivos: ${inactiveServices.length})`);
       setIsRefreshing(false);
     } catch (error) {
-      console.log('Error al cargar servicios:', error);
       setIsRefreshing(false);
     }
   };
@@ -227,26 +217,22 @@ const ServicesScreen = ({ navigation }) => {
   const loadAvailableServices = async () => {
     try {
       if (!provider) {
-        console.log('No hay información del prestador disponible para cargar catálogo');
         // Cargar un tipo predeterminado para mostrar algo en el catálogo
         await getAvailableServices('Veterinario');
         return;
       }
 
       const tipoProvider = provider.tipo || 'Veterinario';
-      console.log('Cargando catálogo de servicios para tipo de prestador:', tipoProvider);
 
       // Usar el store para cargar los servicios disponibles para este tipo de prestador
       await getAvailableServices(tipoProvider);
     } catch (error) {
-      console.log('Error al cargar servicios disponibles:', error);
     }
   };
 
   // Función para ver detalles de un servicio
   const handleViewServiceDetail = (service) => {
     // Asegurarnos de que estamos almacenando la información completa del servicio
-    console.log('Servicio seleccionado:', service);
     setSelectedService(service);
     const gratis = isServicioGratis(service);
     setServiceIsFree(gratis);
@@ -275,12 +261,10 @@ const ServicesScreen = ({ navigation }) => {
   // Función para agregar un servicio del catálogo a mis servicios
   const handleAddServiceFromCatalog = async () => {
     if (!selectedService) {
-      console.log('Error: No hay servicio seleccionado');
       return;
     }
 
     if (!provider || (!provider.id && !provider._id)) {
-      console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
@@ -316,12 +300,6 @@ const ServicesScreen = ({ navigation }) => {
       const providerId = provider._id || provider.id;
       const serviceId = selectedService._id || selectedService.id;
 
-      console.log('Datos para agregar servicio:', {
-        providerId,
-        serviceId,
-        precio,
-        duracion
-      });
 
       // Verificar si el servicio ya está en mi lista (usar el ID correcto)
       const exists = Array.isArray(myServices) && myServices.some(service => {
@@ -345,7 +323,6 @@ const ServicesScreen = ({ navigation }) => {
         activo: true
       };
 
-      console.log('Enviando solicitud con:', { providerId, serviceData });
 
       // Usar el store para agregar el servicio a través de la API real
       const result = await addServiceToProvider(providerId, serviceData);
@@ -363,7 +340,6 @@ const ServicesScreen = ({ navigation }) => {
         );
       }
     } catch (error) {
-      console.log('Error al agregar servicio:', error);
     } finally {
       setIsRefreshing(false);
     }
@@ -372,12 +348,10 @@ const ServicesScreen = ({ navigation }) => {
   // Función para actualizar el precio y duración de un servicio
   const handleUpdateServicePrice = async () => {
     if (!selectedService) {
-      console.log('Error: No hay servicio seleccionado');
       return;
     }
 
     if (!provider || (!provider.id && !provider._id)) {
-      console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
@@ -413,12 +387,6 @@ const ServicesScreen = ({ navigation }) => {
       const providerId = provider._id || provider.id;
       const serviceId = selectedService._id || selectedService.id;
 
-      console.log('Datos para actualizar servicio:', {
-        providerId,
-        serviceId,
-        precio,
-        duracion
-      });
 
       const serviceData = {
         precio: serviceIsFree ? 0 : precio,
@@ -437,7 +405,6 @@ const ServicesScreen = ({ navigation }) => {
         Alert.alert('Error', 'No se pudo actualizar el servicio');
       }
     } catch (error) {
-      console.log('Error al actualizar servicio:', error);
       Alert.alert('Error', 'Ocurrió un error al actualizar el servicio');
     } finally {
       setIsRefreshing(false);
@@ -447,12 +414,10 @@ const ServicesScreen = ({ navigation }) => {
   // Función para activar/desactivar un servicio
   const handleToggleServiceStatus = async (service) => {
     if (!service) {
-      console.log('Error: No se proporcionó servicio');
       return;
     }
 
     if (!provider || (!provider.id && !provider._id)) {
-      console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
@@ -464,11 +429,6 @@ const ServicesScreen = ({ navigation }) => {
       const providerId = provider._id || provider.id;
       const serviceId = service._id || service.id;
 
-      console.log('Datos para cambiar estado de servicio:', {
-        providerId,
-        serviceId,
-        activo: !service.activo
-      });
 
       // Servicio con el estado actualizado
       const serviceData = {
@@ -487,7 +447,6 @@ const ServicesScreen = ({ navigation }) => {
         Alert.alert('Error', 'No se pudo actualizar el estado del servicio');
       }
     } catch (error) {
-      console.log('Error al cambiar estado del servicio:', error);
       Alert.alert('Error', 'Ocurrió un error al cambiar el estado del servicio');
     } finally {
       setIsRefreshing(false);
@@ -528,10 +487,6 @@ const ServicesScreen = ({ navigation }) => {
     try {
       setIsRefreshing(true);
 
-      console.log('Actualizando configuración de emergencias:', {
-        precioEmergencia,
-        disponibleEmergencias: emergencyAvailable
-      });
 
       const result = await updateEmergencySettings(precioEmergencia, emergencyAvailable);
 
@@ -542,7 +497,6 @@ const ServicesScreen = ({ navigation }) => {
         Alert.alert('Error', 'No se pudo actualizar la configuración de emergencias');
       }
     } catch (error) {
-      console.log('Error al actualizar configuración de emergencias:', error);
       Alert.alert('Error', 'Ocurrió un error al actualizar la configuración de emergencias');
     } finally {
       setIsRefreshing(false);
@@ -552,12 +506,10 @@ const ServicesScreen = ({ navigation }) => {
   // Función para eliminar un servicio
   const handleRemoveService = (service) => {
     if (!service) {
-      console.log('Error: No se proporcionó servicio');
       return;
     }
 
     if (!provider || (!provider.id && !provider._id)) {
-      console.log('Error: No hay proveedor disponible o su ID no es válido:', provider);
       Alert.alert('Error', 'No se pudo identificar tu perfil de prestador. Intenta cerrar sesión y volver a entrar.');
       return;
     }
@@ -581,10 +533,6 @@ const ServicesScreen = ({ navigation }) => {
             try {
               setIsRefreshing(true);
 
-              console.log('Eliminando servicio:', {
-                providerId,
-                serviceId
-              });
 
               // Usar el store para eliminar el servicio
               const result = await removeProviderService(providerId, serviceId);
@@ -595,7 +543,6 @@ const ServicesScreen = ({ navigation }) => {
                 Alert.alert('Error', 'No se pudo eliminar el servicio');
               }
             } catch (error) {
-              console.log('Error al eliminar servicio:', error);
               Alert.alert('Error', 'Ocurrió un error al eliminar el servicio');
             } finally {
               setIsRefreshing(false);

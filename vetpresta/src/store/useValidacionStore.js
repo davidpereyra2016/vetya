@@ -38,7 +38,6 @@ const useValidacionStore = create((set, get) => ({
       const { estadoValidacion } = get();
       // Solo inicializar si no tenemos estado o es diferente
       if (!estadoValidacion || estadoValidacion !== 'aprobado') {
-        console.log('🚀 Inicializando estado de validación desde provider: aprobado');
         set({
           estadoValidacion: 'aprobado',
           prestadorTipo: provider.tipo || null,
@@ -57,7 +56,6 @@ const useValidacionStore = create((set, get) => ({
     
     // ✅ OPTIMIZACIÓN: Si ya está aprobado y no es un refresh forzado, no hacer request
     if (estadoValidacion === 'aprobado' && !forceRefresh) {
-      console.log('⚡ Validación ya aprobada, evitando request innecesario');
       return { success: true, data: { estadoValidacion: 'aprobado' } };
     }
     

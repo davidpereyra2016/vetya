@@ -1,10 +1,10 @@
+import logger from '../utils/logger';
 import { create } from 'zustand';
 import { prestadorService } from '../services/api';
 import prestadorServicePrestador from '../services/apiPrestador';
 import * as Location from 'expo-location';
 
 // Log para verificar que prestadorServicePrestador está definido correctamente
-console.log('prestadorServicePrestador cargado:', prestadorServicePrestador);
 
 /**
  * Store para manejar el estado del perfil de prestador
@@ -29,15 +29,9 @@ const usePrestadorStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('🔍 [PRESTADOR STORE] Obteniendo prestador para usuario ID:', userId);
       const result = await prestadorService.getByUserId(userId);
       
       if (result.success) {
-        console.log('✅ [PRESTADOR STORE] Perfil cargado:', result.data._id);
-        console.log('   -> Nombre:', result.data.nombre);
-        console.log('   -> Disponible emergencias:', result.data.disponibleEmergencias);
-        console.log('   -> Ubicación actual:', result.data.ubicacionActual);
-        console.log('   -> Última actualización:', result.data.ubicacionActual?.ultimaActualizacion);
         
         set({ 
           prestador: result.data,
@@ -45,7 +39,6 @@ const usePrestadorStore = create((set, get) => ({
         });
         return result.data;
       } else {
-        console.log('❌ [PRESTADOR STORE] Error al cargar:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -53,7 +46,6 @@ const usePrestadorStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      console.log('❌ [PRESTADOR STORE] Error:', error);
       set({ 
         error: "Error al cargar información del prestador",
         isLoading: false
@@ -67,18 +59,15 @@ const usePrestadorStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log('Obteniendo prestador por ID directo:', prestadorId);
       const result = await prestadorService.getById(prestadorId);
       
       if (result.success) {
-        console.log('Perfil de prestador cargado correctamente por ID:', result.data._id);
         set({ 
           prestador: result.data,
           isLoading: false
         });
         return result.data;
       } else {
-        console.log('Error al cargar perfil de prestador por ID:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -86,7 +75,6 @@ const usePrestadorStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      console.log('Error al cargar prestador por ID:', error);
       set({ 
         error: "Error al cargar información del prestador",
         isLoading: false
@@ -117,7 +105,6 @@ const usePrestadorStore = create((set, get) => ({
       let ubicacionActualizada = null;
       
       if (disponibleEmergencias === true) {
-        console.log('🔍 Obteniendo ubicación GPS para activar disponibilidad de emergencias...');
         
         // Solicitar permisos de ubicación
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -135,7 +122,6 @@ const usePrestadorStore = create((set, get) => ({
         });
         
         const { latitude, longitude } = location.coords;
-        console.log('📍 Ubicación obtenida:', { lat: latitude, lng: longitude });
         
         // Enviar ubicación al backend ANTES de activar disponibilidad
         const ubicacionResult = await prestadorService.actualizarUbicacion(
@@ -146,9 +132,8 @@ const usePrestadorStore = create((set, get) => ({
         
         if (ubicacionResult.success) {
           ubicacionActualizada = { lat: latitude, lng: longitude };
-          console.log('✅ Ubicación guardada en backend correctamente');
         } else {
-          console.error('❌ Error al guardar ubicación:', ubicacionResult.error);
+          logger.error('❌ Error al guardar ubicación:', ubicacionResult.error);
           // No bloquear, pero registrar el error
         }
       }
@@ -177,10 +162,6 @@ const usePrestadorStore = create((set, get) => ({
           isLoading: false
         });
         
-        console.log('✅ Configuración de emergencias actualizada:', {
-          disponibleEmergencias: updatedPrestador.disponibleEmergencias,
-          ubicacionActualizada: !!ubicacionActualizada
-        });
         
         return updatedPrestador;
       } else {
@@ -191,7 +172,6 @@ const usePrestadorStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      console.log('Error al actualizar configuración de emergencias:', error);
       set({ 
         error: "Error al actualizar la configuración de emergencias: " + (error.message || error),
         isLoading: false
@@ -237,7 +217,6 @@ const usePrestadorStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      console.log('Error al obtener la cantidad de emergencias:', error);
       set({ 
         error: "Error al obtener la cantidad de emergencias",
         isLoading: false

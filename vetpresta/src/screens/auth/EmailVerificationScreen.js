@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import useAuthStore from '../../store/useAuthStore';
 
 const EmailVerificationScreen = ({ navigation, route }) => {
-  console.log('[VetPresta EmailVerificationScreen] Pantalla montada, params:', JSON.stringify(route?.params));
   const email = route?.params?.email || '';
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isResending, setIsResending] = useState(false);

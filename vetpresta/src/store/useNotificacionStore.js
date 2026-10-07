@@ -49,7 +49,6 @@ const useNotificacionStore = create((set, get) => ({
         
         return sortedNotificaciones;
       } else {
-        console.log('Error al cargar notificaciones:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -57,7 +56,6 @@ const useNotificacionStore = create((set, get) => ({
         return [];
       }
     } catch (error) {
-      console.log('Error al cargar notificaciones:', error);
       set({ 
         error: "Error al cargar notificaciones",
         isLoading: false
@@ -87,7 +85,6 @@ const useNotificacionStore = create((set, get) => ({
         
         return sortedNotificaciones;
       } else {
-        console.log('Error al cargar notificaciones no leídas:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -95,7 +92,6 @@ const useNotificacionStore = create((set, get) => ({
         return [];
       }
     } catch (error) {
-      console.log('Error al cargar notificaciones no leídas:', error);
       set({ 
         error: "Error al cargar notificaciones no leídas",
         isLoading: false
@@ -113,11 +109,9 @@ const useNotificacionStore = create((set, get) => ({
         set({ conteoNoLeidas: result.data.conteo });
         return result.data.conteo;
       } else {
-        console.log('Error al obtener conteo de notificaciones:', result.error);
         return 0;
       }
     } catch (error) {
-      console.log('Error al obtener conteo de notificaciones:', error);
       return 0;
     }
   },
@@ -150,7 +144,6 @@ const useNotificacionStore = create((set, get) => ({
         
         return { success: true };
       } else {
-        console.log('Error al marcar notificación como leída:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -158,7 +151,6 @@ const useNotificacionStore = create((set, get) => ({
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.log('Error al marcar notificación como leída:', error);
       set({ 
         error: "Error al marcar notificación como leída",
         isLoading: false
@@ -192,7 +184,6 @@ const useNotificacionStore = create((set, get) => ({
         
         return { success: true };
       } else {
-        console.log('Error al marcar todas las notificaciones como leídas:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -200,7 +191,6 @@ const useNotificacionStore = create((set, get) => ({
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.log('Error al marcar todas las notificaciones como leídas:', error);
       set({ 
         error: "Error al marcar todas las notificaciones como leídas",
         isLoading: false
@@ -233,7 +223,6 @@ const useNotificacionStore = create((set, get) => ({
         
         return { success: true };
       } else {
-        console.log('Error al eliminar notificación:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -241,7 +230,6 @@ const useNotificacionStore = create((set, get) => ({
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.log('Error al eliminar notificación:', error);
       set({ 
         error: "Error al eliminar notificación",
         isLoading: false
@@ -273,7 +261,6 @@ const useNotificacionStore = create((set, get) => ({
           data: result.data 
         };
       } else {
-        console.log('Error al enviar notificación de emergencia:', result.error);
         set({ error: result.error });
         return { 
           success: false, 
@@ -281,7 +268,6 @@ const useNotificacionStore = create((set, get) => ({
         };
       }
     } catch (error) {
-      console.log('Error al enviar notificación de emergencia:', error);
       set({ 
         error: "Error al enviar notificación de emergencia",
         isLoading: false

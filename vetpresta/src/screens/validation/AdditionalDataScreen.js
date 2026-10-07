@@ -69,11 +69,8 @@ const AdditionalDataScreen = ({ navigation }) => {
   );
 
   const loadInitialData = async () => {
-    console.log('🔄 Cargando datos iniciales...');
     await fetchEstadoValidacion();
 
-    console.log('Datos adicionales obtenidos:', datosAdicionales);
-    console.log('Datos del provider:', provider);
 
     // Pre-llenar formulario con datos de validación existentes
     if (datosAdicionales) {
@@ -95,7 +92,6 @@ const AdditionalDataScreen = ({ navigation }) => {
       }));
     }
 
-    console.log('Datos del formulario después de cargar:', formData);
   };
 
   const validateForm = () => {
@@ -178,9 +174,6 @@ const AdditionalDataScreen = ({ navigation }) => {
 
     setIsSubmitting(true);
 
-    console.log('=== ENVIANDO DATOS ADICIONALES ===');
-    console.log('Tipo de prestador:', prestadorTipo);
-    console.log('Datos del formulario:', formData);
 
     // Filtrar datos: eliminar campos vacíos, nulos y objetos vacíos
     const filteredData = Object.fromEntries(
@@ -193,15 +186,12 @@ const AdditionalDataScreen = ({ navigation }) => {
       })
     );
 
-    console.log('Datos filtrados (sin campos vacíos):', filteredData);
 
     try {
       const result = await updateDatosAdicionales(filteredData);
 
-      console.log('Resultado de la API:', result);
 
       if (result.success) {
-        console.log('✅ Datos guardados exitosamente');
         Alert.alert(
           'Éxito',
           'Datos adicionales guardados correctamente',
@@ -219,11 +209,9 @@ const AdditionalDataScreen = ({ navigation }) => {
           ]
         );
       } else {
-        console.log('❌ Error al guardar:', result.error);
         Alert.alert('Error', result.error || 'Error al guardar datos');
       }
     } catch (error) {
-      console.log('❌ Error inesperado:', error);
       Alert.alert('Error', 'Error inesperado al guardar datos');
     } finally {
       setIsSubmitting(false);

@@ -14,23 +14,19 @@ const useServiceStore = create((set, get) => ({
   // Obtener todos los servicios del prestador (activos e inactivos)
   getProviderServices: async (providerId) => {
     if (!providerId) {
-      console.log('No se proporcionó ID del prestador');
       return;
     }
     
     set({ isLoading: true, error: null });
     try {
-      console.log('Obteniendo todos los servicios para el prestador:', providerId);
       const result = await servicioService.getProviderServices(providerId);
       
       if (result.success) {
-        console.log('Servicios totales obtenidos:', result.data.length);
         
         // Filtrar servicios activos e inactivos
         const activeServices = result.data.filter(service => service.activo === true);
         const inactiveServices = result.data.filter(service => service.activo === false);
         
-        console.log(`Servicios activos: ${activeServices.length}, Servicios inactivos: ${inactiveServices.length}`);
         
         set({ 
           services: result.data,
@@ -40,7 +36,6 @@ const useServiceStore = create((set, get) => ({
         });
         return result.data;
       } else {
-        console.log('Error obteniendo servicios:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -48,7 +43,6 @@ const useServiceStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      console.log('Excepción obteniendo servicios:', error);
       set({ 
         error: "Error al obtener servicios del prestador",
         isLoading: false
@@ -60,24 +54,20 @@ const useServiceStore = create((set, get) => ({
   // Obtener solo servicios activos del prestador
   getActiveProviderServices: async (providerId) => {
     if (!providerId) {
-      console.log('No se proporcionó ID del prestador');
       return;
     }
     
     set({ isLoading: true, error: null });
     try {
-      console.log('Obteniendo servicios activos para el prestador:', providerId);
       const result = await servicioService.getActiveProviderServices(providerId);
       
       if (result.success) {
-        console.log('Servicios activos obtenidos:', result.data.length);
         set({ 
           activeServices: result.data,
           isLoading: false
         });
         return result.data;
       } else {
-        console.log('Error obteniendo servicios activos:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -85,7 +75,6 @@ const useServiceStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      console.log('Excepción obteniendo servicios activos:', error);
       set({ 
         error: "Error al obtener servicios activos del prestador",
         isLoading: false
@@ -97,24 +86,20 @@ const useServiceStore = create((set, get) => ({
   // Obtener solo servicios inactivos del prestador
   getInactiveProviderServices: async (providerId) => {
     if (!providerId) {
-      console.log('No se proporcionó ID del prestador');
       return;
     }
     
     set({ isLoading: true, error: null });
     try {
-      console.log('Obteniendo servicios inactivos para el prestador:', providerId);
       const result = await servicioService.getInactiveProviderServices(providerId);
       
       if (result.success) {
-        console.log('Servicios inactivos obtenidos:', result.data.length);
         set({ 
           inactiveServices: result.data,
           isLoading: false
         });
         return result.data;
       } else {
-        console.log('Error obteniendo servicios inactivos:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -122,7 +107,6 @@ const useServiceStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      console.log('Excepción obteniendo servicios inactivos:', error);
       set({ 
         error: "Error al obtener servicios inactivos del prestador",
         isLoading: false
@@ -135,18 +119,15 @@ const useServiceStore = create((set, get) => ({
   getAvailableServices: async (providerType) => {
     set({ isLoading: true, error: null });
     try {
-      console.log('Obteniendo catálogo para tipo de prestador:', providerType);
       const result = await servicioService.getCatalogServices(providerType);
       
       if (result.success) {
-        console.log('Catálogo obtenido correctamente:', result.data.length, 'servicios');
         set({ 
           availableServices: result.data,
           isLoading: false
         });
         return result.data;
       } else {
-        console.log('Error obteniendo catálogo:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -154,7 +135,6 @@ const useServiceStore = create((set, get) => ({
         return null;
       }
     } catch (error) {
-      console.log('Excepción obteniendo catálogo:', error);
       set({ 
         error: "Error al obtener servicios disponibles",
         isLoading: false

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import axios, { setAuthToken } from '../config/axios'; // Usar la instancia configurada con tokens automáticos
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
@@ -231,7 +232,7 @@ export const prestadorService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al actualizar ubicación:', error);
+      logger.error('Error al actualizar ubicación:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al actualizar ubicación'
@@ -251,7 +252,6 @@ export const prestadorService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al actualizar precio emergencia:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al actualizar precio de emergencia'
@@ -317,14 +317,12 @@ export const prestadorService = {
   // Agregar servicio a un prestador
   addService: async (id, serviceData) => {
     try {
-      console.log(`Añadiendo servicio para prestador ID:`, id, serviceData);
       const response = await axios.post(`/prestadores/${id}/servicios`, serviceData);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al agregar servicio:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al agregar servicio'
@@ -555,20 +553,13 @@ export const emergenciaService = {
   // Aceptar una emergencia
   acceptEmergency: async (emergencyId) => {
     try {
-      console.log('🚀 [CLIENTE] Aceptando emergencia:', emergencyId);
       const response = await axios.post(`/emergencias/${emergencyId}/aceptar`);
-      console.log('✅ [CLIENTE] Emergencia aceptada:', {
-        emergenciaId: response.data?.emergenciaActualizada?._id,
-        estado: response.data?.emergenciaActualizada?.estado,
-        metodoPago: response.data?.emergenciaActualizada?.metodoPago,
-        preferenciaMP: response.data?.preferenciaMP?.id
-      });
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('❌ [CLIENTE] Error al aceptar emergencia:', error.response?.data || error.message);
+      logger.error('❌ [CLIENTE] Error al aceptar emergencia:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al aceptar la emergencia'
@@ -579,15 +570,12 @@ export const emergenciaService = {
   // Rechazar una emergencia
   rejectEmergency: async (emergencyId) => {
     try {
-      console.log(`Intentando rechazar emergencia con ID: ${emergencyId}`);
       const response = await axios.post(`/emergencias/${emergencyId}/rechazar`);
-      console.log('Respuesta exitosa al rechazar emergencia:', response.data);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('API Error:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al rechazar la emergencia'
@@ -606,16 +594,14 @@ export const emergenciaService = {
   },
 
   setEmergencyStatus: async (emergencyId, estado) => {
-    console.log(`🟠 [API] setEmergencyStatus - ID: ${emergencyId}, Estado: ${estado}`);
     try {
       const response = await axios.patch(`/emergencias/${emergencyId}/estado`, { estado });
-      console.log('🟠 [API] ✅ Respuesta exitosa:', response.status, response.data);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('🟠 [API] ❌ Error en setEmergencyStatus:', error.response?.data || error.message);
+      logger.error('🟠 [API] ❌ Error en setEmergencyStatus:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || `Error al cambiar estado a ${estado}`
@@ -953,7 +939,6 @@ export const userService = {
 
       // Elegir el endpoint correcto según el tipo de usuario
       const endpoint = isPrestador ? '/prestadores/profile-picture' : '/users/profile-picture';
-      console.log(`Subiendo imagen a ${endpoint}...`);
 
       const response = await axios.post(endpoint, formData, {
         headers: {
@@ -961,14 +946,13 @@ export const userService = {
         }
       });
 
-      console.log('Imagen subida exitosamente:', response.data);
 
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('Error al subir imagen:', error.response?.data || error.message);
+      logger.error('Error al subir imagen:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al subir la imagen'
@@ -998,14 +982,12 @@ export const servicioService = {
   // Obtener servicios predefinidos del catálogo por tipo de prestador
   getCatalogServices: async (tipoPrestador) => {
     try {
-      console.log(`Obteniendo catálogo de servicios para tipo:`, tipoPrestador);
       const response = await axios.get(`/catalogo/servicios/${tipoPrestador}`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener catálogo de servicios:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener catálogo de servicios'
@@ -1016,14 +998,12 @@ export const servicioService = {
   // Obtener servicios de un prestador específico
   getProviderServices: async (prestadorId) => {
     try {
-      console.log(`Obteniendo servicios del prestador ID:`, prestadorId);
       const response = await axios.get(`/prestadores/${prestadorId}/servicios`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener servicios del prestador:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener servicios del prestador'
@@ -1034,14 +1014,12 @@ export const servicioService = {
   // Obtener servicios disponibles por tipo de prestador
   getByProviderType: async (tipoPrestador) => {
     try {
-      console.log(`Obteniendo servicios disponibles para tipo:`, tipoPrestador);
       const response = await axios.get(`/catalogo/servicios/${tipoPrestador}`);
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener servicios disponibles:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener servicios disponibles'
@@ -1052,7 +1030,6 @@ export const servicioService = {
   // Añadir un servicio del catálogo al prestador
   addServiceFromCatalog: async (prestadorId, servicioId, datos) => {
     try {
-      console.log(`Añadiendo servicio ${servicioId} al prestador ${prestadorId}`);
       const response = await axios.post(`/prestadores/${prestadorId}/servicios`, {
         servicioId,
         ...datos
@@ -1062,7 +1039,6 @@ export const servicioService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al añadir servicio:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al añadir servicio'

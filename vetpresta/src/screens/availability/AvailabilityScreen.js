@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import Modal from '../../components/common/ResponsiveModal';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
@@ -45,15 +46,12 @@ export default function AvailabilityScreen({ navigation, route }) {
       const providerId = provider._id || provider.id;
 
       if (providerId) {
-        console.log('AvailabilityScreen - Usando ID de prestador del provider:', providerId);
         setPrestadorId(providerId);
         // Cargar detalles completos del prestador
         loadPrestadorDetails(providerId);
       } else {
-        console.log('AvailabilityScreen - Provider sin ID válido:', provider);
       }
     } else {
-      console.log('AvailabilityScreen - No hay provider en el store de autenticación');
     }
   }, [provider]);
 
@@ -61,25 +59,21 @@ export default function AvailabilityScreen({ navigation, route }) {
   const loadPrestadorDetails = async (providerId) => {
     try {
       if (!providerId) {
-        console.log('loadPrestadorDetails - ID de prestador no proporcionado');
         return;
       }
 
-      console.log('loadPrestadorDetails - Cargando detalles del prestador ID:', providerId);
 
       // Cargar detalles del prestador usando el store
       const result = await usePrestadorStore.getState().loadPrestadorById(providerId);
 
       if (result) {
-        console.log('loadPrestadorDetails - Detalles del prestador cargados correctamente');
         // Una vez cargado el prestador en el store, podemos cargar sus datos de disponibilidad
         await loadPrestadorData(providerId);
       } else {
-        console.log('loadPrestadorDetails - No se pudieron cargar los detalles del prestador');
         setLoading(false);
       }
     } catch (error) {
-      console.error('loadPrestadorDetails - Error al cargar detalles:', error);
+      logger.error('loadPrestadorDetails - Error al cargar detalles:', error);
       setLoading(false);
     }
   };
@@ -177,7 +171,7 @@ export default function AvailabilityScreen({ navigation, route }) {
         setEveningEndTime(newTime);
         break;
       default:
-        console.warn('Tipo de tiempo desconocido:', timeType);
+        logger.warn('Tipo de tiempo desconocido:', timeType);
     }
     setTimePickerVisible(false); // Ocultar el modal después de seleccionar
   };
@@ -190,10 +184,8 @@ export default function AvailabilityScreen({ navigation, route }) {
     // Usar el ID proporcionado o el del estado
     const idToUse = targetPrestadorId || prestadorId;
 
-    console.log('loadPrestadorData - Usando ID de prestador:', idToUse);
 
     if (!idToUse) {
-      console.log('loadPrestadorData - No hay ID de prestador disponible');
       setLoading(false);
       return;
     }
@@ -202,7 +194,6 @@ export default function AvailabilityScreen({ navigation, route }) {
       setLoading(true);
 
       // 1. Obtener servicios del prestador usando el store de servicios
-      console.log('loadPrestadorData - Obteniendo servicios para prestador ID:', idToUse);
       const servicesData = await getProviderServices(idToUse);
       if (servicesData) {
         setUserServices(servicesData);
@@ -217,10 +208,8 @@ export default function AvailabilityScreen({ navigation, route }) {
       }
 
       // 2. Obtener datos básicos del prestador
-      console.log('loadPrestadorData - Obteniendo datos básicos del prestador ID:', idToUse);
       const prestadorResult = await prestadorService.getById(idToUse);
       const prestadorData = prestadorResult?.success ? prestadorResult.data : null;
-      console.log('loadPrestadorData - Datos básicos obtenidos:', prestadorData ? 'Sí' : 'No');
 
       // NOTA: El API de disponibilidad aún no está implementada en el backend, por lo que
       // en lugar de intentar obtener datos de disponibilidad, usaremos los horarios
@@ -228,7 +217,6 @@ export default function AvailabilityScreen({ navigation, route }) {
 
       // Si hay horarios en los datos del prestador, usarlos
       if (prestadorData?.horarios && prestadorData.horarios.length > 0) {
-        console.log('loadPrestadorData - Usando horarios del objeto prestador');
         setGeneralSchedule(prestadorData.horarios);
       }
       // Si no hay horarios, crear horario por defecto
@@ -267,11 +255,9 @@ export default function AvailabilityScreen({ navigation, route }) {
       // 4. Configurar datos de disponibilidad para emergencias desde el objeto prestador
       if (prestadorData?.disponibleEmergencias !== undefined) {
         setEmergencyAvailable(prestadorData.disponibleEmergencias);
-        console.log('loadPrestadorData - Disponibilidad para emergencias:', prestadorData.disponibleEmergencias);
       }
       if (prestadorData?.precioEmergencia !== undefined) {
         setEmergencyPrice(prestadorData.precioEmergencia);
-        console.log('loadPrestadorData - Precio de emergencia:', prestadorData.precioEmergencia);
       }
 
       // 5. Las fechas especiales no están disponibles sin la API de disponibilidad
@@ -281,15 +267,13 @@ export default function AvailabilityScreen({ navigation, route }) {
       // 6. Si es un veterinario, asegurarnos de que se respete el radio de privacidad de 1km
       if (prestadorData?.tipo === 'Veterinario' && prestadorData?.radio !== undefined) {
         // Verificar que el radio sea al menos 1km para proteger la privacidad
-        console.log('loadPrestadorData - Radio de atención para veterinario:', prestadorData.radio, 'km');
         if (prestadorData.radio < 1) {
-          console.log('loadPrestadorData - Ajustando radio a mínimo 1km para proteger privacidad');
         }
       }
 
       setLoading(false);
     } catch (error) {
-      console.error('Error al cargar datos del prestador:', error);
+      logger.error('Error al cargar datos del prestador:', error);
       Alert.alert(
         'Error de conexión',
         'No se pudieron cargar los datos. Por favor, verifica tu conexión a internet.'
@@ -303,17 +287,14 @@ export default function AvailabilityScreen({ navigation, route }) {
     // Usar el ID del prestador guardado en el estado local
     const idToUse = prestadorId;
 
-    console.log('saveGeneralSchedule - Revisando ID de prestador:', idToUse || 'No disponible');
 
     if (!idToUse) {
-      console.log('saveGeneralSchedule - No se encontró ID de prestador');
       Alert.alert('Error', 'No se pudo identificar el prestador. Por favor, intenta nuevamente.');
       return;
     }
 
     try {
       setSaving(true);
-      console.log('saveGeneralSchedule - Guardando horarios para prestador ID:', idToUse);
 
       // Formatear horarios para la API con turnos mañana y tarde-noche
       const disponibilidadData = {
@@ -323,17 +304,14 @@ export default function AvailabilityScreen({ navigation, route }) {
         }
       };
 
-      console.log('saveGeneralSchedule - Datos a enviar:', JSON.stringify(disponibilidadData));
 
       // El servicio de disponibilidad aún no está disponible en el backend, por lo que solo actualizaremos
       // los horarios directamente en el modelo de prestador por ahora
-      console.log('saveGeneralSchedule - Actualizando horarios directamente en el modelo de prestador');
 
       // Usar la función update del prestadorService (no updatePrestador)
       const updateResult = await prestadorService.update(idToUse, {
         horarios: generalSchedule
       });
-      console.log('saveGeneralSchedule - Respuesta de update:', updateResult.success ? 'Exitosa' : 'Fallida');
 
       if (updateResult.success) {
         Alert.alert('¡Horario guardado!', 'Tu horario de atención se ha actualizado correctamente.');
@@ -341,15 +319,13 @@ export default function AvailabilityScreen({ navigation, route }) {
         // Si es un veterinario, recordar que mantenemos un radio de privacidad de 1km
         const { prestador } = usePrestadorStore.getState();
         if (prestador?.tipo === 'Veterinario') {
-          console.log('saveGeneralSchedule - Manteniendo radio de privacidad de 1km para veterinario');
           // El radio de 1km se maneja en el backend, pero es bueno loggear para recordarlo
         }
       } else {
-        console.log('saveGeneralSchedule - Error al guardar:', updateResult.error);
         Alert.alert('Error', updateResult.error || 'No se pudo guardar el horario. Intenta nuevamente.');
       }
     } catch (error) {
-      console.error('saveGeneralSchedule - Error al guardar horario:', error);
+      logger.error('saveGeneralSchedule - Error al guardar horario:', error);
       Alert.alert('Error', 'Ocurrió un problema al guardar los cambios. Verifica tu conexión.');
     } finally {
       setSaving(false);
@@ -366,10 +342,6 @@ export default function AvailabilityScreen({ navigation, route }) {
     try {
       setSaving(true);
 
-      console.log('Actualizando disponibilidad para emergencias:', {
-        disponible: emergencyAvailable,
-        precio: emergencyPrice
-      });
 
       // Usar el store de disponibilidad para actualizar
       const response = await actualizarDisponibilidadEmergencias(
@@ -388,7 +360,7 @@ export default function AvailabilityScreen({ navigation, route }) {
         clearError(); // Limpiar error del store
       }
     } catch (error) {
-      console.error('Error al guardar disponibilidad de emergencias:', error);
+      logger.error('Error al guardar disponibilidad de emergencias:', error);
       Alert.alert('Error', 'Ocurrió un problema al guardar los cambios. Verifica tu conexión.');
     } finally {
       setSaving(false);
@@ -437,7 +409,6 @@ export default function AvailabilityScreen({ navigation, route }) {
         horarios: isDateAvailable ? specialDateHours : []
       };
 
-      console.log('Guardando fecha especial:', fechaEspecialData);
 
       // Usar store de disponibilidad para guardar la fecha especial
       const servicioId = selectedServiceId || null;
@@ -459,7 +430,7 @@ export default function AvailabilityScreen({ navigation, route }) {
         clearError();
       }
     } catch (error) {
-      console.error('Error al guardar fecha especial:', error);
+      logger.error('Error al guardar fecha especial:', error);
       Alert.alert('Error', 'Ocurrió un problema al guardar los cambios. Verifica tu conexión.');
     } finally {
       setSaving(false);
@@ -489,7 +460,7 @@ export default function AvailabilityScreen({ navigation, route }) {
         clearError();
       }
     } catch (error) {
-      console.error('Error al eliminar fecha especial:', error);
+      logger.error('Error al eliminar fecha especial:', error);
       Alert.alert('Error', 'Ocurrió un problema al eliminar la fecha. Verifica tu conexión.');
     } finally {
       setSaving(false);
@@ -637,20 +608,16 @@ export default function AvailabilityScreen({ navigation, route }) {
     if (!prestadorId || !serviceId) return;
     try {
       setLoading(true);
-      console.log(`Obteniendo disponibilidad para prestador ID: ${prestadorId}, servicio ID: ${serviceId}`);
 
       // Usar directamente el store para obtener la disponibilidad del servicio
       // El store maneja internamente la comunicación con el backend
       const disponibilidadData = await getDisponibilidadServicio(prestadorId, serviceId);
 
-      console.log('Datos recibidos del store:', disponibilidadData);
 
       // Si tenemos datos válidos desde el store (es un objeto con propiedades relevantes)
       if (disponibilidadData && typeof disponibilidadData === 'object' &&
           (disponibilidadData.prestador || disponibilidadData.servicio)) {
 
-        console.log('Disponibilidad de servicio obtenida correctamente:',
-                   disponibilidadData.horarioEspecifico?.activo ? 'PERSONALIZADO' : 'USA HORARIO GENERAL');
 
         // Guardar la configuración en el estado local
         setServiceScheduleConfig(disponibilidadData);
@@ -658,7 +625,6 @@ export default function AvailabilityScreen({ navigation, route }) {
         setOriginalServiceScheduleConfig(JSON.parse(JSON.stringify(disponibilidadData)));
         setServiceScheduleConfigChanged(false);
       } else {
-        console.log('No se encontró disponibilidad en el store, creando configuración inicial');
 
         // Crear una configuración inicial vacía
         const initialConfig = {
@@ -676,7 +642,7 @@ export default function AvailabilityScreen({ navigation, route }) {
         setServiceScheduleConfigChanged(false);
       }
     } catch (error) {
-      console.error('Error al cargar disponibilidad de servicio:', error);
+      logger.error('Error al cargar disponibilidad de servicio:', error);
 
       // Crear una estructura inicial para la disponibilidad del servicio en caso de error
       const initialConfig = {
@@ -714,9 +680,7 @@ export default function AvailabilityScreen({ navigation, route }) {
 
     // Log apropiado según el estado del switch
     if (value) {
-      console.log('SWITCH ACTIVADO: Cambiando a horario personalizado para servicio:', selectedServiceId);
     } else {
-      console.log('SWITCH DESACTIVADO: Volviendo a usar horario general para servicio:', selectedServiceId);
     }
 
     const updatedConfig = { ...serviceScheduleConfig };
@@ -741,7 +705,6 @@ export default function AvailabilityScreen({ navigation, route }) {
 
     // Guardar inmediatamente en la base de datos
     try {
-      console.log('Guardando cambio de estado del switch en la base de datos...');
       setSaving(true);
 
       const dataToSave = {
@@ -754,18 +717,17 @@ export default function AvailabilityScreen({ navigation, route }) {
       const result = await configurarDisponibilidadServicio(prestadorId, selectedServiceId, dataToSave);
 
       if ((result && result.prestador && result.servicio) || (result && result.success)) {
-        console.log('Estado del switch guardado exitosamente en la base de datos');
         setServiceScheduleConfigChanged(false);
         setOriginalServiceScheduleConfig(JSON.parse(JSON.stringify(updatedConfig)));
       } else {
-        console.error('Error al guardar estado del switch:', result?.error || 'Desconocido');
+        logger.error('Error al guardar estado del switch:', result?.error || 'Desconocido');
         Alert.alert('Error', 'No se pudo guardar el cambio de configuración.');
 
         // Revertir los cambios en la UI si hubo un error
         setServiceScheduleConfig(originalServiceScheduleConfig);
       }
     } catch (error) {
-      console.error('Error al guardar estado del switch:', error);
+      logger.error('Error al guardar estado del switch:', error);
       Alert.alert('Error', 'Ocurrió un error al actualizar la configuración.');
 
       // Revertir los cambios en la UI si hubo un error
@@ -875,7 +837,6 @@ export default function AvailabilityScreen({ navigation, route }) {
 
     try {
       setSaving(true);
-      console.log('Guardando disponibilidad para servicio:', selectedServiceId);
 
       const dataToSave = {
         prestador: prestadorId,
@@ -887,28 +848,24 @@ export default function AvailabilityScreen({ navigation, route }) {
         fechasEspeciales: serviceScheduleConfig.fechasEspeciales || []
       };
 
-      console.log('Datos a guardar:', JSON.stringify(dataToSave));
 
       const result = await configurarDisponibilidadServicio(prestadorId, selectedServiceId, dataToSave);
 
       if (result && result.prestador && result.servicio && result.horarioEspecifico) {
-        console.log('Disponibilidad guardada correctamente');
         setServiceScheduleConfigChanged(false);
         setOriginalServiceScheduleConfig(JSON.parse(JSON.stringify(serviceScheduleConfig)));
         Alert.alert('Éxito', 'Horarios del servicio actualizados correctamente');
       }
       else if (result && result.success) {
-        console.log('Disponibilidad guardada correctamente (resultado explícito)');
         setServiceScheduleConfigChanged(false);
         setOriginalServiceScheduleConfig(JSON.parse(JSON.stringify(serviceScheduleConfig)));
         Alert.alert('Éxito', 'Horarios del servicio actualizados correctamente');
       }
       else {
-        console.log('Error al guardar disponibilidad:', result?.error || 'Desconocido');
         Alert.alert('Error', `No se pudieron guardar los horarios: ${result?.error || 'Error desconocido'}`);
       }
     } catch (error) {
-      console.error('Error al guardar disponibilidad de servicio:', error);
+      logger.error('Error al guardar disponibilidad de servicio:', error);
       Alert.alert('Error', 'Ocurrió un error al guardar los horarios del servicio.');
     } finally {
       setSaving(false);

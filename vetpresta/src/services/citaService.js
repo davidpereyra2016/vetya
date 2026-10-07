@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import axios from '../config/axios'; // Usar la misma instancia que api.js
 
 const isTransientNetworkError = (error) => (
@@ -59,7 +60,6 @@ const citaService = {
       const errorMessage = getErrorMessage(error, 'Error al obtener citas del prestador');
 
       if (isTransientNetworkError(error)) {
-        console.log('No se pudieron actualizar las citas del prestador:', errorMessage);
         return {
           success: false,
           transient: true,
@@ -67,7 +67,6 @@ const citaService = {
         };
       }
 
-      console.log('Error al obtener citas del prestador:', error.response?.data || errorMessage);
       return {
         success: false,
         error: errorMessage
@@ -109,7 +108,7 @@ const citaService = {
 
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('Error al actualizar estado de cita:', error);
+      logger.error('Error al actualizar estado de cita:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al actualizar estado de la cita'
@@ -132,7 +131,7 @@ const citaService = {
 
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('Error al obtener resumen del dashboard:', error);
+      logger.error('Error al obtener resumen del dashboard:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener resumen del dashboard'
@@ -157,7 +156,7 @@ const citaService = {
         citasCanceladas: response.data.citasCanceladas || 0
       };
     } catch (error) {
-      console.error('Error al verificar citas vencidas:', error);
+      logger.error('Error al verificar citas vencidas:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al verificar citas vencidas'

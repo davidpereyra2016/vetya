@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
@@ -122,12 +123,10 @@ const ProfileScreen = ({ navigation }) => {
       setIsLoading(true);
 
       if (!provider?._id) {
-        console.log('⚠️ No hay provider ID para cargar datos');
         setIsLoading(false);
         return;
       }
 
-      console.log('📊 Cargando datos del prestador:', provider._id);
 
       // Cargar datos en paralelo
       const [valoracionesResult, citasResult] = await Promise.all([
@@ -157,12 +156,6 @@ const ProfileScreen = ({ navigation }) => {
       });
       const clientesAtendidos = clientesUnicos.size;
 
-      console.log('✅ Estadísticas calculadas:', {
-        valoraciones: totalValoraciones,
-        emergenciasAtendidas,
-        citasCompletadas,
-        clientesAtendidos
-      });
 
       setProviderStats({
         valoraciones: totalValoraciones,
@@ -171,7 +164,6 @@ const ProfileScreen = ({ navigation }) => {
         clientesAtendidos
       });
     } catch (error) {
-      console.log('❌ Error al cargar datos del perfil:', error);
     } finally {
       setIsLoading(false);
     }
@@ -202,7 +194,6 @@ const ProfileScreen = ({ navigation }) => {
 
       await Linking.openURL(result.data.authorizationUrl);
     } catch (error) {
-      console.log('Error al conectar Mercado Pago:', error);
       Alert.alert('Mercado Pago', 'Ocurrio un problema al abrir Mercado Pago');
     } finally {
       setIsConnectingMercadoPago(false);
@@ -236,13 +227,11 @@ const ProfileScreen = ({ navigation }) => {
       );
 
       if (result.success) {
-        console.log('✅ Disponibilidad actualizada en BD (ProfileScreen):', newAvailability);
 
         // Recargar datos del prestador desde la BD para asegurar sincronización
         try {
           const providerData = await prestadorService.getById(provider._id);
           if (providerData.success && providerData.data) {
-            console.log('✅ Provider recargado desde BD. disponibleEmergencias:', providerData.data.disponibleEmergencias);
             // Actualizar el provider en el state global con datos frescos de la BD
             useAuthStore.getState().updateProvider(providerData.data);
             // Actualizar el state local con el valor real de la BD
@@ -253,7 +242,7 @@ const ProfileScreen = ({ navigation }) => {
             setAvailableForEmergencies(newAvailability);
           }
         } catch (error) {
-          console.error('Error al recargar provider:', error);
+          logger.error('Error al recargar provider:', error);
           // Fallback: actualizar solo la propiedad
           useAuthStore.getState().updateProvider({ disponibleEmergencias: newAvailability });
           setAvailableForEmergencies(newAvailability);
@@ -269,7 +258,6 @@ const ProfileScreen = ({ navigation }) => {
         Alert.alert('Error', 'No se pudo actualizar tu disponibilidad');
       }
     } catch (error) {
-      console.log('Error al actualizar disponibilidad:', error);
       Alert.alert('Error', 'Ocurrió un problema al actualizar tu disponibilidad');
     } finally {
       setIsRefreshing(false);

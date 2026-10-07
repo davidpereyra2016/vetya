@@ -17,7 +17,6 @@ const prestadorService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener prestador:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener información del prestador'
@@ -43,7 +42,6 @@ const prestadorService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al actualizar precio emergencia:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al actualizar precio de emergencia'
@@ -56,13 +54,11 @@ const prestadorService = {
     try {
       const response = await axiosInstance.get('/emergencias/cantidad-emergencias');
       // Debug: ver respuesta cruda
-      console.log('Respuesta cruda del backend:', response); 
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener la cantidad de emergencias:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener la cantidad de emergencias'
