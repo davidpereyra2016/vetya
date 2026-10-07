@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -35,7 +36,7 @@ const AddressesScreen = ({ navigation }) => {
         }
       }
     } catch (error) {
-      console.error('Error al cargar direcciones:', error);
+      logger.error('Error al cargar direcciones:', error);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -88,7 +89,7 @@ const AddressesScreen = ({ navigation }) => {
         Alert.alert('Error', result.error || 'No se pudo actualizar la ubicación');
       }
     } catch (error) {
-      console.error('Error al actualizar ubicación:', error);
+      logger.error('Error al actualizar ubicación:', error);
       Alert.alert('Error', 'No se pudo obtener tu ubicación');
     } finally {
       setUpdatingLocation(false);

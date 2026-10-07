@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useMemo, useRef, useState } from 'react';
 import { View, ActivityIndicator, Alert, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
@@ -59,7 +60,6 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
     const { url, canGoBack } = navState;
     setCanGoBack(canGoBack);
 
-    console.log('🌐 Navegación WebView:', url);
 
     if (typeof url !== 'string') {
       return;
@@ -156,20 +156,17 @@ const PaymentCheckoutScreen = ({ route, navigation }) => {
         source={{ uri: initPoint }}
         onNavigationStateChange={handleNavigationStateChange}
         onLoad={() => {
-          console.log('✅ WebView cargado');
           setLoading(false);
         }}
         onLoadStart={() => {
-          console.log('🔵 WebView cargando...');
           setLoading(true);
         }}
         onLoadEnd={() => {
-          console.log('✅ WebView finalizado');
           setLoading(false);
         }}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
-          console.error('❌ Error en WebView:', nativeEvent);
+          logger.error('❌ Error en WebView:', nativeEvent);
           setLoading(false);
           Alert.alert(
             'Error',

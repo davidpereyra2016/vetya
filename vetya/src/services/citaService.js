@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import axios from '../config/axios';
 
 /**
@@ -33,7 +34,7 @@ const citaService = {
       
       return { success: true, data: dates };
     } catch (error) {
-      console.error('Error al obtener fechas disponibles:', error);
+      logger.error('Error al obtener fechas disponibles:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al obtener fechas disponibles' 
@@ -64,14 +65,13 @@ const citaService = {
     try {
       // Si falta algún parámetro requerido, retornar error
       if (!date || !providerId || !serviceId) {
-        console.error('Faltan parámetros para obtener horarios disponibles');
+        logger.error('Faltan parámetros para obtener horarios disponibles');
         return {
           success: false,
           error: 'Debe seleccionar fecha, prestador y servicio'
         };
       }
       
-      console.log(`Consultando horarios disponibles para fecha: ${date} prestador: ${providerId} servicio: ${serviceId}`);
       
       // Realizar la petición al endpoint de disponibilidad
       const response = await axios.get(`/citas/prestadores/${providerId}/disponibilidad`, {
@@ -85,7 +85,6 @@ const citaService = {
       if (!disponibilidadFecha) {
         return { success: true, data: [] };
       }
-      // console.log(`Disponibilidad recibida para ${date}:`, disponibilidadFecha);
       
       // Si no hay disponibilidad para esa fecha, devolver array vacío
       if (disponibilidadFecha.length === 0) {
@@ -108,7 +107,7 @@ const citaService = {
         data: mappedSlots
       };
     } catch (error) {
-      console.error('Error al obtener horarios disponibles:', error);
+      logger.error('Error al obtener horarios disponibles:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al obtener horarios disponibles' 
@@ -153,7 +152,7 @@ const citaService = {
       
       return { success: true, data: vets };
     } catch (error) {
-      console.error('Error al obtener veterinarios disponibles:', error);
+      logger.error('Error al obtener veterinarios disponibles:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al obtener veterinarios disponibles' 
@@ -178,7 +177,7 @@ const citaService = {
       
       return { success: true, data: types };
     } catch (error) {
-      console.error('Error al obtener tipos de prestadores:', error);
+      logger.error('Error al obtener tipos de prestadores:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al obtener tipos de prestadores' 
@@ -193,14 +192,12 @@ const citaService = {
    */
   getProvidersByType: async (tipo) => {
     try {
-      // console.log(`Obteniendo prestadores del tipo: ${tipo}`);
       if (!tipo) {
         return { success: false, error: "Tipo de prestador no válido" };
       }
       
       // La llamada ahora usa la ruta /tipo/:tipo, que es la correcta y más específica.
       const response = await axios.get(`/prestadores/tipo/${tipo}`);
-      // console.log('Respuesta de prestadores por tipo:', response.data);
       
       const providers = response.data.map(p => ({
         _id: p._id,
@@ -215,7 +212,7 @@ const citaService = {
       
       return { success: true, data: providers };
     } catch (error) {
-      console.error('Error al obtener prestadores por tipo:', error);
+      logger.error('Error al obtener prestadores por tipo:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al obtener prestadores por tipo' 
@@ -230,10 +227,8 @@ const citaService = {
    */
   getProviderServices: async (providerId) => {
     try {
-      // console.log(`Obteniendo servicios del prestador con ID: ${providerId}`);
       // Hacer petición real al backend
       const response = await axios.get(`/prestadores/${providerId}/servicios`);
-      // console.log('Respuesta del backend con servicios:', response.data);
       
       // Transformar los datos del servicio al formato esperado por el frontend
       const formattedServices = response.data.map(servicio => ({
@@ -252,7 +247,7 @@ const citaService = {
       
       return { success: true, data: formattedServices };
     } catch (error) {
-      console.error('Error al obtener servicios del prestador:', error);
+      logger.error('Error al obtener servicios del prestador:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al obtener servicios del prestador' 
@@ -310,7 +305,7 @@ const citaService = {
       
       return { success: true, data: services };
     } catch (error) {
-      console.error('Error al obtener servicios disponibles:', error);
+      logger.error('Error al obtener servicios disponibles:', error);
       return { 
         success: false, 
         error: error.response?.data?.message || 'Error al obtener servicios disponibles' 

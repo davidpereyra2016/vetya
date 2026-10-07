@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 // usePublicidadStore.js - Estado global para banners publicitarios
 import { create } from 'zustand';
 import * as publicidadService from '../services/publicidadService';
@@ -28,7 +29,7 @@ const usePublicidadStore = create((set, get) => ({
       set({ banners, isLoading: false, lastFetched: Date.now() });
       return banners;
     } catch (error) {
-      console.error('Error en fetchBanners:', error);
+      logger.error('Error en fetchBanners:', error);
       set({ error: error?.message || 'Error al cargar banners', isLoading: false });
       return [];
     }

@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
@@ -126,7 +127,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         [{ text: 'OK', onPress: () => navigation.navigate('MainTabs', { screen: 'Citas' }) }]
       );
     } catch (error) {
-      console.error('Error al reprogramar cita:', error);
+      logger.error('Error al reprogramar cita:', error);
       Alert.alert('Error', 'Ocurrió un problema al reprogramar la cita. Intenta nuevamente.');
     } finally {
       paymentSubmissionRef.current = false;
@@ -153,7 +154,6 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
     try {
       setProcessingPayment(true);
 
-      console.log('Creando cita pendiente con pago en efectivo...');
 
       let nuevaCita = createdAppointment;
 
@@ -173,7 +173,6 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         setCreatedAppointment(nuevaCita);
       }
 
-      console.log('Cita creada:', nuevaCita._id);
 
       // Registrar el pago en efectivo (estado "Pendiente" hasta que se complete el servicio)
       const montoPago =
@@ -192,15 +191,14 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         );
 
         if (!pagoResult.success) {
-          console.warn(
+          logger.warn(
             '⚠️ La cita se creó pero no se pudo registrar el pago en efectivo:',
             pagoResult.error
           );
         } else {
-          console.log('💵 Pago en efectivo registrado para la cita');
         }
       } else {
-        console.warn('⚠️ Monto 0 o no definido, no se registra pago');
+        logger.warn('⚠️ Monto 0 o no definido, no se registra pago');
       }
 
       Alert.alert(
@@ -211,7 +209,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         [{ text: 'OK', onPress: () => navigation.navigate('MainTabs', { screen: 'Citas' }) }]
       );
     } catch (error) {
-      console.error('Error al crear cita con efectivo:', error);
+      logger.error('Error al crear cita con efectivo:', error);
       Alert.alert('Error', 'Ocurrio un problema al enviar la reserva. Intenta nuevamente.');
     } finally {
       paymentSubmissionRef.current = false;
@@ -247,7 +245,6 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         return;
       }
 
-      console.log('🔄 Creando cita para pago con Mercado Pago...');
 
       // 1. Crear la cita en la base de datos (estado: Pendiente)
       const citaResult = await createAppointment({
@@ -262,7 +259,6 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
       }
 
       const nuevaCita = citaResult.data;
-      console.log('✅ Cita creada:', nuevaCita._id);
       setCreatedAppointment(nuevaCita);
 
       // 2. Crear preferencia de pago
@@ -275,11 +271,8 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         paymentIdempotencyKey
       );
 
-      console.log('📦 Resultado de crearPreferencia:', result);
 
       if (result.success && result.initPoint) {
-        console.log('✅ Preferencia creada, redirigiendo a Mercado Pago');
-        console.log('🔗 Init Point:', result.initPoint);
 
         Alert.alert(
           'Proceder al Pago',
@@ -289,7 +282,6 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               text: 'Ir a Mercado Pago',
               onPress: async () => {
                 try {
-                  console.log('🔗 Abriendo Mercado Pago:', result.initPoint);
 
                   // Abrir Mercado Pago en el navegador
                   const supported = await Linking.canOpenURL(result.initPoint);
@@ -307,7 +299,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
                     Alert.alert('Error', 'No se puede abrir la página de pago');
                   }
                 } catch (error) {
-                  console.error('❌ Error al abrir Mercado Pago:', error);
+                  logger.error('❌ Error al abrir Mercado Pago:', error);
                   Alert.alert('Error', 'No se pudo abrir la página de pago. Intenta nuevamente.');
                 }
               }
@@ -316,7 +308,6 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
               text: 'Cancelar',
               style: 'cancel',
               onPress: () => {
-                console.log('❌ Usuario canceló el pago');
               }
             }
           ]
@@ -325,7 +316,7 @@ const CitaConfirmacionScreen = ({ navigation, route }) => {
         Alert.alert('Error', result.error || 'No se pudo procesar el pago con Mercado Pago');
       }
     } catch (error) {
-      console.error('❌ Error al procesar pago con Mercado Pago:', error);
+      logger.error('❌ Error al procesar pago con Mercado Pago:', error);
       Alert.alert('Error', 'Ocurrió un problema al procesar el pago. Intenta nuevamente.');
     } finally {
       paymentSubmissionRef.current = false;

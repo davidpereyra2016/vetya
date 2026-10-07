@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { create } from 'zustand';
 import { emergenciaService, veterinarioService } from '../services/api';
 
@@ -74,17 +75,14 @@ const useEmergencyStore = create((set, get) => ({
   loadVetsWithLocation: async (clientLat, clientLng) => {
     set({ isLoading: true, error: null });
     
-    console.log(' [STORE] Cargando vets con ubicación. Cliente:', { clientLat, clientLng });
     
     try {
       const result = await veterinarioService.getAvailableVetsWithLocation(clientLat, clientLng);
       
       if (result.success) {
-        console.log(' [STORE] Vets recibidos del backend:', result.data?.length || 0);
         
         // Procesar los datos para formato amigable en el mapa, aplicando el radio de privacidad
         const processedVets = result.data.map(vet => {
-          console.log('   [STORE] Procesando:', vet.nombre, '-> ubicacionActual:', vet.ubicacionActual?.coordenadas || 'SIN COORDENADAS');
           
           // Obtener distancia real desde la API
           const realDistanceKm = vet.distancia?.valor || 0;
@@ -136,11 +134,9 @@ const useEmergencyStore = create((set, get) => ({
             lastUpdate: vet.ubicacionActual?.ultimaActualizacion || new Date()
           };
           
-          console.log('   [STORE] Vet procesado:', processed.name, '-> coordenadas:', processed.coordinate || 'NULL');
           return processed;
         });
         
-        console.log(' [STORE] Total procesados:', processedVets.length);
         
         set({ 
           availableVets: processedVets,
@@ -148,7 +144,7 @@ const useEmergencyStore = create((set, get) => ({
         });
         return processedVets;
       } else {
-        console.error(' [STORE] Error del backend:', result.error);
+        logger.error(' [STORE] Error del backend:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -156,7 +152,7 @@ const useEmergencyStore = create((set, get) => ({
         return [];
       }
     } catch (error) {
-      console.error(' [STORE] Error:', error);
+      logger.error(' [STORE] Error:', error);
       set({ 
         error: "Error al obtener veterinarios con ubicación",
         isLoading: false
@@ -463,11 +459,9 @@ const useEmergencyStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log(`Asignando veterinario ${vetId} a emergencia ${emergencyId}`);
       const response = await emergenciaService.assignVetToEmergency(emergencyId, vetId);
       
       if (response.success) {
-        console.log('Veterinario asignado correctamente a la emergencia');
         
         // Actualizar la emergencia seleccionada con los datos del backend
         const updatedEmergencyData = response.data;
@@ -489,7 +483,6 @@ const useEmergencyStore = create((set, get) => ({
         
         return { success: true, data: response.data };
       } else {
-        console.log('Error al asignar veterinario:', response.error);
         set({ 
           error: response.error,
           isLoading: false
@@ -497,7 +490,7 @@ const useEmergencyStore = create((set, get) => ({
         return { success: false, error: response.error };
       }
     } catch (error) {
-      console.error('Error al asignar veterinario a emergencia:', error);
+      logger.error('Error al asignar veterinario a emergencia:', error);
       set({ 
         error: "Error al asignar veterinario a la emergencia",
         isLoading: false
@@ -511,24 +504,18 @@ const useEmergencyStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      console.log(`📦 [STORE] Confirmando llegada del veterinario a emergencia: ${emergencyId}`);
       const args = [emergencyId];
       if (idempotencyKey) args.push(idempotencyKey);
 
       const result = await emergenciaService.confirmVetArrival(...args);
       
       if (result.success) {
-        console.log('✅ [STORE] Llegada del veterinario confirmada');
         
         // Verificar si se recibió preferencia MP o initPoint directo
         const preferenciaMP = result.data?.preferenciaMP;
         const initPoint = result.data?.initPoint || preferenciaMP?.initPoint;
         
         if (initPoint) {
-          console.log('💳 [STORE] Preferencia MP recibida:', {
-            preferenceId: preferenciaMP?.id || result.data?.preferenceId,
-            initPoint: initPoint
-          });
         }
         
         // Actualizar el estado de la emergencia en la lista
@@ -568,7 +555,6 @@ const useEmergencyStore = create((set, get) => ({
           tienePreferenciaMP: !!initPoint
         };
       } else {
-        console.log('Error al confirmar llegada del veterinario:', result.error);
         set({ 
           error: result.error,
           isLoading: false
@@ -576,7 +562,7 @@ const useEmergencyStore = create((set, get) => ({
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('Error al confirmar llegada del veterinario:', error);
+      logger.error('Error al confirmar llegada del veterinario:', error);
       set({ 
         error: "Error al confirmar la llegada del veterinario",
         isLoading: false

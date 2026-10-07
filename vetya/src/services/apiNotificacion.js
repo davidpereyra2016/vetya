@@ -18,7 +18,6 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener notificaciones:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener notificaciones'
@@ -35,7 +34,6 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al obtener conteo de notificaciones:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener conteo',
@@ -53,7 +51,6 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al marcar notificación como leída:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al marcar notificación como leída'
@@ -70,7 +67,6 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al marcar todas las notificaciones:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al marcar notificaciones'
@@ -87,7 +83,6 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.log('Error al eliminar notificación:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al eliminar notificación'
@@ -104,7 +99,6 @@ export const notificacionService = {
         data: response.data
       };
     } catch (error) {
-      console.log('⚠️ No se pudo registrar token de dispositivo:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al registrar token de dispositivo'
@@ -128,7 +122,6 @@ export const notificacionService = {
           ignoredUnauthorized: true
         };
       }
-      console.log('Error al eliminar token de dispositivo:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al eliminar token de dispositivo'

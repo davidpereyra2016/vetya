@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { create } from 'zustand';
 import consultaGeneralService from '../services/consultaGeneralService';
 
@@ -49,7 +50,7 @@ const useConsultaGeneralStore = create((set, get) => ({
       const fechasFormateadas = result.map(fecha => {
         const fechaObj = new Date(fecha.fecha);
         if (isNaN(fechaObj.getTime())) {
-          console.error('Fecha inválida:', fecha.fecha);
+          logger.error('Fecha inválida:', fecha.fecha);
           return null;
         }
         return {

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import axios from '../config/axios';
 
 const getApiErrorMessage = (error, fallback) => {
@@ -82,10 +83,8 @@ const valoracionesService = {
    * @returns {Promise<Object>} Resultado de la operación
    */
   crearValoracion: async (valoracionData) => {
-    console.log('DEBUG - valoracionesService - Iniciando creación de valoración con datos:', valoracionData);
     try {
       if (!valoracionData.prestador || !valoracionData.calificacion) {
-        console.log('DEBUG - valoracionesService - Validación fallida: falta prestador o calificación');
         return {
           success: false,
           error: 'El prestador y la calificación son obligatorios'
@@ -93,24 +92,16 @@ const valoracionesService = {
       }
 
       if (valoracionData.calificacion < 1 || valoracionData.calificacion > 5) {
-        console.log(`DEBUG - valoracionesService - Validación fallida: calificación inválida (${valoracionData.calificacion})`);
         return {
           success: false,
           error: 'La calificación debe estar entre 1 y 5'
         };
       }
 
-      console.log('DEBUG - valoracionesService - Enviando solicitud POST a /valoraciones con payload:', valoracionData);
       const response = await axios.post('/valoraciones', valoracionData);
-      console.log('DEBUG - valoracionesService - Respuesta exitosa del servidor:', response.data);
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('ERROR - valoracionesService - Error al crear valoración:', error);
-      console.log('DEBUG - valoracionesService - Detalles de error:', {
-        mensaje: error.message,
-        respuesta: error.response?.data,
-        status: error.response?.status
-      });
+      logger.error('ERROR - valoracionesService - Error al crear valoración:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al crear la valoración'
@@ -142,7 +133,7 @@ const valoracionesService = {
       const response = await axios.put(`/valoraciones/${valoracionId}`, valoracionData);
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('Error al actualizar valoración:', error);
+      logger.error('Error al actualizar valoración:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al actualizar la valoración'
@@ -164,7 +155,7 @@ const valoracionesService = {
       const response = await axios.delete(`/valoraciones/${valoracionId}`);
       return { success: true, mensaje: 'Valoración eliminada con éxito' };
     } catch (error) {
-      console.error('Error al eliminar valoración:', error);
+      logger.error('Error al eliminar valoración:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al eliminar la valoración'
@@ -186,7 +177,7 @@ const valoracionesService = {
       const response = await axios.patch(`/valoraciones/${valoracionId}/reportar`);
       return { success: true, mensaje: 'Valoración reportada con éxito' };
     } catch (error) {
-      console.error('Error al reportar valoración:', error);
+      logger.error('Error al reportar valoración:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al reportar la valoración'

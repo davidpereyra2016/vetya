@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import axios from '../config/axios';
 // import { API_URL } from '../config';
 
@@ -14,7 +15,7 @@ const consultaGeneralService = {
       const response = await axios.get(`/citas/prestadores/consulta-general`);
       return response.data; // Devuelve directamente los datos
     } catch (error) {
-      console.error('Error al obtener prestadores:', error);
+      logger.error('Error al obtener prestadores:', error);
       throw error; // Lanza el error para que lo capture el store
     }
   },
@@ -29,7 +30,7 @@ const consultaGeneralService = {
       const response = await axios.get(`/citas/prestadores/${prestadorId}/disponibilidad`);
       return response.data;
     } catch (error) {
-      console.error('Error al obtener disponibilidad:', error);
+      logger.error('Error al obtener disponibilidad:', error);
       throw error;
     }
   },
@@ -44,7 +45,7 @@ const consultaGeneralService = {
       const response = await axios.post(`/citas`, consultaData);
       return response.data;
     } catch (error) {
-      console.error('Error al crear consulta:', error);
+      logger.error('Error al crear consulta:', error);
       throw error;
     }
   }

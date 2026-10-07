@@ -160,12 +160,6 @@ const VetDetailScreen = ({ route, navigation }) => {
       tipoServicio: 'Cita' // Por defecto, podría cambiarse según la interacción real
     };
 
-    console.log('DEBUG - Frontend - Enviando valoración:', {
-      prestador: prestadorId,
-      calificacion: userRating,
-      comentario: userComment || '',
-      tipoServicio: 'Cita'
-    });
 
     // Crear una valoración temporal para actualizar optimistamente la UI
     const tempValoracion = {
@@ -202,12 +196,9 @@ const VetDetailScreen = ({ route, navigation }) => {
     setUserComment('');
 
     // Enviar la valoración al servidor
-    console.log('DEBUG - Frontend - Llamando a crearValoracion con:', valoracionData);
     const result = await crearValoracion(valoracionData);
-    console.log('DEBUG - Frontend - Respuesta de crearValoracion:', result);
 
     if (!result.success) {
-      console.log('DEBUG - Frontend - Error al crear valoración:', result.error);
       // Si falla, revertir los cambios optimistas
       await fetchValoracionesByPrestador(prestadorId);
       await fetchEstadisticasPrestador(prestadorId);
@@ -218,7 +209,6 @@ const VetDetailScreen = ({ route, navigation }) => {
         result.error || "No se pudo enviar la valoración. Intenta de nuevo más tarde."
       );
     } else {
-      console.log('DEBUG - Frontend - Valoración creada exitosamente');
       // Actualizar con datos reales del servidor
       await fetchValoracionesByPrestador(prestadorId);
       await fetchEstadisticasPrestador(prestadorId);

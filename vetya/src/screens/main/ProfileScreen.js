@@ -37,7 +37,6 @@ const ProfileScreen = (props) => {
           updateUser(result.data);
         }
       } catch (error) {
-        console.log('Error al cargar perfil:', error);
       }
     };
 
@@ -90,7 +89,6 @@ const ProfileScreen = (props) => {
               <Image
                 source={{ uri: profilePicture }}
                 style={styles.profileImage}
-                onError={() => console.log('Error cargando imagen:', profilePicture)}
               />
             ) : (
               <View style={[styles.profileImage, styles.profilePlaceholder]}>

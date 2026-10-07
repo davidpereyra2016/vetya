@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import Modal from '../../components/common/ResponsiveModal';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
@@ -170,7 +171,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
         setPagoInfo(null);
       }
     } catch (error) {
-      console.error('Error al cargar pago:', error);
+      logger.error('Error al cargar pago:', error);
       setPagoInfo(null);
     } finally {
       setLoadingPago(false);
@@ -208,7 +209,7 @@ const EmergencyDetailScreen = ({ navigation }) => {
                   Alert.alert('Error', 'No se pudo abrir el link de pago');
                 }
               } catch (error) {
-                console.error('Error al abrir Mercado Pago:', error);
+                logger.error('Error al abrir Mercado Pago:', error);
                 Alert.alert('Error', 'Ocurrió un error al abrir Mercado Pago');
               }
             }

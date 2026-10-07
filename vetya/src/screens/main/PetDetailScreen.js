@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import Modal from '../../components/common/ResponsiveModal';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
@@ -55,7 +56,7 @@ const PetDetailScreen = ({ route, navigation }) => {
           setError(result.error || 'Error al cargar los detalles de la mascota');
         }
       } catch (err) {
-        console.error('Error al cargar detalles de mascota:', err);
+        logger.error('Error al cargar detalles de mascota:', err);
         setError('Error al cargar los detalles de la mascota');
       } finally {
         setLoading(false);
@@ -104,7 +105,7 @@ const PetDetailScreen = ({ route, navigation }) => {
         Alert.alert("Error", result.error || "No se pudo eliminar la mascota");
       }
     } catch (err) {
-      console.error('Error al eliminar mascota:', err);
+      logger.error('Error al eliminar mascota:', err);
       Alert.alert("Error", "Ocurrió un error al eliminar la mascota");
     }
   };
@@ -143,7 +144,7 @@ const PetDetailScreen = ({ route, navigation }) => {
         Alert.alert("Error", result.error || "No se pudieron guardar los cambios");
       }
     } catch (err) {
-      console.error('Error al actualizar mascota:', err);
+      logger.error('Error al actualizar mascota:', err);
       Alert.alert("Error", "Ocurrió un error al guardar los cambios");
     }
   };

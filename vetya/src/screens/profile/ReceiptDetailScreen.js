@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React from 'react';
 import {
@@ -97,7 +98,7 @@ const ReceiptDetailScreen = ({ route, navigation }) => {
         `Estado: ${isCompleted ? 'Completado' : 'Pendiente'}`;
       await Share.share({ message: mensaje });
     } catch (error) {
-      console.error('Error al compartir recibo:', error);
+      logger.error('Error al compartir recibo:', error);
     }
   };
 

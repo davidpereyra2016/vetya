@@ -36,7 +36,6 @@ export const AuthProvider = ({ children }) => {
         setIsFirstTime(false);
       }
     } catch (error) {
-      console.log('Error en el inicio de sesión: ', error);
     }
     setIsLoading(false);
   };
@@ -59,7 +58,6 @@ export const AuthProvider = ({ children }) => {
       setUserToken('dummy-auth-token');
       setIsFirstTime(true);
     } catch (error) {
-      console.log('Error en el registro: ', error);
     }
     setIsLoading(false);
   };
@@ -70,7 +68,6 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.removeItem('userInfo');
       await AsyncStorage.removeItem('userToken');
     } catch (error) {
-      console.log('Error en el cierre de sesión: ', error);
     }
     setUserInfo(null);
     setUserToken(null);
@@ -98,7 +95,6 @@ export const AuthProvider = ({ children }) => {
       
       setIsLoading(false);
     } catch (error) {
-      console.log('Error al verificar el estado de sesión: ', error);
       setIsLoading(false);
     }
   };

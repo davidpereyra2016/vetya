@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -193,7 +194,7 @@ const AgendarCitaScreen = ({ navigation, route }) => {
         if (datesResult.success) {
             setAvailableDates(datesResult.data);
         } else {
-            console.error('Error al cargar fechas:', datesResult.error);
+            logger.error('Error al cargar fechas:', datesResult.error);
         }
 
       } catch (error) {

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { create } from 'zustand';
 import { pagoService } from '../services/api';
 
@@ -27,11 +28,6 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // console.log('🔵 Store: Creando preferencia de pago...', {
-      //   emergenciaId,
-      //   citaId,
-      //   monto
-      // });
 
       const args = [emergenciaId, citaId, monto, descripcion];
       if (idempotencyKey) args.push(idempotencyKey);
@@ -39,7 +35,6 @@ const usePagoStore = create((set, get) => ({
       const result = await pagoService.crearPreferencia(...args);
       
       if (result.success) {
-        // console.log('✅ Store: Preferencia creada exitosamente', result.data);
         
         set({ 
           pagoActual: result.data.pago,
@@ -53,12 +48,12 @@ const usePagoStore = create((set, get) => ({
           pago: result.data.pago
         };
       } else {
-        console.error('❌ Store: Error al crear preferencia:', result.error);
+        logger.error('❌ Store: Error al crear preferencia:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store: Excepción al crear preferencia:', error);
+      logger.error('❌ Store: Excepción al crear preferencia:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -84,12 +79,12 @@ const usePagoStore = create((set, get) => ({
         });
         return { success: true, pago: result.data.pago };
       } else {
-        console.error('❌ Store: Error al crear pago en efectivo:', result.error);
+        logger.error('❌ Store: Error al crear pago en efectivo:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store: Excepción al crear pago en efectivo:', error);
+      logger.error('❌ Store: Excepción al crear pago en efectivo:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -127,12 +122,10 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // console.log('🔵 Store: Capturando pago...', pagoId);
 
       const result = await pagoService.capturarPago(pagoId);
       
       if (result.success) {
-        // console.log('✅ Store: Pago capturado exitosamente', result.data);
         
         set({ 
           pagoActual: result.data.pago,
@@ -141,12 +134,12 @@ const usePagoStore = create((set, get) => ({
         
         return { success: true, pago: result.data.pago };
       } else {
-        console.error('❌ Store: Error al capturar pago:', result.error);
+        logger.error('❌ Store: Error al capturar pago:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store: Excepción al capturar pago:', error);
+      logger.error('❌ Store: Excepción al capturar pago:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -159,21 +152,19 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // console.log('🔵 Store: Consultando estado del pago...', paymentId);
 
       const result = await pagoService.consultarEstadoPago(paymentId);
       
       if (result.success) {
-        // console.log('✅ Store: Estado consultado:', result.data);
         set({ isLoading: false });
         return { success: true, data: result.data };
       } else {
-        console.error('❌ Store: Error al consultar estado:', result.error);
+        logger.error('❌ Store: Error al consultar estado:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store: Excepción al consultar estado:', error);
+      logger.error('❌ Store: Excepción al consultar estado:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -186,12 +177,10 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // console.log('🔵 Store: Cancelando pago...', pagoId);
 
       const result = await pagoService.cancelarPago(pagoId);
       
       if (result.success) {
-        // console.log('✅ Store: Pago cancelado exitosamente', result.data);
         
         set({ 
           pagoActual: null,
@@ -200,12 +189,12 @@ const usePagoStore = create((set, get) => ({
         
         return { success: true };
       } else {
-        console.error('❌ Store: Error al cancelar pago:', result.error);
+        logger.error('❌ Store: Error al cancelar pago:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store: Excepción al cancelar pago:', error);
+      logger.error('❌ Store: Excepción al cancelar pago:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -218,23 +207,21 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // console.log('🔵 Store: Obteniendo pagos del usuario...');
 
       const result = await pagoService.obtenerPagos();
       
       if (result.success) {
-        // console.log('✅ Store: Pagos obtenidos:', result.data.length);
         
         set({ 
           pagos: result.data,
           isLoading: false 
         });
       } else {
-        console.error('❌ Store: Error al obtener pagos:', result.error);
+        logger.error('❌ Store: Error al obtener pagos:', result.error);
         set({ error: result.error, isLoading: false });
       }
     } catch (error) {
-      console.error('❌ Store: Excepción al obtener pagos:', error);
+      logger.error('❌ Store: Excepción al obtener pagos:', error);
       set({ error: error.message, isLoading: false });
     }
   },
@@ -246,12 +233,10 @@ const usePagoStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // console.log('🔵 Store: Obteniendo pagos por referencia...', { tipo, id });
 
       const result = await pagoService.obtenerPagosPorReferencia(tipo, id);
       
       if (result.success) {
-        // console.log('✅ Store: Pagos encontrados:', result.data);
         
         // Si hay pagos, establecer el primero como pago actual
         if (result.data && result.data.length > 0) {
@@ -268,12 +253,12 @@ const usePagoStore = create((set, get) => ({
         
         return { success: true, data: result.data };
       } else {
-        console.error('❌ Store: Error al obtener pagos por referencia:', result.error);
+        logger.error('❌ Store: Error al obtener pagos por referencia:', result.error);
         set({ error: result.error, isLoading: false });
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('❌ Store: Excepción al obtener pagos por referencia:', error);
+      logger.error('❌ Store: Excepción al obtener pagos por referencia:', error);
       set({ error: error.message, isLoading: false });
       return { success: false, error: error.message };
     }
@@ -283,7 +268,6 @@ const usePagoStore = create((set, get) => ({
    * Limpiar el pago actual del estado
    */
   limpiarPagoActual: () => {
-    // console.log('🧹 Store: Limpiando pago actual');
     set({ pagoActual: null });
   },
 
@@ -298,7 +282,6 @@ const usePagoStore = create((set, get) => ({
    * Resetear todo el estado del store
    */
   resetStore: () => {
-    // console.log('🧹 Store: Reseteando store de pagos');
     set({
       pagos: [],
       pagoActual: null,

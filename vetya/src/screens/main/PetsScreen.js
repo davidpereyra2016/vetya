@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import Modal from '../../components/common/ResponsiveModal';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
@@ -404,7 +405,7 @@ const PetsScreen = ({ navigation }) => {
         alert(result.error);
       }
     } catch (error) {
-      console.error('Error al seleccionar imagen:', error);
+      logger.error('Error al seleccionar imagen:', error);
       alert('No se pudo seleccionar la imagen');
     }
   };

@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 // Archivo reorganizado y optimizado del componente EmergencyVetMapScreen
 // Se integró lógica del store: carga, procesamiento y asignación de veterinarios
@@ -82,7 +83,6 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         const currentUser = useAuthStore.getState().user;
 
         if (currentUser?.ubicacionActual?.coordinates?.lat && currentUser?.ubicacionActual?.coordinates?.lng) {
-          console.log('📍 Usando ubicación guardada del usuario');
           const loc = {
             latitude: currentUser.ubicacionActual.coordinates.lat,
             longitude: currentUser.ubicacionActual.coordinates.lng
@@ -95,7 +95,6 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
 
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          console.log('⚠️ Permisos de ubicación denegados');
           setLocationLoading(false);
           return;
         }
@@ -104,7 +103,6 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
           accuracy: Location.Accuracy.High
         });
 
-        console.log('📍 Ubicación GPS obtenida:', location.coords.latitude, location.coords.longitude);
         const loc = {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude
@@ -112,7 +110,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         setClientLocation(loc);
         clientLocationRef.current = loc;
       } catch (error) {
-        console.error('Error al obtener ubicación del cliente:', error);
+        logger.error('Error al obtener ubicación del cliente:', error);
       } finally {
         setLocationLoading(false);
       }
@@ -131,13 +129,9 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
   }, []);
 
   const getVetCoordinates = useCallback((vet) => {
-    console.log('🔍 [MAP] Procesando coordenadas de veterinario:', vet?.nombre || 'Sin nombre');
-    console.log('   -> ubicacionActual:', vet?.ubicacionActual?.coordenadas || 'NO TIENE');
-    console.log('   -> direccion:', vet?.direccion?.coordenadas || 'NO TIENE');
 
     const sourceCoords = vet?.ubicacionActual?.coordenadas || vet?.direccion?.coordenadas;
     if (!sourceCoords || (sourceCoords.lat == null && sourceCoords.lng == null && sourceCoords.latitude == null && sourceCoords.longitude == null)) {
-      console.log('   ❌ No hay coordenadas válidas para:', vet?.nombre);
       return null;
     }
 
@@ -145,11 +139,9 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
     const longitude = parseFloat(sourceCoords.lng ?? sourceCoords.longitude);
 
     if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
-      console.log('   ❌ Coordenadas NaN para:', vet?.nombre);
       return null;
     }
 
-    console.log('   ✅ Coordenadas válidas:', { latitude, longitude });
     return { latitude, longitude };
   }, []);
 
@@ -178,10 +170,8 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
 
     let startCoords;
     if (vetCoords && vetCoords.latitude && vetCoords.longitude) {
-      console.log('🚗 Usando ubicación REAL del veterinario:', vetCoords);
       startCoords = vetCoords;
     } else {
-      console.log('⚠️ Sin ubicación real del veterinario, usando aproximación');
       startCoords = {
         latitude: destinationCoords.latitude + 0.015,
         longitude: destinationCoords.longitude + 0.015
@@ -276,16 +266,13 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         ? refreshedVets
         : useEmergencyStore.getState().availableVets;
 
-      console.log('🔍 [MAP] Procesando', sourceVets?.length || 0, 'veterinarios...');
 
       const processedVets = Array.isArray(sourceVets)
         ? sourceVets
             .map(vet => {
-              console.log('   [MAP] Procesando vet:', vet?.nombre, 'ID:', vet?._id || vet?.id);
 
               const coordinate = getVetCoordinates(vet);
               if (!coordinate) {
-                console.log('   ❌ [MAP] Vet descartado - sin coordenadas válidas');
                 return null;
               }
 
@@ -308,14 +295,12 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
                 lastUpdate: vet.ubicacionActual?.ultimaActualizacion || new Date(),
               };
 
-              console.log('   ✅ [MAP] Vet procesado:', processed.name, '->', processed.distance);
               return processed;
             })
             .filter(Boolean)
             .sort((a, b) => a.distanceValue - b.distanceValue)
         : [];
 
-      console.log('✅ [MAP] Total veterinarios procesados:', processedVets.length);
 
       setVets(processedVets);
 
@@ -344,7 +329,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
         setDistanceText('0 km');
       }
     } catch (error) {
-      console.error('loadVets error:', error);
+      logger.error('loadVets error:', error);
       setVets([]);
     } finally {
       isLoadingVetsRef.current = false;
@@ -374,7 +359,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
           throw new Error('Sin datos de emergencia');
         }
       } catch (e) {
-        console.error('fetchEmergencyData:', e);
+        logger.error('fetchEmergencyData:', e);
         Alert.alert('Error', 'No se pudieron cargar los detalles.');
         navigation.goBack();
       }
@@ -482,7 +467,7 @@ const EmergencyVetMapScreen = ({ navigation, route }) => {
       });
 
     } catch (e) {
-      console.error(e);
+      logger.error(e);
       Alert.alert('Error', e.message || 'No se pudo procesar la solicitud.');
     } finally {
       setIsSearching(false);

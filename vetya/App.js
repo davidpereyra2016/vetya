@@ -41,7 +41,6 @@ if (!axios.__vetyaPaginationInterceptorId) {
     return response;
   });
 }
-console.log('[App.js] baseURL configurada:', API_URL);
 
 // Configurar el handler de notificaciones antes de renderizar
 configurePushNotifications();
@@ -68,11 +67,6 @@ export default function App() {
         const updatedEmergency = payload?.emergencia;
         if (!updatedEmergency) return;
 
-        console.log('[App] Emergencia actualizada por socket:', {
-          emergenciaId: payload?.emergenciaId || updatedEmergency?._id,
-          eventType: payload?.eventType,
-          estado: updatedEmergency?.estado,
-        });
 
         useEmergencyStore.getState().applySocketEmergencyUpdate(updatedEmergency);
       });

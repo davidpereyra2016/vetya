@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
@@ -64,11 +65,11 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
             ultimaVisita: pet.ultimaVisita ? new Date(pet.ultimaVisita).toLocaleDateString('es-ES') : 'Sin visitas'
           })));
         } else {
-          console.error('Error al cargar mascotas:', petsResult.error);
+          logger.error('Error al cargar mascotas:', petsResult.error);
           Alert.alert('Error', 'No se pudieron cargar tus mascotas');
         }
       } catch (error) {
-        console.error('Error al cargar mascotas:', error);
+        logger.error('Error al cargar mascotas:', error);
       } finally {
         setIsLoading(false);
       }
@@ -92,7 +93,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
           setIsLoadingProviders(false);
         }
       } catch (error) {
-        console.error('Error al cargar proveedores:', error);
+        logger.error('Error al cargar proveedores:', error);
         if (isMounted) {
           setIsLoadingProviders(false);
         }
@@ -131,11 +132,11 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
           if (datesResult && datesResult.success) {
             setAvailableDates(datesResult.data);
           } else {
-            console.error('Error al cargar fechas para el prestador:', datesResult?.error || 'Error desconocido');
+            logger.error('Error al cargar fechas para el prestador:', datesResult?.error || 'Error desconocido');
             setAvailableDates([]);
           }
         } catch (error) {
-          console.error('Error al cargar fechas para el prestador:', error);
+          logger.error('Error al cargar fechas para el prestador:', error);
           setAvailableDates([]);
         } finally {
           setIsLoading(false);
@@ -157,11 +158,11 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
           if (result.success) {
             setAvailableTimes(result.data);
           } else {
-            console.error('Error al cargar horarios:', result.error);
+            logger.error('Error al cargar horarios:', result.error);
             setAvailableTimes([]);
           }
         } catch (error) {
-          console.error('Error al cargar horarios disponibles:', error);
+          logger.error('Error al cargar horarios disponibles:', error);
           setAvailableTimes([]);
         }
       };
@@ -265,7 +266,7 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
         Alert.alert('Error', result.error || 'No se pudo agendar la consulta');
       }
     } catch (error) {
-      console.error('Error al agendar la consulta:', error);
+      logger.error('Error al agendar la consulta:', error);
       Alert.alert('Error', 'Ocurrió un error al agendar la consulta');
     } finally {
       setIsLoading(false);
@@ -368,7 +369,6 @@ const ConsultaGeneralScreen = ({ navigation, route }) => {
   const renderProviderItem = ({ item }) => {
     // Verificar que item sea un objeto válido para prevenir errores
     if (!item || typeof item !== 'object') {
-      console.log('Item inválido:', item);
       return null;
     }
 

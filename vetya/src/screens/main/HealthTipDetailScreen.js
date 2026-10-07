@@ -166,7 +166,6 @@ const HealthTipDetailScreen = ({ route, navigation }) => {
         title: 'Consejo de salud para mascotas',
       });
     } catch (error) {
-      console.log('Error compartiendo:', error);
     }
   };
 

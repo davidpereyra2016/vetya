@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -44,7 +45,6 @@ const useAuthStore = create(
           setupAxiosInterceptors(token);
           
           const handleTokenExpired = () => {
-            console.log('🔒 Token expirado - ejecutando logout automático');
             set({ 
               token: null, 
               user: null, 
@@ -88,7 +88,6 @@ const useAuthStore = create(
           setupAxiosInterceptors(token);
           
           const handleTokenExpired = () => {
-            console.log('🔒 Token expirado - ejecutando logout automático');
             set({ 
               token: null, 
               user: null, 
@@ -149,7 +148,6 @@ const useAuthStore = create(
           
           // Configurar callback de logout para cuando el token expire
           const handleTokenExpired = () => {
-            console.log('🔒 Token expirado - ejecutando logout automático');
             set({ 
               token: null, 
               user: null, 
@@ -172,13 +170,10 @@ const useAuthStore = create(
           
           // Registrar para notificaciones push después del login
           try {
-            console.log('🔔 Registrando para notificaciones push...');
             const pushToken = await registerForPushNotifications();
             if (pushToken) {
-              console.log('✅ Token de push registrado exitosamente');
             }
           } catch (pushError) {
-            console.log('⚠️ Error al registrar notificaciones push:', pushError.message);
           }
           
           return { success: true };
@@ -191,7 +186,6 @@ const useAuthStore = create(
         try {
           await notificacionService.removeDeviceToken();
         } catch (e) {
-          console.log('⚠️ Error al eliminar token de dispositivo:', e.message);
         }
         
         // Eliminar el token de las cabeceras de axios
@@ -213,7 +207,6 @@ const useAuthStore = create(
         
         // Configurar el callback de logout para cuando el token expire
         const handleTokenExpired = () => {
-          console.log('🔒 Token expirado - ejecutando logout automático desde checkAuth');
           set({ 
             token: null, 
             user: null, 
@@ -259,28 +252,24 @@ const useAuthStore = create(
               try {
                 const pushToken = await registerForPushNotifications();
                 if (pushToken) {
-                  console.log('✅ Push token registrado al restaurar sesión');
                 }
               } catch (pushError) {
-                console.log('⚠️ Error al registrar push en checkAuth:', pushError.message);
               }
               
               return true;
             } else {
               // No se encontró el usuario, forzar logout
-              console.log('Usuario no encontrado o eliminado');
               set({ isInitializing: false, token: null, user: null });
               return false;
             }
           } catch (error) {
             // Error al obtener usuario, resetear todo
-            console.log('Error al verificar perfil:', error);
             set({ isInitializing: false, token: null, user: null });
             return false;
           }
         } catch (error) {
           // Cualquier error, resetear la sesión
-          console.error('Error en checkAuth:', error);
+          logger.error('Error en checkAuth:', error);
           set({ isInitializing: false, token: null, user: null });
           return false;
         }

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import axios, { setAuthToken } from '../config/axios';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -51,9 +52,6 @@ export const authService = {
         data
       };
     } catch (error) {
-      console.log('[api.js login] Error status:', error.response?.status);
-      console.log('[api.js login] Error data:', JSON.stringify(error.response?.data));
-      console.log('[api.js login] requiresVerification:', error.response?.data?.requiresVerification);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al iniciar sesión',
@@ -203,7 +201,6 @@ export const veterinarioService = {
   // Obtener veterinarios disponibles para emergencias
   getAvailableForEmergencies: async () => {
     try {
-      console.log('🔍 [API] Solicitando veterinarios disponibles...');
 
       // Intentar con manejo de timeout más explícito
       const controller = new AbortController();
@@ -216,21 +213,15 @@ export const veterinarioService = {
 
       clearTimeout(timeoutId);
 
-      console.log('✅ [API] Veterinarios recibidos:', response.data?.length || 0);
-
-      // Log de las coordenadas de cada veterinario para debug
-      if (response.data && Array.isArray(response.data)) {
-        response.data.forEach((vet, index) => {
-          console.log(`   Vet ${index + 1}: ${vet.nombre}, ubicacionActual:`, vet.ubicacionActual?.coordenadas || 'NO TIENE');
-        });
-      }
 
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('❌ [API] Error al obtener veterinarios:', error.response?.data || error.message);
+      if (error.code !== 'ERR_CANCELED') {
+        logger.error('❌ [API] Error al obtener veterinarios:', error.response?.data || error.message);
+      }
 
       // Intentar diagnóstico de conexión
       await diagnosticarConexion();
@@ -250,21 +241,16 @@ export const veterinarioService = {
   // Obtener veterinarios disponibles para emergencias con ubicación en tiempo real
   getAvailableVetsWithLocation: async (clientLat, clientLng) => {
     try {
-      console.log('🔍 [API] Solicitando veterinarios con ubicación. Cliente:', { lat: clientLat, lng: clientLng });
 
       const response = await axios.get('/prestadores/emergencias/ubicacion', {
         params: { lat: clientLat, lng: clientLng }
       });
 
-      console.log('✅ [API] Veterinarios con ubicación recibidos:', response.data?.length || 0);
 
       // Log detallado de coordenadas
       if (response.data && Array.isArray(response.data)) {
         response.data.forEach((vet, index) => {
           const coords = vet.ubicacionActual?.coordenadas;
-          console.log(`   Vet ${index + 1}: ${vet.nombre}`);
-          console.log(`      -> ubicacionActual:`, coords ? `${coords.lat}, ${coords.lng}` : 'NO TIENE');
-          console.log(`      -> distancia calculada:`, vet.distancia?.texto || 'N/A');
         });
       }
 
@@ -273,7 +259,7 @@ export const veterinarioService = {
         data: response.data
       };
     } catch (error) {
-      console.error('❌ [API] Error al obtener veterinarios con ubicación:', error.response?.data || error.message);
+      logger.error('❌ [API] Error al obtener veterinarios con ubicación:', error.response?.data || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener veterinarios con ubicación'
@@ -314,7 +300,7 @@ export const emergenciaService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al crear emergencia:', error.response?.data);
+      logger.error('Error al crear emergencia:', error.response?.data);
       // Verificar si el error es debido a una emergencia reciente
       if (error.response?.status === 429) {
         return {
@@ -340,7 +326,7 @@ export const emergenciaService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al obtener detalles de emergencia:', error);
+      logger.error('Error al obtener detalles de emergencia:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener detalles de la emergencia'
@@ -364,7 +350,7 @@ export const emergenciaService = {
       if (backendMsg === 'Coordenadas del veterinario inválidas') {
         // Silencioso: el HomeScreen cuenta errores consecutivos y detiene el polling.
       } else {
-        console.error('❌ [API] Error al obtener ubicación del veterinario:', backendMsg || error.message);
+        logger.error('❌ [API] Error al obtener ubicación del veterinario:', backendMsg || error.message);
       }
       return {
         success: false,
@@ -382,7 +368,7 @@ export const emergenciaService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al verificar estado de emergencia:', error);
+      logger.error('Error al verificar estado de emergencia:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al verificar estado de la emergencia'
@@ -402,7 +388,7 @@ export const emergenciaService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al confirmar servicio de emergencia:', error);
+      logger.error('Error al confirmar servicio de emergencia:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al confirmar el servicio'
@@ -549,7 +535,7 @@ export const emergenciaService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al asignar veterinario:', error);
+      logger.error('Error al asignar veterinario:', error);
 
       // Si ocurre un error, podemos intentar obtener los detalles actuales de la emergencia
       try {
@@ -581,7 +567,6 @@ export const emergenciaService = {
 
   confirmVetArrival: async (emergencyId, idempotencyKey) => {
     try {
-      console.log('🚀 [CLIENTE] Confirmando llegada del veterinario:', emergencyId);
       const response = await axios.patch(
         `/emergencias/${emergencyId}/confirmar-llegada`,
         undefined,
@@ -591,17 +576,12 @@ export const emergenciaService = {
           },
         } : undefined
       );
-      console.log('✅ [CLIENTE] Llegada confirmada:', {
-        estado: response.data?.emergencia?.estado,
-        tienePreferenciaMP: !!response.data?.preferenciaMP,
-        initPoint: response.data?.preferenciaMP?.initPoint
-      });
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      console.error('❌ [CLIENTE] Error al confirmar llegada:', error);
+      logger.error('❌ [CLIENTE] Error al confirmar llegada:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al confirmar llegada del veterinario'
@@ -761,10 +741,8 @@ const convertImageToBase64 = async (uri) => {
   try {
     // Primero comprobamos el tamaño del archivo
     const fileInfo = await FileSystem.getInfoAsync(uri);
-    // console.log(`Tamaño original de la imagen: ${fileInfo.size} bytes`);
 
     // Siempre comprimimos la imagen para reducir tamaño y evitar PayloadTooLargeError
-    // console.log('Aplicando compresión a la imagen');
     const compressedUri = await manipulateAsync(
       uri,
       [{ resize: { width: 400 } }],
@@ -773,7 +751,6 @@ const convertImageToBase64 = async (uri) => {
 
     // Verificar tamaño de la imagen comprimida
     const compressedInfo = await FileSystem.getInfoAsync(compressedUri.uri);
-    // console.log(`Tamaño comprimido de la imagen: ${compressedInfo.size} bytes`);
 
     const response = await fetch(compressedUri.uri);
     const blob = await response.blob();
@@ -784,7 +761,7 @@ const convertImageToBase64 = async (uri) => {
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error('Error convirtiendo imagen a base64:', error);
+    logger.error('Error convirtiendo imagen a base64:', error);
     throw error;
   }
 };
@@ -823,7 +800,7 @@ export const userService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al actualizar ubicación:', error);
+      logger.error('Error al actualizar ubicación:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al actualizar la ubicación'
@@ -840,7 +817,7 @@ export const userService = {
         data: response.data
       };
     } catch (error) {
-      console.error('Error al obtener ubicación:', error);
+      logger.error('Error al obtener ubicación:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Error al obtener la ubicación'

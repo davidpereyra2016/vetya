@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState } from 'react';
 import {
@@ -34,24 +35,20 @@ const LoginScreen = ({ navigation }) => {
 
     clearError();
     try {
-      console.log('[LoginScreen] Iniciando login para:', email);
       const result = await login(email, password);
-      console.log('[LoginScreen] Resultado login:', JSON.stringify(result));
 
       if (!result.success) {
         const needsVerification = result.requiresVerification ||
           (result.error && result.error.toLowerCase().includes('verificar'));
-        console.log('[LoginScreen] needsVerification:', needsVerification, 'requiresVerification:', result.requiresVerification);
 
         if (needsVerification) {
-          console.log('[LoginScreen] Navegando a EmailVerification con email:', result.email || email);
           navigation.navigate('EmailVerification', { email: result.email || email });
         } else {
           Alert.alert('Error de inicio de sesión', result.error || 'No se pudo iniciar sesión');
         }
       }
     } catch (err) {
-      console.error('[LoginScreen] Error inesperado en handleLogin:', err);
+      logger.error('[LoginScreen] Error inesperado en handleLogin:', err);
       Alert.alert('Error', 'Ocurrió un error inesperado: ' + (err.message || ''));
     }
   };

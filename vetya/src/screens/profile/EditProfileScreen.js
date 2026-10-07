@@ -40,7 +40,6 @@ const EditProfileScreen = ({ navigation }) => {
           setProfileImage(normalizeAvatarUri(result.data.profilePicture) || null);
         }
       } catch (error) {
-        console.log('Error al cargar perfil para edición:', error);
       } finally {
         setIsLoading(false);
       }

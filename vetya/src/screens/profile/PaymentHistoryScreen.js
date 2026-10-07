@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from "react";
 import {
@@ -52,7 +53,6 @@ const PaymentHistoryScreen = ({ navigation }) => {
   const loadPayments = async () => {
     try {
       setLoading(true);
-      console.log("🔄 Cargando historial de pagos del cliente...");
 
       await obtenerPagos();
 
@@ -60,7 +60,6 @@ const PaymentHistoryScreen = ({ navigation }) => {
       const result = usePagoStore.getState().pagos;
 
       if (result && result.length > 0) {
-        console.log("✅ Pagos cargados:", result.length);
 
         // Transformar pagos del backend al formato de la UI
         const paymentsData = result.map((pago) => {
@@ -170,11 +169,10 @@ const PaymentHistoryScreen = ({ navigation }) => {
 
         setTransactions(paymentsData);
       } else {
-        console.log("📭 No hay pagos registrados");
         setTransactions([]);
       }
     } catch (error) {
-      console.error("❌ Error al cargar pagos:", error);
+      logger.error("❌ Error al cargar pagos:", error);
       Alert.alert(
         "Error",
         "No pudimos cargar tu historial de pagos. Intenta nuevamente."

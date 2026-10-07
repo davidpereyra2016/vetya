@@ -49,7 +49,6 @@ export const configurePushNotifications = () => {
  */
 export const requestNotificationPermissions = async () => {
   if (!Device.isDevice) {
-    console.log('Las notificaciones push requieren un dispositivo físico');
     return false;
   }
 
@@ -62,7 +61,6 @@ export const requestNotificationPermissions = async () => {
   }
 
   if (finalStatus !== 'granted') {
-    console.log('No se obtuvieron permisos para las notificaciones push');
     return false;
   }
 
@@ -102,7 +100,6 @@ export const registerForPushNotifications = async () => {
     const isExpoGo = Constants.appOwnership === 'expo';
     
     if (isExpoGo) {
-      console.log('⚠️ Las notificaciones push remotas no funcionan en Expo Go. Usa un development build.');
     }
     
     const projectId = Constants.expoConfig?.extra?.eas?.projectId || 'vetya-app-development';
@@ -114,18 +111,14 @@ export const registerForPushNotifications = async () => {
 
       if (token.data) {
         await notificacionService.registerDeviceToken(token.data);
-        console.log('✅ Expo Push Token registrado:', token.data);
         return token.data;
       }
     } catch (error) {
-      console.log('⚠️ Error al obtener push token:', error.message);
       if (isExpoGo) {
-        console.log('Este error es esperado en Expo Go.');
       }
       return null;
     }
   } catch (outerError) {
-    console.log('⚠️ Error al registrar para notificaciones push:', outerError.message);
     return null;
   }
 };
@@ -136,7 +129,6 @@ export const registerForPushNotifications = async () => {
  */
 export const handleNotificationReceived = (notification) => {
   const data = notification.request.content.data;
-  console.log('🔔 Notificación recibida en primer plano:', data);
 
   if ([
     'Emergencia',
@@ -157,7 +149,6 @@ export const handleNotificationReceived = (notification) => {
 export const handleNotificationResponse = (response) => {
   const data = response.notification.request.content.data;
   
-  console.log('📱 Procesando respuesta a notificación:', data);
   
   switch (data.tipo) {
     case 'Emergencia':
@@ -198,7 +189,6 @@ export const handleNotificationResponse = (response) => {
       break;
   }
   
-  console.log('✅ Acción pendiente configurada:', global.pendingNotificationAction);
 };
 
 /**

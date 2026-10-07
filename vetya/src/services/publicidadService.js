@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 // publicidadService.js - Servicio para banners publicitarios (Cloudinary)
 import axios from '../config/axios';
 
@@ -11,7 +12,7 @@ export const getBannersActivos = async () => {
     const response = await axios.get('/publicidad/banners-activos');
     return response.data;
   } catch (error) {
-    console.error('Error al obtener banners publicitarios:', error);
+    logger.error('Error al obtener banners publicitarios:', error);
     throw error;
   }
 };

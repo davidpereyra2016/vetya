@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect } from 'react';
 import {
@@ -106,7 +107,7 @@ const AllVetsScreen = ({ navigation, route }) => {
               pacientesAtendidos: pacientes
             };
           } catch (error) {
-            console.error(`Error al cargar estadísticas para veterinario ${veterinario._id}:`, error);
+            logger.error(`Error al cargar estadísticas para veterinario ${veterinario._id}:`, error);
             return {
               ...veterinario,
               rating: 0,
@@ -150,7 +151,7 @@ const AllVetsScreen = ({ navigation, route }) => {
     try {
       await fetchVeterinariosDisponibles();
     } catch (error) {
-      console.error('Error al cargar veterinarios:', error);
+      logger.error('Error al cargar veterinarios:', error);
       Alert.alert('Error', 'No se pudieron cargar los veterinarios');
     } finally {
       setRefreshing(false);

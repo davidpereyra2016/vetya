@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -74,7 +75,7 @@ const BannerPublicitario = () => {
         Alert.alert('Aviso', 'No se pudo abrir el enlace.');
       }
     } catch (err) {
-      console.warn('Error al abrir enlace:', err);
+      logger.warn('Error al abrir enlace:', err);
     }
   };
 

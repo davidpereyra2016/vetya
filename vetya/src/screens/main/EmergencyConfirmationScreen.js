@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -54,10 +55,10 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
         if (response.success && response.data) {
           setEmergencyDetails(response.data);
         } else {
-          console.error('No se pudieron cargar los detalles de la emergencia');
+          logger.error('No se pudieron cargar los detalles de la emergencia');
         }
       } catch (e) {
-        console.error('Error al cargar detalles de la emergencia:', e);
+        logger.error('Error al cargar detalles de la emergencia:', e);
       } finally {
         setLoading(false);
       }
@@ -401,10 +402,9 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                       const emergencyDetailsResponse = await emergenciaService.getEmergencyDetails(finalEmergencyId);
                       if (emergencyDetailsResponse.success && emergencyDetailsResponse.data) {
                         currentEmergencyStatus = emergencyDetailsResponse.data.estado;
-                        // console.log(`Estado actual de la emergencia: ${currentEmergencyStatus}`);
                       }
                     } catch (detailError) {
-                      console.error('Error al verificar estado de emergencia:', detailError);
+                      logger.error('Error al verificar estado de emergencia:', detailError);
                       // Continuamos con el estado que tenemos disponible
                     }
                   }
@@ -417,8 +417,6 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                       Alert.alert('Efectivo no disponible', 'Este veterinario debe regularizar comisiones pendientes y por ahora solo puede recibir pagos con Mercado Pago.');
                       return;
                     }
-                    // console.log(`Confirmando servicio para emergencia ${emergencyIdToUse} en estado ${currentEmergencyStatus}...`);
-                    // console.log(`Método de pago seleccionado: ${selectedPaymentMethod}`);
                     const veterinarianId = vetInfo?._id || vetInfo?.id;
                     const result = await emergenciaService.confirmEmergencyService(
                       finalEmergencyId,
@@ -442,7 +440,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                     Alert.alert('Acción no disponible', `La emergencia está en estado ${currentEmergencyStatus}. No se puede confirmar en este momento o falta información del veterinario.`);
                   }
                 } catch (error) {
-                  console.error('Error en la confirmación:', error);
+                  logger.error('Error en la confirmación:', error);
                   Alert.alert('Error', 'Ocurrió un problema al procesar tu solicitud. Verifica el estado de la emergencia.');
                 } finally {
                   setConfirming(false);
@@ -495,7 +493,7 @@ const EmergencyConfirmationScreen = ({ navigation, route }) => {
                             Alert.alert('Error', result.error || 'No se pudo cancelar la emergencia');
                           }
                         } catch (error) {
-                          console.error('Error al cancelar emergencia:', error);
+                          logger.error('Error al cancelar emergencia:', error);
                           Alert.alert('Error', 'Ocurrió un error al cancelar la emergencia');
                         } finally {
                           setCancelingEmergency(false);

@@ -68,7 +68,6 @@ const AppointmentsScreen = ({ navigation }) => {
   // useFocusEffect se ejecuta cada vez que la pantalla entra en foco
   useFocusEffect(
     useCallback(() => {
-      console.log('Cargando citas...');
       fetchUserAppointments();
     }, [])
   );

@@ -63,7 +63,6 @@ export async function syncCurrentUserLocation(options = {}) {
       direccion = address.direccion;
       ciudad = address.ciudad;
     } catch (geocodeError) {
-      console.log('⚠️ Error en geocodificación inversa:', geocodeError);
     }
 
     if (saveToBackend) {

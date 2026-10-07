@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import ScrollView from '../../components/common/AppScrollView';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
@@ -320,7 +321,7 @@ const HomeScreen = ({ navigation }) => {
         if (locationUpdateErrorCountRef.current >= LOCATION_UPDATE_MAX_ERRORS
             && locationUpdateTimerRef.current) {
           // Detener el polling cuando el vet claramente no tiene ubicación en vivo
-          console.warn(`⏸️  Polling de ubicación detenido: ${locationUpdateErrorCountRef.current} errores consecutivos. El veterinario no comparte ubicación en tiempo real.`);
+          logger.warn(`⏸️  Polling de ubicación detenido: ${locationUpdateErrorCountRef.current} errores consecutivos. El veterinario no comparte ubicación en tiempo real.`);
           clearInterval(locationUpdateTimerRef.current);
           locationUpdateTimerRef.current = null;
           setCurrentDistance('---');
@@ -329,11 +330,11 @@ const HomeScreen = ({ navigation }) => {
       }
     } catch (error) {
       locationUpdateErrorCountRef.current += 1;
-      console.error('Error al actualizar ubicación del veterinario:', error?.message || error);
+      logger.error('Error al actualizar ubicación del veterinario:', error?.message || error);
 
       if (locationUpdateErrorCountRef.current >= LOCATION_UPDATE_MAX_ERRORS
           && locationUpdateTimerRef.current) {
-        console.warn('⏸️  Polling de ubicación detenido por errores repetidos de red.');
+        logger.warn('⏸️  Polling de ubicación detenido por errores repetidos de red.');
         clearInterval(locationUpdateTimerRef.current);
         locationUpdateTimerRef.current = null;
       }
@@ -370,7 +371,7 @@ const HomeScreen = ({ navigation }) => {
             nuevasEstadisticas[id] = { promedio: 0, total: 0 };
           }
         } catch (err) {
-          console.error(`Error al cargar estadísticas para prestador ${prestador._id}:`, err);
+          logger.error(`Error al cargar estadísticas para prestador ${prestador._id}:`, err);
         }
       });
 
@@ -387,7 +388,7 @@ const HomeScreen = ({ navigation }) => {
             nuevosPacientes[id] = 0;
           }
         } catch (err) {
-          console.error(`Error al cargar pacientes para prestador ${prestador._id}:`, err);
+          logger.error(`Error al cargar pacientes para prestador ${prestador._id}:`, err);
         }
       });
 
@@ -415,7 +416,7 @@ const HomeScreen = ({ navigation }) => {
 
       setPrestadoresDestacadosConStats(destacados);
     } catch (error) {
-      console.error('Error en cargarEstadisticasYPacientesEnParalelo:', error);
+      logger.error('Error en cargarEstadisticasYPacientesEnParalelo:', error);
     }
   }, [fetchEstadisticasPrestador, fetchTotalPacientes]);
 
@@ -498,7 +499,7 @@ const HomeScreen = ({ navigation }) => {
       try {
         return await loadAvailableVets();
       } catch (error) {
-        console.error('Error al cargar veterinarios disponibles:', error?.message || error);
+        logger.error('Error al cargar veterinarios disponibles:', error?.message || error);
         return [];
       } finally {
         setAvailableVetsLoading(false);
@@ -509,7 +510,7 @@ const HomeScreen = ({ navigation }) => {
       // Iniciar en paralelo la carga de emergencias y prestadores
       const emergenciesPromise = loadActiveEmergencies();
       const prestadoresPromise = fetchAllPrestadores().catch(err => {
-        console.error('Error al cargar prestadores:', err.message || err);
+        logger.error('Error al cargar prestadores:', err.message || err);
         return []; // Devolvemos array vacío en caso de error para no romper el flujo
       });
 
@@ -724,7 +725,6 @@ const HomeScreen = ({ navigation }) => {
 
         // 💳 Redirigir a Mercado Pago si hay initPoint
         if (result.initPoint) {
-          console.log('💳 Redirigiendo a Mercado Pago:', result.initPoint);
 
           Alert.alert(
             "Pago de la emergencia",
@@ -744,7 +744,7 @@ const HomeScreen = ({ navigation }) => {
                       );
                     }
                   } catch (error) {
-                    console.error('Error al abrir Mercado Pago:', error);
+                    logger.error('Error al abrir Mercado Pago:', error);
                     Alert.alert(
                       "Error",
                       "No se pudo abrir Mercado Pago. Por favor, intenta nuevamente."
@@ -768,7 +768,7 @@ const HomeScreen = ({ navigation }) => {
         throw new Error(result.error || 'No se pudo confirmar la llegada');
       }
     } catch (error) {
-      console.error('Error al confirmar llegada del veterinario:', error);
+      logger.error('Error al confirmar llegada del veterinario:', error);
       Alert.alert(
         "Error",
         "No se pudo consultar el pago de la emergencia. Intenta nuevamente."
