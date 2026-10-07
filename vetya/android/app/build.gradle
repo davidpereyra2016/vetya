@@ -90,6 +90,7 @@ android {
     namespace 'com.vetya.app'
     defaultConfig {
         applicationId 'com.vetya.app'
+        manifestPlaceholders["googleMapsApiKey"] = System.getenv("GOOGLE_MAPS_ANDROID_API_KEY") ?: ""
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 16
