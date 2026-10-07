@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { StatusBar } from 'react-native';
-import AppFrame from './src/components/common/AppFrame';
+import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-gesture-handler';
 import axios from 'axios';
 
@@ -25,6 +24,10 @@ import {
   disconnectEmergencySocket,
   onEmergencyUpdated
 } from './src/services/socketService';
+
+// Retener el splash estático hasta que la intro tenga su primer fotograma listo.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.setOptions({ fade: false, duration: 0 });
 
 // Configurar axios globalmente a nivel de módulo (inmediato, sin esperar useEffect)
 axios.defaults.baseURL = API_URL;
@@ -100,14 +103,5 @@ export default function App() {
     };
   }, []);
 
-  return (
-    <AppFrame>
-      <StatusBar
-        style="auto"
-        backgroundColor="#1E88E5"
-        barStyle="light-content"
-      />
-      <AppNavigator />
-    </AppFrame>
-  );
+  return <AppNavigator />;
 }

@@ -1,9 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, View } from 'react-native';
+import { BackHandler, StatusBar, View } from 'react-native';
+import AppFrame from '../components/common/AppFrame';
+import IntroScreen from '../screens/onboarding/IntroScreen';
 
 // Estado global con Zustand
 import useAuthStore from '../store/useAuthStore';
@@ -64,6 +66,9 @@ import PrivacyPolicyScreen from '../screens/settings/PrivacyPolicyScreen';
 // Creación de navegadores
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Solo vive en memoria: un nuevo arranque de JS vuelve a mostrar la intro.
+let introCompleted = false;
 
 const NAV_COLORS = {
   primary: '#1E88E5',
@@ -591,6 +596,11 @@ function OnboardingNavigator() {
 
 // Componente principal que controla toda la navegación
 function AppNavigator() {
+  const [introFinished, setIntroFinished] = useState(introCompleted);
+  const handleIntroFinish = useCallback(() => {
+    introCompleted = true;
+    setIntroFinished(true);
+  }, []);
   // Usar Zustand para el estado de autenticación
   const isInitializing = useAuthStore(state => state.isInitializing);
   const token = useAuthStore(state => state.token);
@@ -602,24 +612,38 @@ function AppNavigator() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (introFinished && !isInitializing) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => subscription.remove();
+  }, [introFinished, isInitializing]);
+
+  if (!introFinished) {
+    return <IntroScreen onFinish={handleIntroFinish} />;
+  }
+
   if (isInitializing) {
+    // Liberar el video al terminar, sin exponer una ruta antes de validar la sesión.
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#1E88E5" />
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <StatusBar hidden />
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
-      {token === null ? (
-        <AuthNavigator />
-      ) : isFirstTime ? (
-        <OnboardingNavigator />
-      ) : (
-        <MainNavigator />
-      )}
-    </NavigationContainer>
+    <AppFrame>
+      <StatusBar backgroundColor="#1E88E5" barStyle="light-content" hidden={false} />
+      <NavigationContainer>
+        {token === null ? (
+          <AuthNavigator />
+        ) : isFirstTime ? (
+          <OnboardingNavigator />
+        ) : (
+          <MainNavigator />
+        )}
+      </NavigationContainer>
+    </AppFrame>
   );
 };
 

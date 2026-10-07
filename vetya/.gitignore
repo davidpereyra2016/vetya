@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# Video local necesario para la introducción de Zuvia.
+!assets/videos/zuvia-intro.mp4
+
 # Expo
 .expo/
 dist/
