@@ -22,3 +22,4 @@ android/app/.cxx/
 
 .env
 .env.*
+.zuvia-validation/
