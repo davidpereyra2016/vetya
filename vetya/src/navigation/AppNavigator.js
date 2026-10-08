@@ -40,6 +40,7 @@ import ReceiptDetailScreen from '../screens/profile/ReceiptDetailScreen';
 // Pantallas de emergencia
 import EmergencyFormScreen from '../screens/main/EmergencyFormScreen';
 import EmergencyVetMapScreen from '../screens/main/EmergencyVetMapScreen';
+import EmergencyTrackingMapScreen from '../screens/main/EmergencyTrackingMapScreen';
 import EmergencyConfirmationScreen from '../screens/main/EmergencyConfirmationScreen';
 import MisEmergenciasScreen from '../screens/main/EmergencyDetailScreen';
 
@@ -345,6 +346,7 @@ function MainNavigator() {
           }),
         }}
       />
+      <Stack.Screen name="EmergencyTrackingMap" component={EmergencyTrackingMapScreen} />
       <Stack.Screen
         name="EmergencyConfirmation"
         component={EmergencyConfirmationScreen}

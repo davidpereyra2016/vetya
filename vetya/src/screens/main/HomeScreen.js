@@ -1069,6 +1069,12 @@ const HomeScreen = ({ navigation }) => {
 
             <ArrivalCodeCard emergencyId={activeEmergencyVet.emergencyId} status={activeEmergencyVet.status} />
 
+            {activeEmergencyVet.vetAssigned !== false && activeEmergencyVet.status === 'En camino' && (
+              <TouchableOpacity accessibilityRole="button" style={styles.emergencyButton} onPress={() => navigation.navigate('EmergencyTrackingMap', { emergencyId: activeEmergencyVet.emergencyId })}>
+                <Text style={styles.emergencyButtonText}>Ver mapa y recorrido simulado</Text>
+              </TouchableOpacity>
+            )}
+
             {/* El veterinario valida la llegada; el cliente conserva el acceso al cobro. */}
             {activeEmergencyVet.status === 'En atención' && (
               <TouchableOpacity accessibilityRole="button"
