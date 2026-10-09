@@ -10,10 +10,20 @@ npm ci --prefix map3d-source
 ./vetya/tools/formosa/fetch.ps1
 cd vetya
 node tools/formosa/generate.mjs
+node tools/formosa/generate-routes.mjs
 node tools/formosa/build-viewer.mjs
 node tools/formosa/verify.mjs
+node tools/formosa/test-route.mjs
 ```
 
 `fetch.ps1` consulta 16 áreas pequeñas de Overpass y conserva los JSON en `map3d-source/osm` para reproducibilidad. Los archivos GLB generados y el visor quedan incorporados en `assets/maps/formosa` y no necesitan descargas durante el uso. El campo `generatedAt` del manifiesto registra cuándo se regeneraron.
 
-El marcador del veterinario se redondea a una cuadrícula de ~1 km. El trazo entre el veterinario y el cliente es recto y la animación de 60 segundos es una vista previa, no una ruta por calles ni seguimiento en tiempo real. Fuera de la caja de Formosa se usa el mapa 2D ya instalado. La fidelidad de alturas y edificios depende de lo que haya registrado en OpenStreetMap.
+El marcador del veterinario se redondea a una cuadrícula de ~1 km. Un grafo de calles transitables almacenado en `roads.bin` alimenta A* con distancias geodésicas; se respetan las calles de una mano registradas y se evita el acceso marcado como privado. El trazo es una estimación por calles y la animación de 60 segundos es una vista previa, no navegación ni seguimiento en tiempo real. Si las posiciones no pueden conectarse a la red vial, se muestra un trazo lineal de referencia identificado como tal. Fuera de la caja de Formosa se usa el mapa 2D ya instalado. No se modelan tráfico, giros prohibidos ni cierres temporales; la fidelidad depende de OpenStreetMap.
+
+## Elección del algoritmo
+
+- **Dijkstra:** correcto para distancias positivas, pero explora más nodos sin la guía geográfica y el ejemplo adjunto ordena toda la cola en cada iteración.
+- **A\*:** elegido. La distancia geodésica en línea recta nunca excede el recorrido por calles cuando cada arista se pesa por su longitud, así que guía la búsqueda sin perder el camino mínimo entre los nodos viales elegidos. Se usa un montículo mínimo y se valida que exista una ruta antes de reconstruirla.
+- **BFS bidireccional:** minimiza el número de aristas, no la distancia recorrida; no sirve para calles de longitudes distintas.
+- **Greedy Best-First:** puede escoger un rodeo por atender sólo la cercanía aparente al destino.
+- **Beam Search:** puede descartar la única conexión útil. Además, el ejemplo recibido inicializa `prev` con todos los nodos y luego sólo expande vecinos que no estén allí, por lo que no avanzaría.

@@ -34,7 +34,7 @@ const marker = color => {
 };
 const clientMarker = marker('#1269d3');
 const vetMarker = marker('#e6443b');
-let clientPoint, vetPoint, route, startedAt;
+let clientPoint, vetPoint, route, pathPoints = [], cumulative = [], totalLength = 0, startedAt;
 
 function post(type, extra = {}) { window.ReactNativeWebView?.postMessage(JSON.stringify({ type, ...extra })); }
 function currentView() {
@@ -47,17 +47,22 @@ window.setMapData = data => {
   Object.assign(reference, data.reference);
   clientPoint = point(data.client);
   vetPoint = point(data.vet);
+  pathPoints = data.route?.length > 1 ? data.route.map(point) : [vetPoint, clientPoint];
+  cumulative = [0];
+  for (let i = 1; i < pathPoints.length; i++) cumulative.push(cumulative[i - 1] + pathPoints[i - 1].distanceTo(pathPoints[i]));
+  totalLength = cumulative[cumulative.length - 1];
   clientMarker.position.copy(clientPoint);
   vetMarker.position.copy(vetPoint);
   if (route) { scene.remove(route); route.geometry.dispose(); }
-  const geometry = new THREE.BufferGeometry().setFromPoints([vetPoint.clone().setY(5), clientPoint.clone().setY(5)]);
+  const geometry = new THREE.BufferGeometry().setFromPoints(pathPoints.map(position => position.clone().setY(5)));
   route = new THREE.Line(geometry, new THREE.LineDashedMaterial({ color: '#e6443b', dashSize: 55, gapSize: 35, linewidth: 2 }));
   route.computeLineDistances();
   scene.add(route);
-  const middle = vetPoint.clone().add(clientPoint).multiplyScalar(.5);
-  const distance = Math.max(500, vetPoint.distanceTo(clientPoint));
+  const bounds = new THREE.Box3().setFromPoints(pathPoints);
+  const middle = bounds.getCenter(new THREE.Vector3());
+  const distance = Math.max(500, bounds.getSize(new THREE.Vector3()).length()) * Math.max(1, 1.4 / camera.aspect);
   controls.target.set(middle.x, 0, middle.z);
-  camera.position.set(middle.x + distance * .38, Math.max(700, distance * .7), middle.z + distance * .75);
+  camera.position.set(middle.x + distance * .25, Math.max(700, distance * 1.1), middle.z + distance * .4);
   camera.lookAt(controls.target);
   controls.update();
   startedAt = performance.now();
@@ -88,10 +93,13 @@ window.keepTiles = keys => {
 
 function frame(now) {
   requestAnimationFrame(frame);
-  if (clientPoint && vetPoint) {
-    // shortcut: straight-line demonstration, replace with routed geometry if a licensed routing service is added.
-    const fraction = Math.min(1, (now - startedAt) / 60000);
-    vetMarker.position.copy(vetPoint).lerp(clientPoint, fraction);
+  if (pathPoints.length > 1) {
+    const traveled = totalLength * Math.min(1, (now - startedAt) / 60000);
+    let segment = 0;
+    while (segment < cumulative.length - 2 && cumulative[segment + 1] < traveled) segment++;
+    const length = cumulative[segment + 1] - cumulative[segment];
+    const fraction = length ? (traveled - cumulative[segment]) / length : 0;
+    vetMarker.position.copy(pathPoints[segment]).lerp(pathPoints[segment + 1], fraction);
   }
   controls.update();
   renderer.render(scene, camera);

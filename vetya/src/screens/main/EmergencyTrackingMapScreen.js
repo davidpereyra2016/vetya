@@ -10,6 +10,7 @@ import { emergenciaService } from '../../services/api';
 import tileAssets from '../../../assets/maps/formosa/assets';
 import viewerHtml from '../../../assets/maps/formosa/viewerHtml';
 import manifest from '../../../assets/maps/formosa/manifest.json';
+import { findRoadRoute } from '../../utils/formosaRoute';
 
 const coordinate = value => {
   const latitude = Number(value?.lat ?? value?.latitud ?? value?.latitude);
@@ -50,6 +51,7 @@ export default function EmergencyTrackingMapScreen({ navigation, route }) {
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mapError, setMapError] = useState(null);
+  const [roadRoute, setRoadRoute] = useState(undefined);
 
   const inject = useCallback(script => webRef.current?.injectJavaScript(`${script};true;`), []);
   const loadAround = useCallback(point => {
@@ -98,8 +100,24 @@ export default function EmergencyTrackingMapScreen({ navigation, route }) {
   const exactVet = coordinate(details?.veterinario?.ubicacionActual?.coordenadas);
   const vet = exactVet ? approximate(exactVet) : null;
   const use3D = inside(client) && inside(vet) && !mapError;
+  useEffect(() => {
+    if (!client || !vet) return;
+    if (!inside(client) || !inside(vet)) { setRoadRoute(null); return; }
+    let cancelled = false;
+    setRoadRoute(undefined);
+    (async () => {
+      try {
+        const asset = await Asset.fromModule(require('../../../assets/maps/formosa/roads.bin')).downloadAsync();
+        const graph = JSON.parse(await FileSystem.readAsStringAsync(asset.localUri));
+        if (!cancelled) setRoadRoute(findRoadRoute(graph, vet, client));
+      } catch {
+        if (!cancelled) setRoadRoute(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [client?.latitude, client?.longitude, vet?.latitude, vet?.longitude]);
   const readyData = client && vet ? {
-    client, vet,
+    client, vet, route: roadRoute?.coordinates,
     reference: { lat: manifest.center[0], lon: manifest.center[1], latScale: manifest.metersPerDegree[0], lonScale: manifest.metersPerDegree[1] },
   } : null;
 
@@ -107,7 +125,7 @@ export default function EmergencyTrackingMapScreen({ navigation, route }) {
     if (!readyData || !webReady.current || !use3D) return;
     inject(`window.setMapData(${JSON.stringify(readyData)})`);
     loadAround({ latitude: (client.latitude + vet.latitude) / 2, longitude: (client.longitude + vet.longitude) / 2 });
-  }, [details, use3D, inject, loadAround]);
+  }, [details, roadRoute, use3D, inject, loadAround]);
 
   const onMessage = useCallback(event => {
     let message;
@@ -134,11 +152,11 @@ export default function EmergencyTrackingMapScreen({ navigation, route }) {
         <Text style={styles.subtitle}>{details?.veterinario?.nombre || 'Veterinario'} · {location?.distancia?.texto || 'Distancia pendiente'} · {location?.tiempoEstimado?.texto || 'Tiempo pendiente'}</Text>
       </View>
     </View>
-    {loading ? <View style={styles.center}><ActivityIndicator color="#1269d3" /></View> : client && vet ? (
+    {loading || (use3D && roadRoute === undefined) ? <View style={styles.center}><ActivityIndicator color="#1269d3" /></View> : client && vet ? (
       use3D ? <WebView ref={webRef} source={{ html: viewerHtml }} onMessage={onMessage} onError={() => setMapError('No se pudo abrir el mapa 3D.')} javaScriptEnabled scrollEnabled={false} originWhitelist={['*']} style={styles.map} />
-        : <MapView style={styles.map} initialRegion={{ latitude: (client.latitude + vet.latitude) / 2, longitude: (client.longitude + vet.longitude) / 2, latitudeDelta: Math.max(.02, Math.abs(client.latitude - vet.latitude) * 2), longitudeDelta: Math.max(.02, Math.abs(client.longitude - vet.longitude) * 2) }}><Marker coordinate={client} title="Cliente" /><Marker coordinate={vet} title="Veterinario (aproximado)" pinColor="red" /><Polyline coordinates={[vet, client]} strokeColor="#e6443b" strokeWidth={3} lineDashPattern={[8, 6]} /></MapView>
+        : <MapView style={styles.map} initialRegion={{ latitude: (client.latitude + vet.latitude) / 2, longitude: (client.longitude + vet.longitude) / 2, latitudeDelta: Math.max(.02, Math.abs(client.latitude - vet.latitude) * 2), longitudeDelta: Math.max(.02, Math.abs(client.longitude - vet.longitude) * 2) }}><Marker coordinate={client} title="Cliente" /><Marker coordinate={vet} title="Veterinario (aproximado)" pinColor="red" /><Polyline coordinates={roadRoute?.coordinates || [vet, client]} strokeColor="#e6443b" strokeWidth={3} lineDashPattern={[8, 6]} /></MapView>
     ) : <View style={styles.center}><Text style={styles.message}>{mapError || 'Aún no hay ubicación disponible del veterinario.'}</Text></View>}
-    <View style={styles.notice}><Text style={styles.noticeText}>Azul: tu ubicación · rojo: {details?.veterinario?.nombre || 'veterinario'} (aprox.).</Text><Text style={styles.noticeText}>Recorrido simulado en línea recta · posición aproximada (≈1 km). No indica una ruta ni un viaje en tiempo real.</Text><Text style={styles.credit} onPress={() => Linking.openURL('https://www.openstreetmap.org/copyright')}>{manifest.source}</Text></View>
+    <View style={styles.notice}><Text style={styles.noticeText}>Azul: tu ubicación · rojo: {details?.veterinario?.nombre || 'veterinario'} (aprox.).</Text><Text style={styles.noticeText}>{roadRoute === undefined ? 'Calculando recorrido por calles...' : roadRoute ? `Recorrido simulado por calles OSM: ${(roadRoute.distanceMeters / 1000).toFixed(1)} km.` : 'Sin conexión vial calculable: trazo lineal de referencia.'} No indica navegación ni viaje en tiempo real.</Text><Text style={styles.credit} onPress={() => Linking.openURL('https://www.openstreetmap.org/copyright')}>{manifest.source}</Text></View>
   </SafeAreaView>;
 }
 
