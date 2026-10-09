@@ -3,7 +3,6 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
 yarn.lock
 
 # Expo
@@ -92,3 +91,12 @@ vetpresta/video-vetpresta/
 *.mp3
 *.wav
 *.m4a
+
+# Local working copies and generated validation/build files
+/package-lock.json
+/map3d-source/
+/vetpresta/android/
+/vetya/.zuvia-validation/
+/vetya/scripts/
+/condiciones_mirar/
+/vetya-audit-report.md

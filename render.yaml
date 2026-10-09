@@ -5,7 +5,7 @@ services:
     plan: free
     rootDir: backend
     autoDeploy: true
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
